@@ -8,7 +8,7 @@
             <p class="text-sm text-gray-500 mb-6">Welcome back, {{ auth()->user()->name }}. Pick a module.</p>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <a href="{{ route('jobs.placeholder') }}" class="block bg-white shadow-sm sm:rounded-lg p-6 hover:shadow-md transition">
+                <a href="{{ route('jobs.index') }}" class="block bg-white shadow-sm sm:rounded-lg p-6 hover:shadow-md transition">
                     <h3 class="text-lg font-semibold text-gray-800">Jobs</h3>
                     <p class="text-sm text-gray-500 mt-1">Job queue, customers, vendors, leads.</p>
                 </a>

@@ -58,7 +58,8 @@
                     @if (in_array($job->status, ['potential', 'in_progress']))
                         <button type="button" @click="closing = !closing" class="text-xs text-red-600 hover:underline">Close Ticket</button>
                     @endif
-                    {{-- Generate Invoice/Receipt return once the Finance module (Phase 3) exists to post the ledger entry. --}}
+                    <a href="{{ route('jobs.invoice', $job) }}" class="text-xs font-semibold px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">Generate Invoice</a>
+                    <a href="{{ route('jobs.receipt', $job) }}" class="text-xs font-semibold px-3 py-2 rounded-md bg-green-600 text-white hover:bg-green-700">Generate Receipt</a>
                 </div>
                 <form method="POST" action="{{ route('jobs.close-ticket', $job) }}" x-show="closing" x-cloak class="mt-4 flex flex-wrap items-end gap-2">
                     @csrf

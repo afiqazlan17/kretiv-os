@@ -12,10 +12,12 @@
                     <h3 class="text-lg font-semibold text-gray-800">Jobs</h3>
                     <p class="text-sm text-gray-500 mt-1">Job queue, customers, vendors, leads.</p>
                 </a>
-                <a href="{{ route('finance.placeholder') }}" class="block bg-white shadow-sm sm:rounded-lg p-6 hover:shadow-md transition">
-                    <h3 class="text-lg font-semibold text-gray-800">Finance</h3>
-                    <p class="text-sm text-gray-500 mt-1">Ledger, reports, invoices/receipts.</p>
-                </a>
+                @if (auth()->user()->isBod() || auth()->user()->isDeptHead())
+                    <a href="{{ route('finance.index') }}" class="block bg-white shadow-sm sm:rounded-lg p-6 hover:shadow-md transition">
+                        <h3 class="text-lg font-semibold text-gray-800">Finance</h3>
+                        <p class="text-sm text-gray-500 mt-1">Ledger, reports, invoices/receipts.</p>
+                    </a>
+                @endif
             </div>
         </div>
     </div>

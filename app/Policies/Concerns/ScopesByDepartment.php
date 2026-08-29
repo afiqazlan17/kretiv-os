@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Domain\Jobs\Policies\Concerns;
+namespace App\Policies\Concerns;
 
 use App\Models\User;
 
 /**
- * Shared department-scoping logic for the Job/Customer/Vendor/
- * ItemLibrary/Lead policies — reproduces the old Supabase RLS pattern
+ * Shared department-scoping logic reused across module policies
+ * (Jobs, Finance, ...) — reproduces the old Supabase RLS pattern
  * (get_user_role() = ANY(...) AND department = ANY(get_user_visible_departments())).
  */
 trait ScopesByDepartment

@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Finance\Http\Controllers\DocumentController as FinanceDocumentController;
 use App\Domain\Jobs\Http\Controllers\AttachmentController;
 use App\Domain\Jobs\Http\Controllers\CustomerController;
 use App\Domain\Jobs\Http\Controllers\JobController;
@@ -33,6 +34,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/jobs/{job}/attachments', [AttachmentController::class, 'store'])->name('jobs.attachments.store');
     Route::get('/jobs/{job}/attachments/{attachmentId}', [AttachmentController::class, 'show'])->name('jobs.attachments.show');
     Route::delete('/jobs/{job}/attachments/{attachmentId}', [AttachmentController::class, 'destroy'])->name('jobs.attachments.destroy');
+
+    // Handled by the Finance module's DocumentController — a Job action
+    // calling straight into Finance as a plain PHP method call, the
+    // cross-module link the module split (Phase 3) exists to prove.
+    Route::get('/jobs/{job}/invoice', [FinanceDocumentController::class, 'invoice'])->name('jobs.invoice');
+    Route::get('/jobs/{job}/receipt', [FinanceDocumentController::class, 'receipt'])->name('jobs.receipt');
 
     Route::get('/leads', [LeadController::class, 'index'])->name('leads.index');
     Route::get('/leads/create', [LeadController::class, 'create'])->name('leads.create');

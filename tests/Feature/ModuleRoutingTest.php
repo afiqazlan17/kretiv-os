@@ -24,7 +24,7 @@ class ModuleRoutingTest extends TestCase
 
     public function test_guest_hitting_finance_subdomain_is_redirected_to_hub_login(): void
     {
-        $response = $this->get('http://'.config('kretivos.domains.finance').'/placeholder');
+        $response = $this->get('http://'.config('kretivos.domains.finance').'/finance');
 
         $response->assertRedirect(route('login'));
     }
@@ -39,13 +39,13 @@ class ModuleRoutingTest extends TestCase
             ->assertSee('Job Queue');
     }
 
-    public function test_authenticated_user_can_reach_finance_placeholder(): void
+    public function test_authenticated_bod_can_reach_finance(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => User::ROLE_BOD]);
 
         $this->actingAs($user)
-            ->get('http://'.config('kretivos.domains.finance').'/placeholder')
+            ->get('http://'.config('kretivos.domains.finance').'/finance')
             ->assertOk()
-            ->assertSee($user->name);
+            ->assertSee('Finance');
     }
 }

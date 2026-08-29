@@ -31,7 +31,7 @@ cara public-sementara ni.)
 
 Ini bahagian paling penting untuk Kretiv.OS (beza dari `jobs.kretiv.co`
 yang cuma satu domain): dalam **Domains**/**Subdomains**, cipta subdomain
-untuk **setiap** module (`kretivos`, `jobs`, `finance`, ...) tapi set
+untuk **setiap** module (`kretivos`, `jobs`, `finance`, `hr`) tapi set
 Document Root semua sekali ke path **sama**:
 `/home/cpaneluser/kretiv-os/public`. Jangan bagi mana-mana subdomain punya
 docroot sendiri berasingan — satu app, satu docroot, banyak Host header.
@@ -47,6 +47,7 @@ APP_URL=https://kretivos.kretiv.co
 KRETIVOS_HUB_DOMAIN=kretivos.kretiv.co
 KRETIVOS_JOBS_DOMAIN=jobs.kretiv.co
 KRETIVOS_FINANCE_DOMAIN=finance.kretiv.co
+KRETIVOS_HR_DOMAIN=hr.kretiv.co
 
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
@@ -75,7 +76,7 @@ bahagian bawah).
 
 ## 6. Cloudflare DNS
 
-Setiap subdomain (`kretivos`, `jobs`, `finance`, ...) perlukan A record
+Setiap subdomain (`kretivos`, `jobs`, `finance`, `hr`) perlukan A record
 sendiri di Cloudflare (bukan cPanel Zone Editor), **DNS only** (bukan
 proxied), point ke IP server yang sama.
 

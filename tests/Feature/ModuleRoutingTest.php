@@ -48,4 +48,21 @@ class ModuleRoutingTest extends TestCase
             ->assertOk()
             ->assertSee('Finance');
     }
+
+    public function test_guest_hitting_hr_subdomain_is_redirected_to_hub_login(): void
+    {
+        $response = $this->get('http://'.config('kretivos.domains.hr').'/leaves');
+
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_authenticated_user_can_reach_hr_leaves(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get('http://'.config('kretivos.domains.hr').'/leaves')
+            ->assertOk()
+            ->assertSee('My Requests');
+    }
 }

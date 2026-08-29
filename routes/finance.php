@@ -1,13 +1,21 @@
 <?php
 
+use App\Domain\Finance\Http\Controllers\FinanceController;
+use App\Domain\Finance\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Route;
 
-// finance.kretiv.co — Finance module. Populated in Phase 3 when Finance
-// is exploded out of the Jobs module into its own standalone module.
+// finance.kretiv.co — Finance module. Auth relies entirely on the shared
+// session set at the hub (SESSION_DOMAIN=.kretiv.co); no login form here.
 Route::get('/', function () {
-    return redirect()->route(auth()->check() ? 'finance.placeholder' : 'login');
+    return redirect()->route(auth()->check() ? 'finance.index' : 'login');
 });
 
-Route::get('/placeholder', function () {
-    return 'Finance module — coming in Phase 3. Logged in as: '.(auth()->user()->name ?? 'guest');
-})->middleware(['auth'])->name('finance.placeholder');
+Route::middleware('auth')->group(function () {
+    Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
+    Route::post('/finance/expense', [FinanceController::class, 'storeExpense'])->name('finance.expense.store');
+    Route::post('/finance/opening-balance', [FinanceController::class, 'storeOpeningBalance'])->name('finance.opening-balance.store');
+    Route::post('/finance/director-loan', [FinanceController::class, 'storeDirectorLoan'])->name('finance.director-loan.store');
+    Route::post('/finance/bank-transfer', [FinanceController::class, 'storeBankTransfer'])->name('finance.bank-transfer.store');
+
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+});

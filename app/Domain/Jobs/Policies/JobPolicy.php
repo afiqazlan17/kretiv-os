@@ -3,8 +3,8 @@
 namespace App\Domain\Jobs\Policies;
 
 use App\Domain\Jobs\Models\Job;
-use App\Domain\Jobs\Policies\Concerns\ScopesByDepartment;
 use App\Models\User;
+use App\Policies\Concerns\ScopesByDepartment;
 
 class JobPolicy
 {

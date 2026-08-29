@@ -8,6 +8,7 @@ return [
         'hub' => env('KRETIVOS_HUB_DOMAIN', 'kretivos.test'),
         'jobs' => env('KRETIVOS_JOBS_DOMAIN', 'jobs.kretivos.test'),
         'finance' => env('KRETIVOS_FINANCE_DOMAIN', 'finance.kretivos.test'),
+        'hr' => env('KRETIVOS_HR_DOMAIN', 'hr.kretivos.test'),
     ],
 
     // Company-wide concepts every module reads (Jobs scopes by department,

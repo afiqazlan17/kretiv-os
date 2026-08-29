@@ -18,6 +18,10 @@
                         <p class="text-sm text-gray-500 mt-1">Ledger, reports, invoices/receipts.</p>
                     </a>
                 @endif
+                <a href="{{ route('leaves.index') }}" class="block bg-white shadow-sm sm:rounded-lg p-6 hover:shadow-md transition">
+                    <h3 class="text-lg font-semibold text-gray-800">HR</h3>
+                    <p class="text-sm text-gray-500 mt-1">Staff, leave, attendance, payroll.</p>
+                </a>
             </div>
         </div>
     </div>

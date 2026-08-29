@@ -41,6 +41,24 @@
                             {{ __('Reports') }}
                         </x-nav-link>
                     @endif
+
+                    <x-nav-link :href="route('leaves.index')" :active="request()->routeIs('leaves.*')">
+                        {{ __('Leave') }}
+                    </x-nav-link>
+
+                    <x-nav-link :href="route('attendance.index')" :active="request()->routeIs('attendance.*')">
+                        {{ __('Attendance') }}
+                    </x-nav-link>
+
+                    @if (Auth::user()->isBod())
+                        <x-nav-link :href="route('staff.index')" :active="request()->routeIs('staff.*')">
+                            {{ __('Staff') }}
+                        </x-nav-link>
+
+                        <x-nav-link :href="route('payroll.index')" :active="request()->routeIs('payroll.*')">
+                            {{ __('Payroll') }}
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 

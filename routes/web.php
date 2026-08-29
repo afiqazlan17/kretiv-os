@@ -17,3 +17,5 @@ Route::domain(config('kretivos.domains.hub'))->group(function () {
 Route::domain(config('kretivos.domains.jobs'))->group(base_path('routes/jobs.php'));
 
 Route::domain(config('kretivos.domains.finance'))->group(base_path('routes/finance.php'));
+
+Route::domain(config('kretivos.domains.hr'))->group(base_path('routes/hr.php'));

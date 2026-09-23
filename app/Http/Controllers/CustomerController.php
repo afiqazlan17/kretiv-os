@@ -7,10 +7,30 @@ use App\Models\Job;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class CustomerController extends Controller
 {
+    /**
+     * City/state for a Malaysian postcode, so the customer form can
+     * auto-fill both from what staff already typed. Data bundled from a
+     * public postcode dataset (resources/data/my-postcodes.json) — cached
+     * in memory after the first lookup since it's ~2,900 rows.
+     */
+    public function postcodeLookup(string $postcode): JsonResponse
+    {
+        $postcodes = Cache::rememberForever('my_postcodes', function () {
+            return json_decode(file_get_contents(resource_path('data/my-postcodes.json')), true) ?? [];
+        });
+
+        abort_unless(isset($postcodes[$postcode]), 404);
+
+        [$city, $state] = $postcodes[$postcode];
+
+        return response()->json(['city' => $city, 'state' => $state]);
+    }
+
     public function index(Request $request): View
     {
         $this->authorize('viewAny', Customer::class);

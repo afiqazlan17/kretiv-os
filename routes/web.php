@@ -60,6 +60,7 @@ $onHost('jobs', function () {
         Route::post('/settings/reset-jobs', [UserController::class, 'resetJobs'])->name('settings.reset-jobs');
         Route::post('/settings/reset-all-data', [UserController::class, 'resetAllData'])->name('settings.reset-all-data');
         Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
+        Route::get('/postcode-lookup/{postcode}', [CustomerController::class, 'postcodeLookup'])->name('postcode.lookup');
         Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store');
         Route::put('/customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
         Route::get('/vendors', [VendorController::class, 'index'])->name('vendors.index');

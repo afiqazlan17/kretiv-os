@@ -62,4 +62,14 @@ class CustomerPageTest extends TestCase
 
         $this->assertSame(['KP-2026-001'], $history->pluck('job_id')->all());
     }
+
+    public function test_postcode_lookup_returns_city_and_state(): void
+    {
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+
+        $this->actingAs($bod)->getJson(route('postcode.lookup', '40000'))
+            ->assertOk()->assertJson(['city' => 'Shah Alam', 'state' => 'Selangor']);
+
+        $this->actingAs($bod)->getJson(route('postcode.lookup', '00000'))->assertNotFound();
+    }
 }

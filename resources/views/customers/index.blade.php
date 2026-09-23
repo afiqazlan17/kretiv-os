@@ -67,7 +67,7 @@
                         </div>
                         <x-text-input name="address_line_2" type="text" class="block w-full" :value="old('address_line_2')" placeholder="Line 2" />
                         <div class="grid grid-cols-3 gap-2">
-                            <x-text-input name="postcode" type="text" class="block w-full" :value="old('postcode')" placeholder="Postcode" />
+                            <x-text-input name="postcode" type="text" class="block w-full" :value="old('postcode')" placeholder="Postcode" onblur="lookupPostcode(this)" />
                             <x-text-input name="city" type="text" class="block w-full" :value="old('city')" placeholder="City" />
                             <x-text-input name="state" type="text" class="block w-full" :value="old('state')" placeholder="State" />
                         </div>
@@ -227,7 +227,7 @@
                                             <x-text-input name="address_line_1" type="text" class="block w-full" :value="$customer->address_line_1" placeholder="Address line 1" />
                                             <x-text-input name="address_line_2" type="text" class="block w-full" :value="$customer->address_line_2" placeholder="Address line 2" />
                                             <div class="grid grid-cols-3 gap-2">
-                                                <x-text-input name="postcode" type="text" class="block w-full" :value="$customer->postcode" placeholder="Postcode" />
+                                                <x-text-input name="postcode" type="text" class="block w-full" :value="$customer->postcode" placeholder="Postcode" onblur="lookupPostcode(this)" />
                                                 <x-text-input name="city" type="text" class="block w-full" :value="$customer->city" placeholder="City" />
                                                 <x-text-input name="state" type="text" class="block w-full" :value="$customer->state" placeholder="State" />
                                             </div>

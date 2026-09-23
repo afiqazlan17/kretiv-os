@@ -82,4 +82,25 @@ Alpine.data('itemCombo', (url, dept, mode) => ({
     },
 }));
 
+// Malaysian postcode -> city/state auto-fill. Wired via onblur="lookupPostcode(this)"
+// on a postcode <input> that sits in the same .grid container as the city/state
+// inputs (see resources/views/customers/index.blade.php). Never overwrites what's
+// already typed there — a postcode can span more than one town, and staff who
+// already picked the right one shouldn't have it silently replaced.
+window.lookupPostcode = async function (input) {
+    const value = input.value.trim();
+    if (!/^\d{5}$/.test(value)) return;
+    const container = input.closest('.grid');
+    if (!container) return;
+    try {
+        const res = await fetch(`/postcode-lookup/${value}`, { headers: { Accept: 'application/json' } });
+        if (!res.ok) return;
+        const data = await res.json();
+        const cityInput = container.querySelector('[name="city"]');
+        const stateInput = container.querySelector('[name="state"]');
+        if (cityInput && !cityInput.value.trim()) cityInput.value = data.city;
+        if (stateInput && !stateInput.value.trim()) stateInput.value = data.state;
+    } catch (e) { /* leave fields as staff typed */ }
+};
+
 Alpine.start();

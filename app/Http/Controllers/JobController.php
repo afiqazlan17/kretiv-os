@@ -163,12 +163,10 @@ class JobController extends Controller
             'per_dept.*.product_line' => ['nullable', 'string', 'max:255'],
             'per_dept.*.segment' => ['nullable', 'string', 'max:255'],
             'per_dept.*.package_value' => ['nullable', 'string', 'max:255'],
-            'per_dept.*.bank' => ['nullable', 'in:mbb,affin'],
-            'per_dept.*.pic' => ['nullable', 'string', 'max:255'],
+            'per_dept.*.bank' => ['required', 'in:mbb,affin'],
             'per_dept.*.start_date' => ['nullable', 'date'],
             'per_dept.*.deadline' => ['nullable', 'date'],
             'per_dept.*.notes' => ['nullable', 'string'],
-            'per_dept.*.estimation_value' => ['nullable', 'numeric', 'min:0'],
             'per_dept.*.delivery_amount' => ['nullable', 'numeric', 'min:0'],
             'per_dept.*.discount_amount' => ['nullable', 'numeric', 'min:0'],
             'per_dept.*.line_items' => ['nullable', 'array'],
@@ -224,10 +222,14 @@ class JobController extends Controller
                 if ($jobType === '') {
                     $errors["per_dept.{$dept}.job_type"] = 'Job Name is required.';
                 }
+                $lineItems = $this->buildLineItems($fields['line_items'] ?? []);
+                $subtotal = collect($lineItems)->sum(fn ($i) => $i['qty'] * $i['price']);
                 $prepared[$dept] = [
                     'job_type' => $jobType,
-                    'estimation_value' => $fields['estimation_value'] ?? null,
-                    'line_items' => $this->buildLineItems($fields['line_items'] ?? []),
+                    // Derived from the line items rather than typed separately, so
+                    // it can never drift from what the quotation actually totals.
+                    'estimation_value' => $subtotal + (float) ($fields['delivery_amount'] ?? 0) - (float) ($fields['discount_amount'] ?? 0),
+                    'line_items' => $lineItems,
                 ];
             }
         }
@@ -250,8 +252,7 @@ class JobController extends Controller
                 'project_id' => $projectId,
                 'job_type' => $resolved['job_type'],
                 'job_type_category' => $fields['job_type_category'],
-                'bank' => $fields['bank'] ?? null,
-                'pic' => $fields['pic'] ?? null,
+                'bank' => $fields['bank'],
                 'start_date' => $fields['start_date'] ?? null,
                 'deadline' => $fields['deadline'] ?? null,
                 'notes' => $fields['notes'] ?? null,

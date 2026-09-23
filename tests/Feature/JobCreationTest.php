@@ -21,6 +21,7 @@ class JobCreationTest extends TestCase
             $perDept[$dept] = [
                 'job_type' => "Job for {$dept}",
                 'job_type_category' => 'client_project',
+                'bank' => 'mbb',
             ];
         }
 
@@ -116,6 +117,7 @@ class JobCreationTest extends TestCase
                     'product_line' => 'undangan_my',
                     'segment' => 'end_user',
                     'package_value' => 'vip:200',
+                    'bank' => 'mbb',
                 ],
             ],
         ]);
@@ -140,6 +142,7 @@ class JobCreationTest extends TestCase
             'per_dept' => [
                 'print' => [
                     'job_type_category' => 'client_project',
+                    'bank' => 'mbb',
                 ],
             ],
         ]);
@@ -153,7 +156,7 @@ class JobCreationTest extends TestCase
         $bod = User::factory()->create(['role' => User::ROLE_BOD]);
         $payload = $this->payload(['print'], [
             'per_dept' => ['print' => [
-                'job_type' => 'Business Card', 'job_type_category' => 'client_project',
+                'job_type' => 'Business Card', 'job_type_category' => 'client_project', 'bank' => 'mbb',
                 'line_items' => [['item' => 'Business Card', 'desc' => '3x6ft, matte finish', 'qty' => 2, 'price' => 50]],
             ]],
         ]);
@@ -163,5 +166,24 @@ class JobCreationTest extends TestCase
         $job = Job::first();
         $this->assertSame('Business Card', $job->line_items[0]['item']);
         $this->assertSame('3x6ft, matte finish', $job->line_items[0]['desc']);
+        // Estimation value is derived from the line items (2 x RM50), not typed separately.
+        $this->assertSame(100.0, (float) $job->estimation_value);
+    }
+
+    public function test_bank_is_required_and_pic_is_no_longer_collected_on_create(): void
+    {
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $payload = $this->payload(['print']);
+        unset($payload['per_dept']['print']['bank']);
+
+        $this->actingAs($bod)->post(route('jobs.store'), $payload)
+            ->assertSessionHasErrors(['per_dept.print.bank']);
+        $this->assertSame(0, Job::count());
+
+        $payload['per_dept']['print']['bank'] = 'affin';
+        $payload['per_dept']['print']['pic'] = 'Someone';
+        $this->actingAs($bod)->post(route('jobs.store'), $payload)->assertSessionHasNoErrors();
+
+        $this->assertNull(Job::first()->pic);
     }
 }

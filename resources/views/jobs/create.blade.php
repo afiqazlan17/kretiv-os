@@ -93,9 +93,9 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <x-input-label value="Bank" />
-                                    <select name="per_dept[{{ $key }}][bank]" x-model="perDept.{{ $key }}.bank" :disabled="!depts.includes('{{ $key }}')" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
-                                        <option value="">No bank selected</option>
+                                    <x-input-label value="Bank *" />
+                                    <select name="per_dept[{{ $key }}][bank]" x-model="perDept.{{ $key }}.bank" required :disabled="!depts.includes('{{ $key }}')" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
+                                        <option value="" disabled>Select a bank</option>
                                         @foreach (config('kretivco.banks') as $bKey => $b)
                                             <option value="{{ $bKey }}">{{ $b['label'] }}</option>
                                         @endforeach
@@ -148,17 +148,11 @@
                             @endif
 
                             <div class="mb-3">
-                                <x-input-label value="Job Name * (what this job is, shown on the quotation)" />
+                                <x-input-label value="Job Name *" />
                                 <input type="text" name="per_dept[{{ $key }}][job_type]" x-model="perDept.{{ $key }}.jobType" :disabled="!depts.includes('{{ $key }}')" placeholder="e.g. Business Card for Ariff's Wedding" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
-                                <p class="mt-1 text-[11px] text-gray-400">Filled in automatically from the first line item below, but change it to whatever best describes this job.</p>
                             </div>
 
-                            <div class="mb-3">
-                                <x-input-label value="PIC (optional, leave blank for department staff to self-assign)" />
-                                <input type="text" name="per_dept[{{ $key }}][pic]" :disabled="!depts.includes('{{ $key }}')" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
-                            </div>
-
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                                 <div>
                                     <x-input-label value="Start Date" />
                                     <input type="date" name="per_dept[{{ $key }}][start_date]" :disabled="!depts.includes('{{ $key }}')" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
@@ -166,10 +160,6 @@
                                 <div>
                                     <x-input-label value="Deadline" />
                                     <input type="date" name="per_dept[{{ $key }}][deadline]" :disabled="!depts.includes('{{ $key }}')" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
-                                </div>
-                                <div>
-                                    <x-input-label value="Estimation Value (RM)" />
-                                    <input type="number" step="0.01" min="0" name="per_dept[{{ $key }}][estimation_value]" x-model="perDept.{{ $key }}.estimation" :disabled="!depts.includes('{{ $key }}')" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
                                 </div>
                             </div>
 
@@ -287,7 +277,7 @@
                 packageCatalog,
                 depts: {{ old('departments') ? json_encode(old('departments')) : '[]' }},
                 perDept: Object.fromEntries(departmentKeys.map(k => [k, {
-                    jobTypeCategory: 'client_project', productLine: '', segment: '', pkg: '', jobType: '', lineItems: [], bank: '', estimation: '', delivery: '', discount: '',
+                    jobTypeCategory: 'client_project', productLine: '', segment: '', pkg: '', jobType: '', lineItems: [], bank: '', delivery: '', discount: '',
                     editNotes: false, notesLines: [],
                 }])),
                 previewDept: null, pvSrc: ['', ''], pvActive: 0, pvPending: null, pvBusy: false, pvError: '', pvTimer: null, pvSeq: 0,
@@ -299,18 +289,8 @@
                 inlineSaving: false,
                 inlineError: null,
                 init() {
-                    ['depts', 'customerId', 'previewDept'].forEach(k => this.$watch(k, () => this.schedulePreview()));
-                    this.$watch('perDept', () => { this.autoFillJobNames(); this.schedulePreview(); });
+                    ['depts', 'perDept', 'customerId', 'previewDept'].forEach(k => this.$watch(k, () => this.schedulePreview()));
                     this.schedulePreview();
-                },
-                // Job Name is required, but typing it by hand for every line item feels
-                // manual, so borrow the first line item's name until the staff overrides it.
-                autoFillJobNames() {
-                    for (const dept of this.depts) {
-                        const pd = this.perDept[dept];
-                        const first = (pd.lineItems[0]?.item || '').trim();
-                        if (first && !pd.jobType.trim()) pd.jobType = first;
-                    }
                 },
                 get activeDept() {
                     return this.depts.includes(this.previewDept) ? this.previewDept : (this.depts[0] || null);
@@ -323,7 +303,7 @@
                         : pd.lineItems.filter(r => (r.item || '').trim() !== '').map(r => ({ item: r.item, desc: r.desc || '', qty: r.qty === '' ? 0 : r.qty, price: r.price === '' ? 0 : r.price }));
                     const payload = {
                         customer_id: this.customerId || null, bank: pd.bank || null, title: pd.jobType || '',
-                        estimation_value: tier ? tier.tier.price : (pd.estimation === '' ? null : pd.estimation),
+                        estimation_value: tier ? tier.tier.price : null,
                         delivery: pd.delivery === '' ? 0 : pd.delivery, discount: pd.discount === '' ? 0 : pd.discount, items,
                     };
                     const notes = pd.editNotes ? pd.notesLines.map(l => l.trim()).filter(l => l !== '').join('\n') : '';

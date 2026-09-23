@@ -21,6 +21,17 @@
                       x-data="{ customerType: '{{ old('customer_type', 'individual') }}' }"
                       class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
                     @csrf
+                    <div class="sm:col-span-2">
+                        <x-input-label value="Customer Type *" />
+                        <div class="mt-1 flex gap-2">
+                            @foreach (config('kretivco.customer_types') as $key => $label)
+                                <label class="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm cursor-pointer">
+                                    <input type="radio" name="customer_type" value="{{ $key }}" x-model="customerType" {{ old('customer_type', 'individual') === $key ? 'checked' : '' }}>
+                                    {{ $label }}
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
                     <div>
                         <x-input-label for="name" value="Name *" />
                         <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name')" required />
@@ -32,17 +43,6 @@
                     <div>
                         <x-input-label for="email" value="Email" />
                         <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email')" />
-                    </div>
-                    <div>
-                        <x-input-label value="Customer Type *" />
-                        <div class="mt-1 flex gap-2">
-                            @foreach (config('kretivco.customer_types') as $key => $label)
-                                <label class="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm cursor-pointer">
-                                    <input type="radio" name="customer_type" value="{{ $key }}" x-model="customerType" {{ old('customer_type', 'individual') === $key ? 'checked' : '' }}>
-                                    {{ $label }}
-                                </label>
-                            @endforeach
-                        </div>
                     </div>
                     <div x-show="customerType === 'company'" x-cloak>
                         <x-input-label for="company" value="Company Name" />
@@ -60,15 +60,17 @@
                             @endforeach
                         </select>
                     </div>
-                    <div>
-                        <x-input-label for="address_line_1" value="Address" />
-                        <x-text-input id="address_line_1" name="address_line_1" type="text" class="mt-1 block w-full" :value="old('address_line_1')" placeholder="Line 1" />
-                        <x-text-input name="address_line_2" type="text" class="mt-1 block w-full" :value="old('address_line_2')" placeholder="Line 2" />
-                    </div>
-                    <div class="grid grid-cols-3 gap-2">
-                        <x-text-input name="postcode" type="text" class="mt-1 block w-full" :value="old('postcode')" placeholder="Postcode" />
-                        <x-text-input name="city" type="text" class="mt-1 block w-full" :value="old('city')" placeholder="City" />
-                        <x-text-input name="state" type="text" class="mt-1 block w-full" :value="old('state')" placeholder="State" />
+                    <div class="sm:col-span-2 space-y-1.5">
+                        <div>
+                            <x-input-label for="address_line_1" value="Address" />
+                            <x-text-input id="address_line_1" name="address_line_1" type="text" class="mt-1 block w-full" :value="old('address_line_1')" placeholder="Line 1" />
+                        </div>
+                        <x-text-input name="address_line_2" type="text" class="block w-full" :value="old('address_line_2')" placeholder="Line 2" />
+                        <div class="grid grid-cols-3 gap-2">
+                            <x-text-input name="postcode" type="text" class="block w-full" :value="old('postcode')" placeholder="Postcode" />
+                            <x-text-input name="city" type="text" class="block w-full" :value="old('city')" placeholder="City" />
+                            <x-text-input name="state" type="text" class="block w-full" :value="old('state')" placeholder="State" />
+                        </div>
                     </div>
                     <div class="sm:col-span-2">
                         <x-input-label for="notes" value="Notes" />
@@ -81,15 +83,9 @@
                 </form>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="bg-white shadow-sm sm:rounded-lg p-5 border-l-4 border-pink-500">
-                    <div class="text-[11px] font-semibold text-gray-400 uppercase">Total Customers</div>
-                    <div class="text-2xl font-bold text-gray-900 mt-1">{{ $customers->count() }}</div>
-                </div>
-                <div class="bg-white shadow-sm sm:rounded-lg p-5 border-l-4 border-green-500">
-                    <div class="text-[11px] font-semibold text-gray-400 uppercase">Revenue</div>
-                    <div class="text-2xl font-bold text-green-600 mt-1">RM {{ number_format($totalRevenue, 2) }}</div>
-                </div>
+            <div class="bg-white shadow-sm sm:rounded-lg p-5 border-l-4 border-pink-500 max-w-xs">
+                <div class="text-[11px] font-semibold text-gray-400 uppercase">Total Customers</div>
+                <div class="text-2xl font-bold text-gray-900 mt-1">{{ $customers->count() }}</div>
             </div>
 
             <div class="bg-white shadow-sm sm:rounded-lg p-4">

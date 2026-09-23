@@ -186,4 +186,27 @@ class VendorCostTest extends TestCase
 
         $this->actingAs($bod)->get(route('jobs.show', $job))->assertOk()->assertSee('payment-sy.pdf');
     }
+
+    public function test_a_vendor_cost_can_be_edited_to_add_the_actual_cost(): void
+    {
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $job = $this->job();
+        $vendor = $this->vendor();
+
+        $this->actingAs($bod)->post(route('jobs.vendor-costs.store', $job), [
+            'vendor_id' => $vendor->id,
+            'estimated_cost' => 150,
+        ]);
+        $costId = $job->refresh()->vendor_costs[0]['id'];
+
+        $this->actingAs($bod)->put(route('jobs.vendor-costs.update', [$job, $costId]), [
+            'vendor_id' => $vendor->id,
+            'estimated_cost' => 150,
+            'actual_cost' => 165,
+        ])->assertRedirect();
+
+        $this->assertSame(165.0, (float) $job->refresh()->vendor_costs[0]['actual_cost']);
+
+        $this->actingAs($bod)->get(route('jobs.show', $job))->assertOk()->assertSee('Edit');
+    }
 }

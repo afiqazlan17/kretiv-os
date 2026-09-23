@@ -368,7 +368,7 @@
                 @endcan
 
                 @php $canSeeMargin = auth()->user()->canManageFinance(); @endphp
-                <div class="bg-white shadow-sm sm:rounded-lg p-6" x-data="{ showVendorForm: false, payingId: null }">
+                <div class="bg-white shadow-sm sm:rounded-lg p-6" x-data="{ showVendorForm: false, payingId: null, editingId: null }">
                     @php
                         $vendorCosts = collect($job->vendor_costs ?? []);
                         $totalEstimated = $vendorCosts->sum(fn ($v) => (float) ($v['estimated_cost'] ?? 0));
@@ -469,6 +469,9 @@
 
                                     @can('update', $job)
                                     <div class="flex flex-wrap items-center gap-2 mt-2">
+                                        @if (($item['status'] ?? 'unpaid') === 'unpaid')
+                                            <button type="button" @click="editingId = (editingId === '{{ $item['id'] }}' ? null : '{{ $item['id'] }}')" class="text-xs font-semibold px-2.5 py-1 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50">Edit</button>
+                                        @endif
                                         @if (($item['status'] ?? 'unpaid') === 'unpaid' && (float) ($item['actual_cost'] ?? 0) > 0)
                                             <button type="button" @click="payingId = (payingId === '{{ $item['id'] }}' ? null : '{{ $item['id'] }}')" class="text-xs font-semibold px-2.5 py-1 rounded-md border border-green-200 text-green-600 hover:bg-green-50">Mark as Paid</button>
                                         @endif
@@ -478,6 +481,24 @@
                                             <button type="submit" class="text-xs font-semibold px-2.5 py-1 rounded-md border border-red-200 text-red-600 hover:bg-red-50">Remove</button>
                                         </form>
                                     </div>
+                                    <form method="POST" action="{{ route('jobs.vendor-costs.update', [$job, $item['id']]) }}" x-show="editingId === '{{ $item['id'] }}'" x-cloak class="flex flex-wrap items-end gap-2 mt-2 p-2.5 rounded-md bg-gray-50">
+                                        @csrf
+                                        @method('PUT')
+                                        <input type="hidden" name="vendor_id" value="{{ $item['vendor_id'] }}">
+                                        <div>
+                                            <label class="text-xs text-gray-500">Estimated Cost (RM)</label>
+                                            <input type="number" step="0.01" min="0" name="estimated_cost" value="{{ $item['estimated_cost'] }}" class="block rounded-md border-gray-300 shadow-sm text-sm w-32">
+                                        </div>
+                                        <div>
+                                            <label class="text-xs text-gray-500">Actual Cost (RM)</label>
+                                            <input type="number" step="0.01" min="0" name="actual_cost" value="{{ $item['actual_cost'] }}" class="block rounded-md border-gray-300 shadow-sm text-sm w-32">
+                                        </div>
+                                        <div class="flex-1 min-w-[160px]">
+                                            <label class="text-xs text-gray-500">Notes</label>
+                                            <input type="text" name="notes" value="{{ $item['notes'] }}" class="block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                                        </div>
+                                        <button type="submit" class="text-xs font-semibold px-3 py-2 rounded-md bg-gray-800 text-white hover:bg-gray-900">Save</button>
+                                    </form>
                                     <form method="POST" action="{{ route('jobs.vendor-costs.mark-paid', [$job, $item['id']]) }}" x-show="payingId === '{{ $item['id'] }}'" x-cloak class="flex flex-wrap items-end gap-2 mt-2 p-2.5 rounded-md bg-gray-50">
                                         @csrf
                                         <div>

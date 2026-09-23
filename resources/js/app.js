@@ -71,7 +71,7 @@ Alpine.data('itemCombo', (url, dept, mode) => ({
         }, 200);
     },
     pick(row, r) {
-        if (mode === 'doc') {
+        if ('item' in row) {
             row.item = r.name;
             row.desc = r.description || '';
         } else {

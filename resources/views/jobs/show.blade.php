@@ -292,7 +292,7 @@
                         $docsLocked = ! in_array($job->status, [\App\Models\Job::STATUS_IN_PROGRESS, \App\Models\Job::STATUS_COMPLETED], true);
                         $docButtons = [
                             'quotation' => ['📄 Quotation', '#6366F1'],
-                            'proforma' => ['📋 Proforma Invoice', '#3A86FF'],
+                            // 'proforma' => ['📋 Proforma Invoice', '#3A86FF'], // hidden for now, not deleted
                             'invoice' => ['📑 Invoice', '#10B981'],
                             'receipt' => ['🧾 Receipt', '#E85D04'],
                         ];
@@ -328,7 +328,6 @@
                             </div>
                             <div class="flex flex-wrap gap-2">
                                 <button type="submit" name="doc_type" value="quotation" class="text-xs font-semibold px-3 py-1.5 rounded-md text-white hover:opacity-90" style="background: #6366F1">Quotation</button>
-                                <button type="submit" name="doc_type" value="proforma" class="text-xs font-semibold px-3 py-1.5 rounded-md text-white hover:opacity-90" style="background: #3A86FF">Proforma</button>
                                 <button type="submit" name="doc_type" value="invoice" class="text-xs font-semibold px-3 py-1.5 rounded-md bg-green-600 text-white hover:bg-green-700">Invoice</button>
                                 <button type="submit" name="doc_type" value="receipt" class="text-xs font-semibold px-3 py-1.5 rounded-md text-white hover:opacity-90" style="background: #E85D04">Receipt</button>
                             </div>

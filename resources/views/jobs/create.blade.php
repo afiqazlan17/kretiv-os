@@ -59,8 +59,8 @@
 
                     {{-- Department multi-select --}}
                     <div class="mb-5">
-                        <x-input-label value="Department * — you can select more than one" />
-                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1">
+                        <x-input-label value="Department * (you can select more than one)" />
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
                             @foreach ($departments as $key => $dept)
                                 <label class="flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold cursor-pointer"
                                        :class="depts.includes('{{ $key }}') ? 'border-2' : 'border-gray-200'"
@@ -71,7 +71,7 @@
                             @endforeach
                         </div>
                         <div x-show="depts.length > 1" x-cloak class="mt-2 px-3 py-2 rounded-md bg-pink-50 border border-dashed border-pink-300 text-xs text-gray-700">
-                            <span x-text="depts.length"></span> departments selected — one Project ID will be generated to group these jobs together. Each department still gets its own Job ID &amp; status.
+                            <span x-text="depts.length"></span> departments selected. One Project ID will be generated to group these jobs together, and each department still gets its own Job ID and status.
                         </div>
                     </div>
 
@@ -95,7 +95,7 @@
                                 <div>
                                     <x-input-label value="Bank" />
                                     <select name="per_dept[{{ $key }}][bank]" x-model="perDept.{{ $key }}.bank" :disabled="!depts.includes('{{ $key }}')" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
-                                        <option value="">—</option>
+                                        <option value="">No bank selected</option>
                                         @foreach (config('kretivco.banks') as $bKey => $b)
                                             <option value="{{ $bKey }}">{{ $b['label'] }}</option>
                                         @endforeach
@@ -110,7 +110,7 @@
                                             <x-input-label value="Product" />
                                             <select name="per_dept[{{ $key }}][product_line]" x-model="perDept.{{ $key }}.productLine" @change="perDept.{{ $key }}.segment = ''; perDept.{{ $key }}.pkg = ''"
                                                     :disabled="!depts.includes('{{ $key }}') || perDept.{{ $key }}.jobTypeCategory !== 'product_sale'" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
-                                                <option value="">— Custom job (not a package) —</option>
+                                                <option value="">Custom job (not a package)</option>
                                                 <template x-for="line in productLinesFor('{{ $key }}')" :key="line.key">
                                                     <option :value="line.key" x-text="line.label"></option>
                                                 </template>
@@ -120,7 +120,7 @@
                                             <x-input-label value="Customer Type" />
                                             <select name="per_dept[{{ $key }}][segment]" x-model="perDept.{{ $key }}.segment" @change="perDept.{{ $key }}.pkg = ''"
                                                     :disabled="!depts.includes('{{ $key }}') || perDept.{{ $key }}.jobTypeCategory !== 'product_sale'" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
-                                                <option value="">— Select —</option>
+                                                <option value="">Select a customer type</option>
                                                 <template x-for="seg in segmentsFor('{{ $key }}', perDept.{{ $key }}.productLine)" :key="seg.key">
                                                     <option :value="seg.key" x-text="seg.label"></option>
                                                 </template>
@@ -131,7 +131,7 @@
                                         <x-input-label value="Package" />
                                         <select name="per_dept[{{ $key }}][package_value]" x-model="perDept.{{ $key }}.pkg" @change="onPackageChange('{{ $key }}')"
                                                 :disabled="!depts.includes('{{ $key }}') || perDept.{{ $key }}.jobTypeCategory !== 'product_sale'" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
-                                            <option value="">— Select package —</option>
+                                            <option value="">Select a package</option>
                                             <template x-for="opt in packageTierOptions('{{ $key }}', perDept.{{ $key }}.productLine, perDept.{{ $key }}.segment)" :key="opt.value">
                                                 <option :value="opt.value" x-text="opt.label"></option>
                                             </template>
@@ -153,7 +153,7 @@
                             </div>
 
                             <div class="mb-3">
-                                <x-input-label value="PIC — optional, leave blank for department staff to self-assign" />
+                                <x-input-label value="PIC (optional, leave blank for department staff to self-assign)" />
                                 <input type="text" name="per_dept[{{ $key }}][pic]" :disabled="!depts.includes('{{ $key }}')" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
                             </div>
 
@@ -172,23 +172,38 @@
                                 </div>
                             </div>
 
-                            {{-- Line items — optional breakdown shown on the quotation/proforma PDF instead of a single collapsed row --}}
+                            {{-- Line items, optional breakdown shown on the quotation PDF instead of a single collapsed row --}}
                             <div class="mb-3">
-                                <x-input-label value="Line Items (optional — shown on the quotation PDF)" />
-                                <div class="mt-1 space-y-1.5">
+                                <x-input-label value="Line Items (optional, shown on the quotation PDF)" />
+                                <div class="mt-1 space-y-2">
                                     <template x-for="(row, idx) in perDept.{{ $key }}.lineItems" :key="idx">
-                                        <div class="grid grid-cols-12 gap-1.5 items-center">
-                                            <div class="col-span-7 relative" x-data="itemCombo('{{ route('items.search') }}', '{{ $key }}', 'create')" @click.outside="open = false">
-                                                <input type="text" :name="`per_dept[{{ $key }}][line_items][${idx}][desc]`" x-model="row.desc" :disabled="!depts.includes('{{ $key }}')" placeholder="Search or type an item…" autocomplete="off"
-                                                       @focus="search(row.desc)" @input="search(row.desc)" @keydown.escape="open = false" class="block w-full rounded-md border-gray-300 shadow-sm text-xs">
-                                                <x-item-dropdown />
+                                        <div class="rounded-lg border border-gray-200 bg-white p-2.5 space-y-1.5">
+                                            <div class="flex items-start gap-1.5">
+                                                <div class="flex-1 relative" x-data="itemCombo('{{ route('items.search') }}', '{{ $key }}', 'create')" @click.outside="open = false">
+                                                    <label class="text-[10px] text-gray-400">Item name</label>
+                                                    <input type="text" :name="`per_dept[{{ $key }}][line_items][${idx}][item]`" x-model="row.item" :disabled="!depts.includes('{{ $key }}')" placeholder="Search the library or type an item" autocomplete="off"
+                                                           @focus="search(row.item)" @input="search(row.item)" @keydown.escape="open = false" class="block w-full rounded-md border-gray-300 shadow-sm text-xs">
+                                                    <x-item-dropdown />
+                                                </div>
+                                                <button type="button" @click="perDept.{{ $key }}.lineItems.splice(idx, 1)" class="mt-4 text-red-500 text-sm leading-none" title="Remove item">✕</button>
                                             </div>
-                                            <input type="number" step="1" min="0" :name="`per_dept[{{ $key }}][line_items][${idx}][qty]`" x-model="row.qty" :disabled="!depts.includes('{{ $key }}')" placeholder="Unit" class="col-span-2 rounded-md border-gray-300 shadow-sm text-xs">
-                                            <input type="number" step="0.01" min="0" :name="`per_dept[{{ $key }}][line_items][${idx}][price]`" x-model="row.price" :disabled="!depts.includes('{{ $key }}')" placeholder="Price" class="col-span-2 rounded-md border-gray-300 shadow-sm text-xs">
-                                            <button type="button" @click="perDept.{{ $key }}.lineItems.splice(idx, 1)" class="col-span-1 text-red-500 text-xs">✕</button>
+                                            <div>
+                                                <label class="text-[10px] text-gray-400">Description (optional)</label>
+                                                <input type="text" :name="`per_dept[{{ $key }}][line_items][${idx}][desc]`" x-model="row.desc" :disabled="!depts.includes('{{ $key }}')" placeholder="Size, spec or extra detail for this item" class="block w-full rounded-md border-gray-300 shadow-sm text-xs">
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-1.5">
+                                                <div>
+                                                    <label class="text-[10px] text-gray-400">Quantity</label>
+                                                    <input type="number" step="1" min="0" :name="`per_dept[{{ $key }}][line_items][${idx}][qty]`" x-model="row.qty" :disabled="!depts.includes('{{ $key }}')" class="block w-full rounded-md border-gray-300 shadow-sm text-xs">
+                                                </div>
+                                                <div>
+                                                    <label class="text-[10px] text-gray-400">Price (RM)</label>
+                                                    <input type="number" step="0.01" min="0" :name="`per_dept[{{ $key }}][line_items][${idx}][price]`" x-model="row.price" :disabled="!depts.includes('{{ $key }}')" class="block w-full rounded-md border-gray-300 shadow-sm text-xs">
+                                                </div>
+                                            </div>
                                         </div>
                                     </template>
-                                    <button type="button" @click="perDept.{{ $key }}.lineItems.push({ desc: '', qty: 1, price: 0 })" class="text-xs font-semibold text-indigo-600 hover:underline">+ Add Line Item</button>
+                                    <button type="button" @click="perDept.{{ $key }}.lineItems.push({ item: '', desc: '', qty: 1, price: 0 })" class="text-xs font-semibold text-indigo-600 hover:underline">+ Add Line Item</button>
                                 </div>
                             </div>
 
@@ -203,9 +218,21 @@
                                 </div>
                             </div>
 
+                            {{-- Preview-only: lets staff see and tweak the quotation's wording before the job is saved. Not persisted with the job — the document modal is where the final wording for a generated document is set. --}}
+                            <div class="mb-3 p-3 rounded-md bg-white border border-dashed border-gray-300">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-semibold text-gray-700">Quotation notes</span>
+                                    <button type="button" @click="toggleQuotationNotes('{{ $key }}')" :disabled="!depts.includes('{{ $key }}')"
+                                            class="text-xs font-semibold px-2.5 py-1 rounded-md border border-indigo-200 text-indigo-600 hover:bg-indigo-50 disabled:opacity-40"
+                                            x-text="perDept.{{ $key }}.editNotes ? 'Use default notes' : '✎ Edit notes shown on quotation'"></button>
+                                </div>
+                                <p x-show="!perDept.{{ $key }}.editNotes" class="mt-1 text-xs text-gray-400">Uses the standard payment terms for the selected bank. Edit them here only if this quotation needs different wording.</p>
+                                <textarea x-show="perDept.{{ $key }}.editNotes" x-cloak x-model="perDept.{{ $key }}.notesText" rows="6" placeholder="One note per line" class="mt-2 block w-full rounded-md border-gray-300 shadow-sm text-xs"></textarea>
+                            </div>
+
                             <div>
-                                <x-input-label value="Notes" />
-                                <textarea name="per_dept[{{ $key }}][notes]" :disabled="!depts.includes('{{ $key }}')" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs"></textarea>
+                                <x-input-label value="Special Remarks" />
+                                <textarea name="per_dept[{{ $key }}][notes]" :disabled="!depts.includes('{{ $key }}')" rows="2" placeholder="Anything the team should know about this job" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs"></textarea>
                             </div>
                         </div>
                     @endforeach
@@ -251,6 +278,7 @@
                 depts: {{ old('departments') ? json_encode(old('departments')) : '[]' }},
                 perDept: Object.fromEntries(departmentKeys.map(k => [k, {
                     jobTypeCategory: 'client_project', productLine: '', segment: '', pkg: '', jobType: '', lineItems: [], bank: '', estimation: '', delivery: '', discount: '',
+                    editNotes: false, notesText: '',
                 }])),
                 previewDept: null, pvSrc: ['', ''], pvActive: 0, pvPending: null, pvBusy: false, pvError: '', pvTimer: null, pvSeq: 0,
                 customerId: '{{ old('customer_id', request('customer_id')) }}',
@@ -272,12 +300,25 @@
                     const tier = pd.jobTypeCategory === 'product_sale' ? this.findPackageTier(d, pd.productLine, pd.segment, pd.pkg) : null;
                     const items = tier
                         ? [{ item: `${tier.pkg.label} (${tier.tier.pcs}pcs)`, desc: this.packageItemLines(d, pd.productLine, pd.segment, pd.pkg).join('\n'), qty: 1, price: tier.tier.price }]
-                        : pd.lineItems.filter(r => (r.desc || '').trim() !== '').map(r => ({ item: r.desc, desc: '', qty: r.qty === '' ? 0 : r.qty, price: r.price === '' ? 0 : r.price }));
-                    return {
+                        : pd.lineItems.filter(r => (r.item || '').trim() !== '').map(r => ({ item: r.item, desc: r.desc || '', qty: r.qty === '' ? 0 : r.qty, price: r.price === '' ? 0 : r.price }));
+                    const payload = {
                         customer_id: this.customerId || null, bank: pd.bank || null, title: pd.jobType || '',
                         estimation_value: tier ? tier.tier.price : (pd.estimation === '' ? null : pd.estimation),
                         delivery: pd.delivery === '' ? 0 : pd.delivery, discount: pd.discount === '' ? 0 : pd.discount, items,
                     };
+                    if (pd.editNotes && pd.notesText.trim() !== '') payload.notes = pd.notesText;
+                    return payload;
+                },
+                async toggleQuotationNotes(dept) {
+                    const pd = this.perDept[dept];
+                    if (pd.editNotes) { pd.editNotes = false; return; }
+                    if (!pd.notesText.trim()) {
+                        try {
+                            const res = await fetch(`{{ route('jobs.quotation-notes') }}?bank=${encodeURIComponent(pd.bank || '')}`, { headers: { Accept: 'application/json' } });
+                            if (res.ok) pd.notesText = (await res.json()).notes.join('\n');
+                        } catch (e) { /* leave blank, staff can still type their own */ }
+                    }
+                    pd.editNotes = true;
                 },
                 schedulePreview() {
                     clearTimeout(this.pvTimer);

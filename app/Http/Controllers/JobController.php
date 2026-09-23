@@ -172,7 +172,8 @@ class JobController extends Controller
             'per_dept.*.delivery_amount' => ['nullable', 'numeric', 'min:0'],
             'per_dept.*.discount_amount' => ['nullable', 'numeric', 'min:0'],
             'per_dept.*.line_items' => ['nullable', 'array'],
-            'per_dept.*.line_items.*.desc' => ['nullable', 'string', 'max:1000'],
+            'per_dept.*.line_items.*.item' => ['nullable', 'string', 'max:1000'],
+            'per_dept.*.line_items.*.desc' => ['nullable', 'string', 'max:2000'],
             'per_dept.*.line_items.*.qty' => ['nullable', 'numeric', 'min:0'],
             'per_dept.*.line_items.*.price' => ['nullable', 'numeric', 'min:0'],
         ]);
@@ -329,10 +330,10 @@ class JobController extends Controller
     private function buildLineItems(array $rows): array
     {
         return collect($rows)
-            ->filter(fn ($row) => trim($row['desc'] ?? '') !== '')
+            ->filter(fn ($row) => trim($row['item'] ?? '') !== '')
             ->map(fn ($row) => [
-                'item' => trim($row['desc']),
-                'desc' => trim($row['desc']),
+                'item' => trim($row['item']),
+                'desc' => trim($row['desc'] ?? ''),
                 'qty' => (float) ($row['qty'] ?? 1),
                 'price' => (float) ($row['price'] ?? 0),
             ])

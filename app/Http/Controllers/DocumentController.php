@@ -62,6 +62,18 @@ class DocumentController extends Controller
      * and defaults as the real Quotation, so what staff see while filling
      * the form is what the job's Quotation will start from.
      */
+    /** Default quotation note lines for a bank, so the New Job form can offer them as an editable starting point. */
+    public function quotationNotes(Request $request): JsonResponse
+    {
+        $this->authorize('create', Job::class);
+
+        $data = $request->validate(['bank' => ['nullable', Rule::in(['mbb', 'affin'])]]);
+
+        $bank = ! empty($data['bank']) ? config("kretivco.bank_details.{$data['bank']}") : null;
+
+        return response()->json(['notes' => DocumentData::defaultNotes('quotation', $bank)]);
+    }
+
     public function previewNewJob(Request $request): Response
     {
         $this->authorize('create', Job::class);
@@ -78,6 +90,7 @@ class DocumentController extends Controller
             'items.*.desc' => ['nullable', 'string', 'max:2000'],
             'items.*.qty' => ['nullable', 'numeric', 'min:0'],
             'items.*.price' => ['nullable', 'numeric', 'min:0'],
+            'notes' => ['nullable', 'string', 'max:5000'],
         ]);
 
         $job = (new Job)->forceFill([
@@ -91,7 +104,13 @@ class DocumentController extends Controller
         $doc = DocumentData::build(
             $job,
             'quotation',
-            ['title' => $data['title'] ?? '', 'items' => $data['items'] ?? [], 'delivery' => $data['delivery'] ?? 0, 'discount' => $data['discount'] ?? 0],
+            array_filter([
+                'title' => $data['title'] ?? '',
+                'items' => $data['items'] ?? [],
+                'delivery' => $data['delivery'] ?? 0,
+                'discount' => $data['discount'] ?? 0,
+                'notes' => $data['notes'] ?? null,
+            ], fn ($v) => $v !== null),
             'QT-'.now()->year.'-XXX',
             $request->user()->name,
         );

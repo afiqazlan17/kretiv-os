@@ -27,7 +27,7 @@
 
     table.sign { width: 468pt; border-collapse: collapse; margin-top: 14.8pt; }
     table.sign td { padding: 0 0 0 5.5pt; border: none; vertical-align: top; }
-    .sign-line { width: 166.7pt; border-top: 0.5pt solid #141414; margin-top: 34.47pt; }
+    .sign-line { width: 166.7pt; border-top: 0.5pt solid #141414; margin-top: 34.47pt; padding-top: 3pt; font-size: 9pt; }
 
     table.tot { width: 145pt; margin: 14pt 0 0 323pt; border-collapse: collapse; }
     table.tot.wide { width: 195pt; margin-left: 273pt; }

@@ -147,4 +147,21 @@ class JobCreationTest extends TestCase
         $response->assertSessionHasErrors(['per_dept.print.job_type']);
         $this->assertSame(0, Job::count());
     }
+
+    public function test_line_items_keep_item_name_and_description_separate(): void
+    {
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $payload = $this->payload(['print'], [
+            'per_dept' => ['print' => [
+                'job_type' => 'Business Card', 'job_type_category' => 'client_project',
+                'line_items' => [['item' => 'Business Card', 'desc' => '3x6ft, matte finish', 'qty' => 2, 'price' => 50]],
+            ]],
+        ]);
+
+        $this->actingAs($bod)->post(route('jobs.store'), $payload)->assertSessionHasNoErrors();
+
+        $job = Job::first();
+        $this->assertSame('Business Card', $job->line_items[0]['item']);
+        $this->assertSame('3x6ft, matte finish', $job->line_items[0]['desc']);
+    }
 }

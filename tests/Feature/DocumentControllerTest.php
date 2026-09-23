@@ -348,4 +348,48 @@ class DocumentControllerTest extends TestCase
         $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
         $this->assertSame(0, Job::count());
     }
+
+    public function test_quotation_notes_endpoint_returns_bank_specific_defaults(): void
+    {
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+
+        $response = $this->actingAs($bod)->getJson(route('jobs.quotation-notes', ['bank' => 'affin']));
+
+        $response->assertOk();
+        $this->assertStringContainsString('AFFIN | 105630012033 | KRETIVCO MEDIAWORKS', $response->json('notes.0'));
+    }
+
+    public function test_new_job_preview_can_override_the_notes(): void
+    {
+        if (! shell_exec('command -v pdftotext')) {
+            $this->markTestSkipped('pdftotext not installed.');
+        }
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+
+        $response = $this->actingAs($bod)->post(route('jobs.quotation-preview'), [
+            'title' => 'Kad Kahwin', 'items' => [['item' => 'Kad Kahwin', 'qty' => 1, 'price' => 50]],
+            'notes' => "Custom note line one.\nCustom note line two.",
+        ]);
+
+        $text = $this->pdfText($response->getContent());
+        $this->assertStringContainsString('Custom note line one.', $text);
+        $this->assertStringNotContainsString('Please indicate quotation number', $text);
+    }
+
+    public function test_issued_by_shows_the_company_name_and_proforma_is_hidden_from_the_job_page(): void
+    {
+        if (! shell_exec('command -v pdftotext')) {
+            $this->markTestSkipped('pdftotext not installed.');
+        }
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $job = $this->job();
+
+        $response = $this->actingAs($bod)->post(route('jobs.documents.preview', [$job, 'quotation']), [
+            'title' => 'Banner', 'items' => [['item' => 'Banner', 'qty' => 1, 'price' => 100]],
+        ]);
+        $this->assertStringContainsString('Kretivco Mediaworks', $this->pdfText($response->getContent()));
+
+        $this->actingAs($bod)->get(route('jobs.show', $job))
+            ->assertOk()->assertDontSee('Proforma Invoice')->assertSee('Quotation', false);
+    }
 }

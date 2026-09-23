@@ -7,7 +7,7 @@
 <div class="thanks">Thank you for your business!</div>
 <table class="sign">
     <tr>
-        <td style="width:228.5pt;"><b>Issued by:</b><div class="sign-line">{{ config('kretivco.brand.name', 'Kretivco Mediaworks') }}</div></td>
+        <td style="width:228.5pt;"><b>Issued by:</b><div class="signed-name">{{ config('kretivco.brand.name', 'Kretivco Mediaworks') }}</div><div class="sign-rule"></div></td>
         <td><b>Accepted by:</b><div class="sign-line"></div></td>
     </tr>
 </table>

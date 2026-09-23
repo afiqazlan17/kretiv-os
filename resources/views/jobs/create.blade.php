@@ -148,8 +148,9 @@
                             @endif
 
                             <div class="mb-3">
-                                <x-input-label value="Job Name *" />
-                                <input type="text" name="per_dept[{{ $key }}][job_type]" x-model="perDept.{{ $key }}.jobType" :disabled="!depts.includes('{{ $key }}')" placeholder="e.g: Design &amp; Print Roti Bakar" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
+                                <x-input-label value="Job Name * (what this job is, shown on the quotation)" />
+                                <input type="text" name="per_dept[{{ $key }}][job_type]" x-model="perDept.{{ $key }}.jobType" :disabled="!depts.includes('{{ $key }}')" placeholder="e.g. Business Card for Ariff's Wedding" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
+                                <p class="mt-1 text-[11px] text-gray-400">Filled in automatically from the first line item below, but change it to whatever best describes this job.</p>
                             </div>
 
                             <div class="mb-3">
@@ -189,7 +190,7 @@
                                             </div>
                                             <div>
                                                 <label class="text-[10px] text-gray-400">Description (optional)</label>
-                                                <input type="text" :name="`per_dept[{{ $key }}][line_items][${idx}][desc]`" x-model="row.desc" :disabled="!depts.includes('{{ $key }}')" placeholder="Size, spec or extra detail for this item" class="block w-full rounded-md border-gray-300 shadow-sm text-xs">
+                                                <textarea rows="2" :name="`per_dept[{{ $key }}][line_items][${idx}][desc]`" x-model="row.desc" :disabled="!depts.includes('{{ $key }}')" placeholder="Size, spec or extra detail for this item" class="block w-full rounded-md border-gray-300 shadow-sm text-xs"></textarea>
                                             </div>
                                             <div class="grid grid-cols-2 gap-1.5">
                                                 <div>
@@ -227,7 +228,16 @@
                                             x-text="perDept.{{ $key }}.editNotes ? 'Use default notes' : '✎ Edit notes shown on quotation'"></button>
                                 </div>
                                 <p x-show="!perDept.{{ $key }}.editNotes" class="mt-1 text-xs text-gray-400">Uses the standard payment terms for the selected bank. Edit them here only if this quotation needs different wording.</p>
-                                <textarea x-show="perDept.{{ $key }}.editNotes" x-cloak x-model="perDept.{{ $key }}.notesText" rows="6" placeholder="One note per line" class="mt-2 block w-full rounded-md border-gray-300 shadow-sm text-xs"></textarea>
+                                <div x-show="perDept.{{ $key }}.editNotes" x-cloak class="mt-2 space-y-1.5">
+                                    <template x-for="(line, i) in perDept.{{ $key }}.notesLines" :key="i">
+                                        <div class="flex items-start gap-1.5">
+                                            <span class="mt-1.5 text-xs text-gray-400 w-4 text-right" x-text="(i + 1) + '.'"></span>
+                                            <input type="text" x-model="perDept.{{ $key }}.notesLines[i]" class="flex-1 rounded-md border-gray-300 shadow-sm text-xs">
+                                            <button type="button" @click="perDept.{{ $key }}.notesLines.splice(i, 1)" class="mt-1.5 text-red-500 text-xs" title="Remove line">✕</button>
+                                        </div>
+                                    </template>
+                                    <button type="button" @click="perDept.{{ $key }}.notesLines.push('')" class="text-xs font-semibold text-indigo-600 hover:underline">+ Add line</button>
+                                </div>
                             </div>
 
                             <div>
@@ -278,7 +288,7 @@
                 depts: {{ old('departments') ? json_encode(old('departments')) : '[]' }},
                 perDept: Object.fromEntries(departmentKeys.map(k => [k, {
                     jobTypeCategory: 'client_project', productLine: '', segment: '', pkg: '', jobType: '', lineItems: [], bank: '', estimation: '', delivery: '', discount: '',
-                    editNotes: false, notesText: '',
+                    editNotes: false, notesLines: [],
                 }])),
                 previewDept: null, pvSrc: ['', ''], pvActive: 0, pvPending: null, pvBusy: false, pvError: '', pvTimer: null, pvSeq: 0,
                 customerId: '{{ old('customer_id', request('customer_id')) }}',
@@ -289,8 +299,18 @@
                 inlineSaving: false,
                 inlineError: null,
                 init() {
-                    ['depts', 'perDept', 'customerId', 'previewDept'].forEach(k => this.$watch(k, () => this.schedulePreview()));
+                    ['depts', 'customerId', 'previewDept'].forEach(k => this.$watch(k, () => this.schedulePreview()));
+                    this.$watch('perDept', () => { this.autoFillJobNames(); this.schedulePreview(); });
                     this.schedulePreview();
+                },
+                // Job Name is required, but typing it by hand for every line item feels
+                // manual, so borrow the first line item's name until the staff overrides it.
+                autoFillJobNames() {
+                    for (const dept of this.depts) {
+                        const pd = this.perDept[dept];
+                        const first = (pd.lineItems[0]?.item || '').trim();
+                        if (first && !pd.jobType.trim()) pd.jobType = first;
+                    }
                 },
                 get activeDept() {
                     return this.depts.includes(this.previewDept) ? this.previewDept : (this.depts[0] || null);
@@ -306,16 +326,17 @@
                         estimation_value: tier ? tier.tier.price : (pd.estimation === '' ? null : pd.estimation),
                         delivery: pd.delivery === '' ? 0 : pd.delivery, discount: pd.discount === '' ? 0 : pd.discount, items,
                     };
-                    if (pd.editNotes && pd.notesText.trim() !== '') payload.notes = pd.notesText;
+                    const notes = pd.editNotes ? pd.notesLines.map(l => l.trim()).filter(l => l !== '').join('\n') : '';
+                    if (notes !== '') payload.notes = notes;
                     return payload;
                 },
                 async toggleQuotationNotes(dept) {
                     const pd = this.perDept[dept];
                     if (pd.editNotes) { pd.editNotes = false; return; }
-                    if (!pd.notesText.trim()) {
+                    if (!pd.notesLines.length) {
                         try {
                             const res = await fetch(`{{ route('jobs.quotation-notes') }}?bank=${encodeURIComponent(pd.bank || '')}`, { headers: { Accept: 'application/json' } });
-                            if (res.ok) pd.notesText = (await res.json()).notes.join('\n');
+                            if (res.ok) pd.notesLines = (await res.json()).notes;
                         } catch (e) { /* leave blank, staff can still type their own */ }
                     }
                     pd.editNotes = true;

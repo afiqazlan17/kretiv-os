@@ -181,7 +181,7 @@
                         @php $st = config('kretivco.job_statuses.'.$job->status); $dept = config('kretivco.departments.'.$job->department); @endphp
                         <a href="{{ route('jobs.show', $job) }}" class="flex items-center gap-3 py-2.5">
                             <span class="font-mono text-xs font-semibold">{{ $job->job_id }}</span>
-                            <span class="flex-1 text-sm truncate">{{ $job->customer?->name ?? '—' }}</span>
+                            <span class="flex-1 text-sm truncate">{{ $job->customer?->name ?? '—' }}{{ $job->customer?->company ? ' · '.$job->customer->company : '' }}</span>
                             @if ($dept)
                                 <span class="text-[11px] font-semibold rounded px-2 py-0.5" style="color:{{ $dept['color'] }};background:{{ $dept['color'] }}15">{{ $dept['label'] }}</span>
                             @endif

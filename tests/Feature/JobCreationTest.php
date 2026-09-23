@@ -58,7 +58,7 @@ class JobCreationTest extends TestCase
 
         $this->actingAs($bod)->get(route('jobs.show', $job))
             ->assertOk()->assertSee('Department: KretivPrint')
-            ->assertDontSee('Estimation Value')->assertDontSee('Save Line Items')->assertDontSee('Add Vendor Cost');
+            ->assertDontSee('Estimation Value')->assertDontSee('Save Line Items');
     }
 
     public function test_a_multi_department_submission_creates_one_job_per_department_sharing_a_project_id(): void

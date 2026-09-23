@@ -367,14 +367,14 @@
                     @include('jobs.partials.document-modal')
                 @endcan
 
-                {{-- Vendor Cost and the Line Items form are hidden for now (documents edit items in the preview modal). --}}
-                @if (false)
+                @php $canSeeMargin = auth()->user()->canManageFinance(); @endphp
                 <div class="bg-white shadow-sm sm:rounded-lg p-6" x-data="{ showVendorForm: false, payingId: null }">
                     @php
                         $vendorCosts = collect($job->vendor_costs ?? []);
                         $totalEstimated = $vendorCosts->sum(fn ($v) => (float) ($v['estimated_cost'] ?? 0));
                         $totalActual = $vendorCosts->sum(fn ($v) => (float) ($v['actual_cost'] ?? 0));
                         $customerPrice = (float) ($job->final_value ?? $job->estimation_value ?? 0);
+                        $receipts = collect($job->attachments ?? [])->where('kind', 'vendor_receipt');
                     @endphp
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-sm font-semibold text-gray-500 uppercase">Vendor Cost</h3>
@@ -389,7 +389,7 @@
                         <div>
                             <label class="text-xs text-gray-500">Vendor *</label>
                             <select name="vendor_id" required class="block rounded-md border-gray-300 shadow-sm text-sm">
-                                <option value="">— Select —</option>
+                                <option value="">Select a vendor</option>
                                 @foreach ($vendors as $vendor)
                                     <option value="{{ $vendor->id }}">{{ $vendor->vendor_id }} · {{ $vendor->name }}</option>
                                 @endforeach
@@ -412,11 +412,14 @@
                     @endcan
 
                     @if ($vendorCosts->isEmpty())
-                        <p class="text-sm text-gray-400 italic">No vendor cost recorded yet — leave blank if this job is done in-house.</p>
+                        <p class="text-sm text-gray-400 italic">No vendor cost recorded yet, leave blank if this job is done in-house.</p>
                     @else
                         <div class="space-y-2">
                             @foreach ($vendorCosts as $item)
-                                @php $vendor = $vendors->firstWhere('id', $item['vendor_id']); @endphp
+                                @php
+                                    $vendor = $vendors->firstWhere('id', $item['vendor_id']);
+                                    $myReceipts = $receipts->filter(fn ($a) => (string) ($a['line_item_id'] ?? '') === (string) $item['id']);
+                                @endphp
                                 <div class="border border-gray-100 rounded-md p-3 text-sm">
                                     <div class="flex items-center justify-between">
                                         <div>
@@ -434,6 +437,36 @@
                                     @if (!empty($item['notes']))
                                         <p class="text-xs text-gray-400 italic mt-1">{{ $item['notes'] }}</p>
                                     @endif
+
+                                    {{-- Receipt: proof of payment to the vendor, attached per vendor-cost entry --}}
+                                    <div class="mt-2 pt-2 border-t border-gray-50">
+                                        <span class="text-[11px] font-semibold text-gray-400 uppercase">Receipt</span>
+                                        @forelse ($myReceipts as $att)
+                                            <div class="flex items-center justify-between text-xs mt-1">
+                                                <a href="{{ route('jobs.attachments.show', [$job, $att['id']]) }}" class="text-indigo-600 hover:underline">{{ $att['name'] }}</a>
+                                                @can('update', $job)
+                                                <form method="POST" action="{{ route('jobs.attachments.destroy', [$job, $att['id']]) }}" onsubmit="return confirm('Delete this receipt?')">
+                                                    @csrf @method('DELETE')
+                                                    <button type="submit" class="text-red-500 hover:underline">Delete</button>
+                                                </form>
+                                                @endcan
+                                            </div>
+                                        @empty
+                                            <p class="text-xs text-gray-400 mt-1">No receipt uploaded.</p>
+                                        @endforelse
+                                        @can('update', $job)
+                                        <form method="POST" action="{{ route('jobs.attachments.store', $job) }}" enctype="multipart/form-data" class="mt-1">
+                                            @csrf
+                                            <input type="hidden" name="kind" value="vendor_receipt">
+                                            <input type="hidden" name="line_item_id" value="{{ $item['id'] }}">
+                                            <label class="inline-block cursor-pointer text-xs font-semibold px-2.5 py-1 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
+                                                + Upload receipt
+                                                <input type="file" name="file" required accept="image/*,.pdf" class="hidden" onchange="this.form.submit()">
+                                            </label>
+                                        </form>
+                                        @endcan
+                                    </div>
+
                                     @can('update', $job)
                                     <div class="flex flex-wrap items-center gap-2 mt-2">
                                         @if (($item['status'] ?? 'unpaid') === 'unpaid' && (float) ($item['actual_cost'] ?? 0) > 0)
@@ -467,15 +500,21 @@
                         </div>
                         <div class="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-600 space-y-1">
                             <div class="flex justify-between"><span>Total Estimated</span><strong>RM {{ number_format($totalEstimated, 2) }}</strong></div>
-                            <div class="flex justify-between"><span>Estimated Margin</span><strong class="{{ ($customerPrice - $totalEstimated) >= 0 ? 'text-green-600' : 'text-red-600' }}">RM {{ number_format($customerPrice - $totalEstimated, 2) }}</strong></div>
+                            @if ($canSeeMargin)
+                                <div class="flex justify-between"><span>Estimated Margin</span><strong class="{{ ($customerPrice - $totalEstimated) >= 0 ? 'text-green-600' : 'text-red-600' }}">RM {{ number_format($customerPrice - $totalEstimated, 2) }}</strong></div>
+                            @endif
                             @if ($totalActual > 0)
                                 <div class="flex justify-between"><span>Total Actual</span><strong>RM {{ number_format($totalActual, 2) }}</strong></div>
-                                <div class="flex justify-between"><span>Actual Margin</span><strong class="{{ ($customerPrice - $totalActual) >= 0 ? 'text-green-600' : 'text-red-600' }}">RM {{ number_format($customerPrice - $totalActual, 2) }}</strong></div>
+                                @if ($canSeeMargin)
+                                    <div class="flex justify-between"><span>Actual Margin</span><strong class="{{ ($customerPrice - $totalActual) >= 0 ? 'text-green-600' : 'text-red-600' }}">RM {{ number_format($customerPrice - $totalActual, 2) }}</strong></div>
+                                @endif
                             @endif
                         </div>
                     @endif
                 </div>
 
+                {{-- The Line Items form is hidden for now (documents edit items in the preview modal). --}}
+                @if (false)
                 @can('update', $job)
                 <div class="bg-white shadow-sm sm:rounded-lg p-6"
                      x-data="lineItemsForm({{ collect($job->line_items ?? [])->map(fn ($i) => ['desc' => $i['desc'] ?? '', 'qty' => $i['qty'] ?? 1, 'price' => $i['price'] ?? 0])->toJson() }})">

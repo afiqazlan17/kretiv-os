@@ -100,7 +100,12 @@
                                         <span title="Part of Project {{ $job->project_id }} — {{ $siblingCount }} other job(s)">🔗</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-gray-800 whitespace-nowrap">{{ $job->customer?->name ?? '—' }}</td>
+                                <td class="px-4 py-3 text-gray-800 whitespace-nowrap">
+                                    {{ $job->customer?->name ?? '—' }}
+                                    @if ($job->customer?->company)
+                                        <span class="text-gray-400">· {{ $job->customer->company }}</span>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3 whitespace-nowrap">
                                     @if ($dept)
                                         <span class="text-[11px] font-semibold rounded px-2 py-0.5" style="color:{{ $dept['color'] }};background:{{ $dept['color'] }}15">{{ $dept['label'] }}</span>

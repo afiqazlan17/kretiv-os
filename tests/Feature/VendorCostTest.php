@@ -7,6 +7,8 @@ use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Models\Vendor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class VendorCostTest extends TestCase
@@ -141,5 +143,47 @@ class VendorCostTest extends TestCase
         $this->job(['job_id' => 'KP-2026-002']);
 
         $this->actingAs($bod)->get(route('jobs.index'))->assertOk()->assertSee('ABC Printing')->assertSee('Vendor');
+    }
+
+    public function test_vendor_cost_card_shows_on_the_job_page_with_margin_hidden_from_staff(): void
+    {
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $staff = User::factory()->create(['role' => User::ROLE_STAFF, 'department' => 'print']);
+        $job = $this->job(['estimation_value' => 900]);
+        $vendor = $this->vendor();
+
+        $this->actingAs($bod)->post(route('jobs.vendor-costs.store', $job), [
+            'vendor_id' => $vendor->id,
+            'estimated_cost' => 300,
+        ]);
+
+        $this->actingAs($bod)->get(route('jobs.show', $job))
+            ->assertOk()->assertSee('Vendor Cost')->assertSee('Estimated Margin');
+
+        $this->actingAs($staff)->get(route('jobs.show', $job))
+            ->assertOk()->assertSee('Vendor Cost')->assertSee('Add Vendor Cost')
+            ->assertSee('Total Estimated')->assertDontSee('Estimated Margin')->assertDontSee('Actual Margin');
+    }
+
+    public function test_a_receipt_can_be_attached_to_a_vendor_cost_entry(): void
+    {
+        Storage::fake('public');
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $job = $this->job();
+        $vendor = $this->vendor();
+
+        $this->actingAs($bod)->post(route('jobs.vendor-costs.store', $job), [
+            'vendor_id' => $vendor->id,
+            'actual_cost' => 250,
+        ]);
+        $costId = $job->refresh()->vendor_costs[0]['id'];
+
+        $this->actingAs($bod)->post(route('jobs.attachments.store', $job), [
+            'kind' => 'vendor_receipt',
+            'line_item_id' => $costId,
+            'file' => UploadedFile::fake()->create('payment-sy.pdf', 50, 'application/pdf'),
+        ])->assertSessionHasNoErrors();
+
+        $this->actingAs($bod)->get(route('jobs.show', $job))->assertOk()->assertSee('payment-sy.pdf');
     }
 }

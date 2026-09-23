@@ -25,9 +25,14 @@
                     <tr>
                         <td class="c">{{ $i + 1 }}</td>
                         <td>
-                            @foreach (collect([$item['item'], $item['desc']])->filter()->unique()->values() as $line)
-                                <div>{!! nl2br(e($line)) !!}</div>
-                            @endforeach
+                            <div class="item-name">{{ $item['item'] }}</div>
+                            @if ($item['desc'] && $item['desc'] !== $item['item'])
+                                <div class="item-spec">
+                                    @foreach (preg_split('/\R/', $item['desc']) as $specLine)
+                                        <div>&bull; {{ $specLine }}</div>
+                                    @endforeach
+                                </div>
+                            @endif
                         </td>
                         <td>{{ $i === 0 ? $doc['payment_method'] : '' }}</td>
                         <td class="rt">RM {{ number_format($item['amount'], 2) }}</td>
@@ -56,9 +61,14 @@
                     <tr>
                         <td class="c">{{ $i + 1 }}</td>
                         <td>
-                            @foreach (collect([$item['item'], $item['desc']])->filter()->unique()->values() as $line)
-                                <div>{!! nl2br(e($line)) !!}</div>
-                            @endforeach
+                            <div class="item-name">{{ $item['item'] }}</div>
+                            @if ($item['desc'] && $item['desc'] !== $item['item'])
+                                <div class="item-spec">
+                                    @foreach (preg_split('/\R/', $item['desc']) as $specLine)
+                                        <div>&bull; {{ $specLine }}</div>
+                                    @endforeach
+                                </div>
+                            @endif
                         </td>
                         <td class="c">{{ rtrim(rtrim(number_format($item['qty'], 2, '.', ''), '0'), '.') }}</td>
                         <td class="rt">RM {{ number_format($item['price'], 2) }}</td>

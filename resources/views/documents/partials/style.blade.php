@@ -20,6 +20,8 @@
     table.grid th { background: #f2f2f2; font-weight: bold; }
     table.grid td { background: #f5f5f5; }
     .c { text-align: center !important; }
+    .item-name { font-weight: bold; }
+    .item-spec { margin-top: 2pt; padding-left: 9pt; color: #333333; }
     .rt { text-align: right !important; }
 
 

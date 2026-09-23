@@ -13,7 +13,7 @@
             $moduleLinks = ['jobs' => route('dashboard'), 'finance' => route('finance.index'), 'hr' => null];
         @endphp
         <header class="bg-[#1A1025] text-white">
-            <div class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+            <div class="max-w-[1600px] mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
                 <a href="{{ route('os.home') }}" class="font-extrabold tracking-tight text-lg">Kretiv <span class="text-[#E91E63]">OS</span></a>
 
                 <nav class="flex items-center gap-1 text-[13px]">
@@ -21,7 +21,7 @@
                     @foreach (config('kretivco.modules') as $key => $module)
                         @continue(! $user->canAccess($key))
                         @if ($moduleLinks[$key])
-                            <a href="{{ $moduleLinks[$key] }}" class="px-3 py-1.5 rounded-md text-white/60 hover:text-white">{{ $module['label'] }}</a>
+                            <a href="{{ $moduleLinks[$key] }}" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-md text-white/60 hover:text-white">{{ $module['label'] }}</a>
                         @else
                             <span class="px-3 py-1.5 rounded-md text-white/30 cursor-default" title="Coming soon">{{ $module['label'] }}</span>
                         @endif
@@ -41,7 +41,7 @@
             </div>
         </header>
 
-        <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+        <main class="max-w-[1600px] mx-auto px-4 sm:px-6 py-6">
             {{ $slot }}
         </main>
 

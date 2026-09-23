@@ -12,10 +12,9 @@ trait GeneratesJobIds
 {
     public const DEPT_CODES = [
         'print' => 'KP',
-        'work' => 'KW',
+        'brand' => 'KB',
         'tech' => 'KT',
         'event' => 'KE',
-        'wisb' => 'WISB',
     ];
 
     protected function nextJobId(string $department): string

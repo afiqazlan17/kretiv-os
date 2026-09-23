@@ -244,7 +244,7 @@ class DocumentControllerTest extends TestCase
         $bod = User::factory()->create(['role' => User::ROLE_BOD]);
         $job = $this->job();
         $sibling = Job::create([
-            'job_id' => 'KW-2026-001', 'customer_id' => $job->customer_id, 'department' => 'work',
+            'job_id' => 'KB-2026-001', 'customer_id' => $job->customer_id, 'department' => 'brand',
             'job_type' => 'Design', 'job_type_category' => 'client_project', 'status' => Job::STATUS_IN_PROGRESS,
             'estimation_value' => 500,
         ]);
@@ -272,7 +272,7 @@ class DocumentControllerTest extends TestCase
         $bod = User::factory()->create(['role' => User::ROLE_BOD]);
         $job = $this->job();
         $sibling = Job::create([
-            'job_id' => 'KW-2026-001', 'customer_id' => $job->customer_id, 'department' => 'work',
+            'job_id' => 'KB-2026-001', 'customer_id' => $job->customer_id, 'department' => 'brand',
             'job_type' => 'Design', 'job_type_category' => 'client_project', 'status' => Job::STATUS_POTENTIAL,
             'estimation_value' => 500,
         ]);
@@ -293,7 +293,7 @@ class DocumentControllerTest extends TestCase
         $job = $this->job();
         $otherCustomer = Customer::create(['customer_id' => 'C002', 'name' => 'Other Co']);
         $unrelated = Job::create([
-            'job_id' => 'KW-2026-002', 'customer_id' => $otherCustomer->id, 'department' => 'work',
+            'job_id' => 'KB-2026-002', 'customer_id' => $otherCustomer->id, 'department' => 'brand',
             'job_type' => 'Design', 'job_type_category' => 'client_project', 'status' => Job::STATUS_IN_PROGRESS,
             'estimation_value' => 500,
         ]);

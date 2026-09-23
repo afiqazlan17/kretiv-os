@@ -121,7 +121,7 @@ class VendorCostTest extends TestCase
 
     public function test_department_scoped_user_cannot_add_a_vendor_cost_outside_their_department(): void
     {
-        $staff = User::factory()->create(['role' => User::ROLE_STAFF, 'department' => 'work']);
+        $staff = User::factory()->create(['role' => User::ROLE_STAFF, 'department' => 'brand']);
         $job = $this->job(['department' => 'print']);
         $vendor = $this->vendor();
 

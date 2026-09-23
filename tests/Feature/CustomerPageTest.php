@@ -56,7 +56,7 @@ class CustomerPageTest extends TestCase
         $head = User::factory()->create(['role' => User::ROLE_DEPT_HEAD, 'department' => 'print']);
         $customer = Customer::create(['customer_id' => 'KCO-001', 'name' => 'Ariff', 'source' => 'referral']);
         $this->job($customer, 'KP-2026-001');
-        $this->job($customer, 'KW-2026-001', ['department' => 'work']);
+        $this->job($customer, 'KB-2026-001', ['department' => 'brand']);
 
         $history = $this->actingAs($head)->get(route('customers.index'))->viewData('customers')->first()->job_history;
 

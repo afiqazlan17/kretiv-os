@@ -64,7 +64,7 @@ class JobCreationTest extends TestCase
     {
         $bod = User::factory()->create(['role' => User::ROLE_BOD]);
 
-        $response = $this->actingAs($bod)->post(route('jobs.store'), $this->payload(['print', 'work']));
+        $response = $this->actingAs($bod)->post(route('jobs.store'), $this->payload(['print', 'brand']));
 
         $response->assertRedirect(route('jobs.index'));
         $this->assertSame(2, Job::count());
@@ -72,14 +72,14 @@ class JobCreationTest extends TestCase
         $jobs = Job::all();
         $this->assertNotNull($jobs->first()->project_id);
         $this->assertSame($jobs->first()->project_id, $jobs->last()->project_id);
-        $this->assertSame(['print', 'work'], $jobs->pluck('department')->sort()->values()->toArray());
+        $this->assertSame(['brand', 'print'], $jobs->pluck('department')->sort()->values()->toArray());
     }
 
     public function test_department_scoped_user_cannot_create_a_job_outside_their_visible_departments(): void
     {
         $staff = User::factory()->create(['role' => User::ROLE_STAFF, 'department' => 'print']);
 
-        $response = $this->actingAs($staff)->post(route('jobs.store'), $this->payload(['work']));
+        $response = $this->actingAs($staff)->post(route('jobs.store'), $this->payload(['brand']));
 
         $response->assertForbidden();
         $this->assertSame(0, Job::count());

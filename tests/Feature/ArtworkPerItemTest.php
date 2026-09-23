@@ -37,9 +37,11 @@ class ArtworkPerItemTest extends TestCase
             ->assertOk()->assertSee('📎 Sticker')->assertSee('+ Add another design')->assertSee('d2.png');
     }
 
-    public function test_kretivmachine_department_is_gone(): void
+    public function test_departments_match_the_official_site_four_divisions(): void
     {
+        $this->assertSame(['print', 'brand', 'tech', 'event'], array_keys(config('kretivco.departments')));
         $this->assertArrayNotHasKey('machine', config('kretivco.departments'));
-        $this->assertArrayHasKey('wisb', config('kretivco.departments'));
+        $this->assertArrayNotHasKey('wisb', config('kretivco.departments'));
+        $this->assertSame('KretivBrand', config('kretivco.departments.brand.label'));
     }
 }

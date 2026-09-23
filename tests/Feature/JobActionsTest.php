@@ -179,7 +179,7 @@ class JobActionsTest extends TestCase
 
     public function test_department_scoped_user_cannot_reassign_a_job_outside_their_department(): void
     {
-        $staff = User::factory()->create(['role' => User::ROLE_STAFF, 'department' => 'work']);
+        $staff = User::factory()->create(['role' => User::ROLE_STAFF, 'department' => 'brand']);
         $job = $this->job(['department' => 'print']);
 
         $response = $this->actingAs($staff)->put(route('jobs.reassign', $job), ['pic' => 'Someone']);

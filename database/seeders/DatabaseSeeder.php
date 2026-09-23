@@ -26,7 +26,7 @@ class DatabaseSeeder extends Seeder
             ['staff_id' => 'KCM002', 'name' => 'Nurfadilah Rahmat', 'title' => 'CMO', 'email' => 'nurfadilah@kretiv.co', 'role' => User::ROLE_BOD, 'department' => null],
             ['staff_id' => 'KCM003', 'name' => 'Afiq Azlan', 'title' => 'COO', 'email' => 'afiq@kretiv.co', 'role' => User::ROLE_BOD, 'department' => null],
             ['staff_id' => 'KCM004', 'name' => 'Amnan Syahmi', 'title' => 'CTO', 'email' => 'amnan@kretiv.co', 'role' => User::ROLE_DEPT_HEAD, 'department' => 'tech', 'visible_departments' => ['tech']],
-            ['staff_id' => 'KCM005', 'name' => 'Syahren', 'title' => null, 'email' => 'syahren@kretiv.co', 'role' => User::ROLE_STAFF, 'department' => 'print', 'visible_departments' => ['print', 'work', 'tech', 'event', 'wisb']],
+            ['staff_id' => 'KCM005', 'name' => 'Syahren', 'title' => null, 'email' => 'syahren@kretiv.co', 'role' => User::ROLE_STAFF, 'department' => 'print', 'visible_departments' => ['print', 'brand', 'tech', 'event']],
         ];
 
         foreach ($users as $u) {

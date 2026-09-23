@@ -6,10 +6,9 @@ return [
 
     'departments' => [
         'print' => ['label' => 'KretivPrint', 'color' => '#E85D04'],
-        'work' => ['label' => 'KretivWork', 'color' => '#7209B7'],
+        'brand' => ['label' => 'KretivBrand', 'color' => '#7209B7'],
         'tech' => ['label' => 'KretivTech', 'color' => '#3A86FF'],
         'event' => ['label' => 'KretivEvent', 'color' => '#E91E63'],
-        'wisb' => ['label' => 'Waffiy Industries', 'color' => '#9B93A8'],
     ],
 
     // Static "who does what" profile shown on the Departments page — copied
@@ -24,11 +23,11 @@ return [
                 'Packaging & Label',
                 'Digital & Offset Printing',
             ],
-            'note' => 'Minor edit = KretivPrint handle. Custom design = loop KretivWork.',
+            'note' => 'Minor edit = KretivPrint handle. Custom design = loop KretivBrand.',
         ],
-        'work' => [
+        'brand' => [
             'lead' => 'Afiq Azlan (Interim)',
-            'services' => ['Sooco — Social Media Management', 'Graphic Design', 'Brand Identity', 'Copywriting & Content Strategy'],
+            'services' => ['Brand Strategy & Identity', 'Social Media Management', 'Content & Design', 'Websites That Convert'],
         ],
         'tech' => [
             'lead' => 'Amnan Syahmi',
@@ -44,11 +43,6 @@ return [
                 'Emcee & Stage Performance',
                 'Corporate Events, Official Functions, Product Launch',
             ],
-        ],
-        'wisb' => [
-            'lead' => 'Amirul Hafiz',
-            'services' => ['Supply & Sales of Industrial Machines'],
-            'note' => 'Strategic Partner — collaboration with Kretivco, not a department.',
         ],
     ],
 

@@ -55,7 +55,7 @@ class FinanceReportsTest extends TestCase
             'estimation_value' => 500,
         ]);
         Job::create([
-            'job_id' => 'KW-2026-001', 'customer_id' => $customer->id, 'department' => 'work',
+            'job_id' => 'KB-2026-001', 'customer_id' => $customer->id, 'department' => 'brand',
             'job_type' => 'Website', 'job_type_category' => 'client_project', 'status' => Job::STATUS_POTENTIAL,
             'estimation_value' => 900,
         ]);

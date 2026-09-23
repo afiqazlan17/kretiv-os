@@ -27,7 +27,7 @@ class ItemLibraryTest extends TestCase
     public function test_search_matches_name_or_description_hides_inactive_and_puts_own_department_first(): void
     {
         $user = User::factory()->create(['role' => User::ROLE_STAFF]);
-        ItemLibrary::create(['department' => 'work', 'item_name' => 'Banner Design', 'price' => 80]);
+        ItemLibrary::create(['department' => 'brand', 'item_name' => 'Banner Design', 'price' => 80]);
         ItemLibrary::create(['department' => 'print', 'item_name' => 'Banner Print', 'price' => 30]);
         ItemLibrary::create(['department' => 'print', 'item_name' => 'Banner Old', 'active' => false]);
         ItemLibrary::create(['department' => 'print', 'item_name' => 'Sticker', 'description' => 'Vinyl banner-grade']);

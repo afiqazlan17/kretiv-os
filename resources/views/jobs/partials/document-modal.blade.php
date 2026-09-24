@@ -15,9 +15,18 @@
             <button type="button" @click="close()" class="text-gray-400 hover:text-gray-700 text-xl leading-none">×</button>
         </div>
 
+        {{-- On phones, the form and the live PDF preview used to be squeezed into one
+             scrolling column with no fixed height, which made typing feel like it was
+             fighting the preview for space. A tab switch lets you fully hide one side. --}}
+        <div class="lg:hidden flex gap-2 px-5 pt-3">
+            <button type="button" @click="mobileTab = 'form'" class="flex-1 text-xs font-semibold px-3 py-1.5 rounded-md border"
+                    :class="mobileTab === 'form' ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 text-gray-600'">Form</button>
+            <button type="button" @click="mobileTab = 'preview'" class="flex-1 text-xs font-semibold px-3 py-1.5 rounded-md border"
+                    :class="mobileTab === 'preview' ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 text-gray-600'">Preview</button>
+        </div>
         <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
             {{-- Form --}}
-            <div class="overflow-y-auto p-5 space-y-3 border-r border-gray-100 text-sm" @input="schedule()" @change="schedule()" @keyup="schedule()">
+            <div class="overflow-y-auto p-5 space-y-3 border-r border-gray-100 text-sm" :class="mobileTab === 'preview' ? 'hidden lg:block' : ''" @input="schedule()" @change="schedule()" @keyup="schedule()">
                 <p x-show="loading" class="text-gray-400 text-xs">Loading…</p>
                 <template x-if="!loading">
                     <div class="space-y-3">
@@ -96,7 +105,7 @@
             </div>
 
             {{-- Live preview (real PDF) --}}
-            <div class="relative bg-gray-100 min-h-[300px]">
+            <div class="relative bg-gray-100 min-h-[300px]" :class="mobileTab === 'form' ? 'hidden lg:block' : ''">
                 {{-- Two stacked frames: the new render loads behind the visible one and swaps in on load, so typing never flashes blank. --}}
                 <template x-for="i in [0, 1]" :key="i">
                     <iframe class="absolute inset-0 w-full h-full border-0 bg-white" :class="active === i ? 'z-10' : 'z-0'" x-show="previewUrl"
@@ -124,7 +133,7 @@
         const blank = () => ({ customer_name: '', company: '', address_line_1: '', address_line_2: '', title: '', by_staff: '',
             items: [], delivery: 0, discount: 0, payment_method: 'Bank Transfer', amount_paid: null });
         return {
-            jobCode: cfg.jobCode, urls: cfg.urls,
+            jobCode: cfg.jobCode, urls: cfg.urls, mobileTab: 'form',
             open: false, type: 'quotation', label: 'Quotation', loading: false, busy: false, previewing: false,
             error: '', notice: '', form: blank(), paymentMethods: [], invoiceNumber: null, invoiceTotal: null, customerPhone: '', docNumber: '',
             editNotes: false, notesText: '', defaultNotes: [], previewUrl: null, frameSrc: ['', ''], active: 0, pending: null, dirty: false, timer: null, seq: 0, pageDirty: false,
@@ -147,7 +156,7 @@
                 this.$watch('notesText', () => this.schedule());
             },
             async openFor(type) {
-                this.type = type; this.open = true; this.loading = true; this.error = ''; this.notice = ''; this.editNotes = false;
+                this.type = type; this.open = true; this.loading = true; this.error = ''; this.notice = ''; this.editNotes = false; this.mobileTab = 'form';
                 this.resetFrames(); this.form = blank(); this.dirty = false;
                 const res = await this.call('draft', 'GET');
                 if (!res.ok) { this.error = await this.failure(res); this.loading = false; return; }

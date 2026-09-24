@@ -23,3 +23,13 @@
     padding-right: 0;
     border-right: none;
 }
+
+/* iOS Safari auto-zooms the whole page when a focused text input's
+   font-size is under 16px — with this app's text-xs/text-sm form fields
+   that made every tap feel like the page "jumps" in and out of zoom on
+   phones. Force 16px on focus only, so desktop keeps its compact sizing. */
+@media (max-width: 767px) {
+    input, select, textarea {
+        font-size: 16px !important;
+    }
+}

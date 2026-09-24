@@ -9,8 +9,18 @@
              {{ json_encode(array_keys($departments)) }},
              {{ json_encode(config('kretivco.package_catalog')) }}
          )">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-[minmax(0,700px)_minmax(0,1fr)] gap-4 items-start">
-            <div class="bg-white shadow-sm sm:rounded-lg p-6">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            {{-- Mobile-only Form/Preview switch — on phones the two panels used to stack
+                 with the preview's 80vh iframe below, so editing meant fighting a huge
+                 frame; this lets you fully hide one side instead. --}}
+            <div class="lg:hidden flex gap-2 mb-3">
+                <button type="button" @click="mobileTab = 'form'" class="flex-1 text-sm font-semibold px-3 py-2 rounded-md border"
+                        :class="mobileTab === 'form' ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 text-gray-600 bg-white'">Form</button>
+                <button type="button" @click="mobileTab = 'preview'" class="flex-1 text-sm font-semibold px-3 py-2 rounded-md border"
+                        :class="mobileTab === 'preview' ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 text-gray-600 bg-white'">Quotation Preview</button>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,700px)_minmax(0,1fr)] gap-4 items-start">
+            <div class="bg-white shadow-sm sm:rounded-lg p-6" :class="mobileTab === 'preview' ? 'hidden lg:block' : ''">
                 <form method="POST" action="{{ route('jobs.store') }}" @invalid.capture="formError = 'Fill in the highlighted field before saving. It might be in a department section above.'" @submit="formError = null">
                     @csrf
 
@@ -247,7 +257,8 @@
             </div>
 
             {{-- Live quotation preview — same PDF the job's Quotation button produces --}}
-            <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden flex flex-col lg:sticky lg:top-4 h-[80vh] lg:h-[88vh]">
+            <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden flex-col lg:sticky lg:top-4 h-[80vh] lg:h-[88vh]"
+                 :class="mobileTab === 'preview' ? 'flex' : 'hidden lg:flex'">
                 <div class="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-gray-100">
                     <h3 class="text-sm font-semibold text-gray-700">Quotation preview</h3>
                     <div class="flex gap-1" x-show="depts.length > 1" x-cloak>
@@ -267,6 +278,7 @@
                     <div x-show="pvError" x-cloak class="absolute z-20 bottom-2 left-3 right-3 text-xs text-red-600 bg-white rounded px-2 py-1 shadow" x-text="pvError"></div>
                 </div>
             </div>
+            </div>
         </div>
     </div>
 
@@ -281,6 +293,7 @@
                     jobTypeCategory: 'client_project', productLine: '', segment: '', pkg: '', jobType: '', lineItems: [], bank: '', delivery: '', discount: '',
                     editNotes: false, notesLines: [],
                 }])),
+                mobileTab: 'form',
                 previewDept: null, pvSrc: ['', ''], pvActive: 0, pvPending: null, pvBusy: false, pvError: '', pvTimer: null, pvSeq: 0,
                 customerId: '{{ old('customer_id', request('customer_id')) }}',
                 customerQuery: '',

@@ -52,7 +52,7 @@
                     <th class="c" style="width:24.75pt;">No</th>
                     <th style="width:217.75pt;">Description</th>
                     <th class="c" style="width:49.75pt;">Unit</th>
-                    <th class="c" style="width:59.75pt;">Price</th>
+                    <th class="c" style="width:59.75pt;">Unit Price</th>
                     <th class="c" style="width:64.75pt;">Amount</th>
                 </tr>
             </thead>

@@ -248,12 +248,21 @@
                                             <button type="button" @click="editingId = null" class="text-xs text-gray-500 hover:underline">Cancel</button>
                                         </div>
                                     </form>
-                                    <form method="POST" action="{{ route('settings.users.toggle-active', $user) }}" class="mt-3">
-                                        @csrf
-                                        <button type="submit" class="text-xs font-semibold px-3 py-1.5 rounded-md border {{ $user->active ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-green-200 text-green-600 hover:bg-green-50' }}">
-                                            {{ $user->active ? 'Deactivate' : 'Activate' }}
-                                        </button>
-                                    </form>
+                                    <div class="mt-3 flex items-center gap-2">
+                                        <form method="POST" action="{{ route('settings.users.toggle-active', $user) }}">
+                                            @csrf
+                                            <button type="submit" class="text-xs font-semibold px-3 py-1.5 rounded-md border {{ $user->active ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-green-200 text-green-600 hover:bg-green-50' }}">
+                                                {{ $user->active ? 'Deactivate' : 'Activate' }}
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="{{ route('settings.users.reset-password', $user) }}"
+                                              onsubmit="return confirm('Reset password untuk {{ $user->name }}? Password baru akan dipaparkan sekali sahaja selepas ini.');">
+                                            @csrf
+                                            <button type="submit" class="text-xs font-semibold px-3 py-1.5 rounded-md border border-amber-200 text-amber-600 hover:bg-amber-50">
+                                                Reset Password
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         @empty

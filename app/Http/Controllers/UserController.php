@@ -89,6 +89,17 @@ class UserController extends Controller
         return back()->with('success', "{$user->name} dikemaskini.");
     }
 
+    public function resetPassword(Request $request, User $user): RedirectResponse
+    {
+        abort_unless($request->user()->isBod(), 403);
+
+        $password = Str::password(16);
+
+        $user->update(['password' => Hash::make($password)]);
+
+        return back()->with('success', "Password {$user->name} direset. Password sementara: {$password} (salin sekarang — tidak dipaparkan lagi).");
+    }
+
     public function toggleActive(User $user): RedirectResponse
     {
         $this->authorize('update', $user);

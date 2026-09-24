@@ -11,7 +11,7 @@
          )">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-[minmax(0,700px)_minmax(0,1fr)] gap-4 items-start">
             <div class="bg-white shadow-sm sm:rounded-lg p-6">
-                <form method="POST" action="{{ route('jobs.store') }}">
+                <form method="POST" action="{{ route('jobs.store') }}" @invalid.capture="formError = 'Fill in the highlighted field before saving. It might be in a department section above.'" @submit="formError = null">
                     @csrf
 
                     {{-- Customer picker + inline create --}}
@@ -238,6 +238,7 @@
                     @endforeach
 
                     <x-input-error :messages="$errors->all()" class="mt-1" />
+                    <p x-show="formError" x-cloak x-text="formError" class="mt-2 text-sm font-semibold text-red-600"></p>
                     <div class="mt-2">
                         <x-primary-button type="submit">Save Job</x-primary-button>
                         <a href="{{ route('jobs.index') }}" class="ml-2 text-xs text-gray-500 hover:underline">Cancel</a>
@@ -288,6 +289,7 @@
                 inlineCustomer: { name: '', company: '', phone: '', email: '', source: 'referral' },
                 inlineSaving: false,
                 inlineError: null,
+                formError: null,
                 init() {
                     ['depts', 'perDept', 'customerId', 'previewDept'].forEach(k => this.$watch(k, () => this.schedulePreview()));
                     this.schedulePreview();

@@ -155,11 +155,11 @@
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                                 <div>
                                     <x-input-label value="Start Date" />
-                                    <input type="date" name="per_dept[{{ $key }}][start_date]" :disabled="!depts.includes('{{ $key }}')" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
+                                    <input type="date" name="per_dept[{{ $key }}][start_date]" value="{{ old('per_dept.'.$key.'.start_date', now()->toDateString()) }}" :disabled="!depts.includes('{{ $key }}')" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
                                 </div>
                                 <div>
                                     <x-input-label value="Deadline" />
-                                    <input type="date" name="per_dept[{{ $key }}][deadline]" :disabled="!depts.includes('{{ $key }}')" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
+                                    <input type="date" name="per_dept[{{ $key }}][deadline]" value="{{ old('per_dept.'.$key.'.deadline', now()->addDays(14)->toDateString()) }}" :disabled="!depts.includes('{{ $key }}')" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
                                 </div>
                             </div>
 

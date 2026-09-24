@@ -49,11 +49,11 @@
         <table class="grid">
             <thead>
                 <tr>
-                    <th style="width:24.75pt;">No</th>
+                    <th class="c" style="width:24.75pt;">No</th>
                     <th style="width:217.75pt;">Description</th>
-                    <th style="width:49.75pt;">Unit</th>
-                    <th style="width:59.75pt;">Price</th>
-                    <th style="width:64.75pt;">Amount</th>
+                    <th class="c" style="width:49.75pt;">Unit</th>
+                    <th class="c" style="width:59.75pt;">Price</th>
+                    <th class="c" style="width:64.75pt;">Amount</th>
                 </tr>
             </thead>
             <tbody>
@@ -71,7 +71,7 @@
                             @endif
                         </td>
                         <td class="c">{{ rtrim(rtrim(number_format($item['qty'], 2, '.', ''), '0'), '.') }}</td>
-                        <td class="rt">RM {{ number_format($item['price'], 2) }}</td>
+                        <td class="c">RM {{ number_format($item['price'], 2) }}</td>
                         <td class="rt">RM {{ number_format($item['amount'], 2) }}</td>
                     </tr>
                 @endforeach
@@ -90,6 +90,6 @@
         </table>
     @endif
 
-    @include('documents.partials.footer', ['notes' => $doc['notes']])
+    @include('documents.partials.footer', ['notes' => $doc['notes'], 'bank' => $doc['bank'], 'bankKey' => $doc['bank_key']])
 </body>
 </html>

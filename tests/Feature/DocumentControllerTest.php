@@ -200,7 +200,7 @@ class DocumentControllerTest extends TestCase
         $receipt = implode("\n", DocumentData::defaultNotes('receipt', $bank));
 
         $this->assertStringContainsString('80% deposit', $quotation);
-        $this->assertStringContainsString('Please make payment to MAYBANK | 5621-0668-8317 | KRETIVCO MEDIAWORKS.', $quotation);
+        $this->assertStringContainsString('This quotation follows the specifications listed above.', $quotation);
         $this->assertSame('AFFIN', config('kretivco.bank_details.affin.label'));
         $this->assertSame('105630012033', config('kretivco.bank_details.affin.acct'));
         $this->assertStringContainsString('Payment due within 7 days from the invoice date.', $invoice);
@@ -349,14 +349,14 @@ class DocumentControllerTest extends TestCase
         $this->assertSame(0, Job::count());
     }
 
-    public function test_quotation_notes_endpoint_returns_bank_specific_defaults(): void
+    public function test_quotation_notes_endpoint_returns_the_default_quotation_notes(): void
     {
         $bod = User::factory()->create(['role' => User::ROLE_BOD]);
 
         $response = $this->actingAs($bod)->getJson(route('jobs.quotation-notes', ['bank' => 'affin']));
 
         $response->assertOk();
-        $this->assertStringContainsString('AFFIN | 105630012033 | KRETIVCO MEDIAWORKS', $response->json('notes.0'));
+        $this->assertStringContainsString('This quotation follows the specifications listed above.', $response->json('notes.0'));
     }
 
     public function test_new_job_preview_can_override_the_notes(): void

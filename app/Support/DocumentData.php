@@ -54,30 +54,25 @@ class DocumentData
      */
     public static function defaultNotes(string $type, ?array $bank): array
     {
-        $contact = [
-            'Email us at '.config('kretivco.brand.email'),
-            'Whatsapp us at '.config('kretivco.brand.phone'),
-        ];
-
-        $payTo = $bank ? ["Please make payment to {$bank['label']} | {$bank['acct']} | {$bank['name']}."] : [];
-
+        // Contact details (phone/email) live in the document header and payment
+        // details live in the Payment Detail block + QR in the footer now, so
+        // notes no longer repeat "please make payment to..." / "email us at...".
         return match ($type) {
-            'quotation' => array_merge($payTo, [
-                'Please indicate quotation number when making payment to us.',
+            'quotation' => [
+                "This quotation follows the specifications listed above. Any change to the design, size, material or quantity after confirmation may affect the final price, and we'll send an updated quotation when that happens. Production only starts once you've confirmed the order in writing.",
                 'Full payment needed for invoice below RM2000 and 80% deposit must be paid before making the first draft for invoice price RM2000 and above.',
                 'Progress will be done in 14 days after final draft has been confirmed by customer.',
                 'Deposit is not refundable after the booking confirmed and first draft has been made.',
-            ], $contact),
-            'receipt' => array_merge([
+            ],
+            'receipt' => [
                 'This receipt confirms payment received for the above job/invoice.',
                 'Please retain this receipt for your reference.',
                 'For any discrepancy, please contact us within 7 days of receipt date.',
-            ], $contact),
-            default => array_merge($payTo, [
-                'Please indicate invoice number when making payment to us.',
+            ],
+            default => [
                 'Payment due within 7 days from the invoice date.',
                 'Late payment may be subject to a surcharge as agreed in the service agreement.',
-            ], $contact),
+            ],
         };
     }
 
@@ -176,6 +171,7 @@ class DocumentData
     public static function build(Job $job, string $type, array $input, string $docNumber, string $userName, ?float $invoiceTotal = null): array
     {
         $defaults = self::defaults($job, $type, $userName, $invoiceTotal);
+        $bank = self::bank($job);
         $pick = fn (string $key) => array_key_exists($key, $input) && $input[$key] !== null ? $input[$key] : $defaults[$key];
 
         $items = self::normalizeItems(array_key_exists('items', $input) ? (array) $input['items'] : $defaults['items']);
@@ -204,6 +200,8 @@ class DocumentData
                 'address_line_2' => $pick('address_line_2'),
             ],
             'title' => (string) $pick('title'),
+            'bank' => $bank,
+            'bank_key' => $job->bank,
             'items' => $items,
             'subtotal' => $subtotal,
             'delivery' => $delivery,

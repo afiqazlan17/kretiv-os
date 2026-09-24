@@ -3,10 +3,11 @@
     body { margin: 0; font-family: Helvetica, sans-serif; font-size: 10pt; line-height: 11.5pt; color: #141414; }
     b, strong { font-weight: bold; }
 
-    .hdr { position: relative; height: 82.82pt; border-bottom: 0.75pt solid #999999; }
+    .hdr { position: relative; height: 100pt; border-bottom: 0.75pt solid #999999; }
     .abs { position: absolute; white-space: nowrap; }
     .brand { font-size: 12pt; font-weight: bold; line-height: 13.8pt; }
     .sub { font-size: 9pt; line-height: 10.35pt; color: #505050; }
+    .contact-line { position: absolute; left: 90.5pt; width: 270pt; white-space: normal; font-size: 8.3pt; line-height: 10.5pt; color: #505050; }
     .doc-title { font-size: 16pt; font-weight: bold; line-height: 18.4pt; }
     .r { text-align: right; }
 
@@ -41,4 +42,9 @@
     table.notes-t { width: 468pt; border-collapse: collapse; }
     table.notes-t td { padding: 0 0 3pt 0; vertical-align: top; color: #3c3c3c; line-height: 13.5pt; border: none; }
     .thanks { margin-top: 12pt; font-weight: bold; }
+    .pay-title { margin-top: 13pt; font-weight: bold; line-height: 13pt; }
+    .pay-line { margin-top: 2pt; font-weight: bold; }
+    .pay-qr { margin-top: 6pt; width: 65pt; height: 65pt; }
+    .pay-qr-caption { font-size: 7.5pt; color: #888888; white-space: nowrap; margin-top: 2pt; }
+    .stamp-img { position: absolute; left: 0; top: 4pt; width: 78pt; height: 78pt; }
 </style>

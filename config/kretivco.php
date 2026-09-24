@@ -225,8 +225,9 @@ return [
         'ssm' => '(SA0463354-A)',
         'address_line_1' => 'No.15A, Jalan USJ1/19',
         'address_line_2' => '47600, Subang Jaya, Selangor',
-        'email' => 'kretivco@gmail.com',
+        'email' => 'sales@kretiv.co',
         'phone' => '+6011-21149204',
+        'phone2' => '+6019-3663805',
     ],
 
     'bank_details' => [

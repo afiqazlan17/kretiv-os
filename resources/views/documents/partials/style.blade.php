@@ -7,7 +7,7 @@
     .abs { position: absolute; white-space: nowrap; }
     .brand { font-size: 12pt; font-weight: bold; line-height: 13.8pt; }
     .sub { font-size: 9pt; line-height: 10.35pt; color: #505050; }
-    .contact-line { position: absolute; left: 90.5pt; width: 270pt; white-space: normal; font-size: 8.3pt; line-height: 10.5pt; color: #505050; }
+    .contact-line { position: absolute; left: 90.5pt; width: 270pt; white-space: nowrap; font-size: 7.3pt; line-height: 10.5pt; color: #505050; }
     .doc-title { font-size: 16pt; font-weight: bold; line-height: 18.4pt; }
     .r { text-align: right; }
 
@@ -30,7 +30,7 @@
 
     table.sign { width: 468pt; border-collapse: collapse; margin-top: 14.8pt; }
     table.sign td { padding: 0 0 0 5.5pt; border: none; vertical-align: top; }
-    .sign-line { width: 166.7pt; border-top: 0.5pt solid #141414; margin-top: 34.47pt; padding-top: 3pt; font-size: 9pt; }
+    .sign-line { width: 166.7pt; border-top: 0.5pt solid #141414; margin-top: 70pt; padding-top: 3pt; font-size: 9pt; }
     .signed-name { width: 166.7pt; text-align: center; margin-top: 24pt; font-size: 9pt; }
     .sign-rule { width: 166.7pt; border-top: 0.5pt solid #141414; margin-top: 4pt; }
 

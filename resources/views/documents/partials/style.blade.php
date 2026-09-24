@@ -11,7 +11,7 @@
     .doc-title { font-size: 16pt; font-weight: bold; line-height: 18.4pt; }
     .r { text-align: right; }
 
-    .block { margin-top: 19.48pt; }
+    .block { margin-top: 10pt; }
     .cust-label { line-height: 13.6pt; margin-bottom: 1pt; }
     .cust-line { line-height: 12.8pt; }
     .title-line { margin-top: 9pt; line-height: 13pt; }

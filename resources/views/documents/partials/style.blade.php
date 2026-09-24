@@ -46,5 +46,5 @@
     .pay-line { margin-top: 2pt; font-weight: bold; }
     .pay-qr { margin-top: 6pt; width: 65pt; height: 65pt; }
     .pay-qr-caption { font-size: 7.5pt; color: #888888; white-space: nowrap; margin-top: 2pt; }
-    .stamp-img { position: absolute; left: 0; top: 10pt; width: 200pt; height: auto; }
+    .stamp-img { position: absolute; left: 0; top: 13pt; width: 185pt; height: auto; }
 </style>

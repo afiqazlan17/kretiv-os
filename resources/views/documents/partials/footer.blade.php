@@ -7,12 +7,14 @@
 
 @isset($bank)
     @if ($bank)
-        <div class="pay-title">Payment Detail:</div>
-        <div class="pay-line">{{ $bank['label'] }} | {{ $bank['name'] }} | {{ $bank['acct'] }}</div>
-        @if (($bankKey ?? null) === 'affin')
-            <img src="{{ public_path('images/affin-duitnow-qr.png') }}" class="pay-qr">
-            <div class="pay-qr-caption">Scan to pay via DuitNow</div>
-        @endif
+        <div class="pay-block">
+            <div class="pay-title">Payment Detail:</div>
+            <div class="pay-line">{{ $bank['label'] }} | {{ $bank['name'] }} | {{ $bank['acct'] }}</div>
+            @if (($bankKey ?? null) === 'affin')
+                <img src="{{ public_path('images/affin-duitnow-qr.png') }}" class="pay-qr">
+                <div class="pay-qr-caption">Scan to pay via DuitNow</div>
+            @endif
+        </div>
     @endif
 @endisset
 

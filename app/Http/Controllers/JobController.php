@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\GeneratesJobIds;
 use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\Job;
+use App\Models\LedgerEntry;
 use App\Models\Vendor;
 use App\Support\NoteSanitizer;
 use Illuminate\Http\RedirectResponse;
@@ -595,6 +596,27 @@ class JobController extends Controller
         ]);
 
         return redirect()->route('jobs.index')->with('success', "{$job->job_id} archived.");
+    }
+
+    /**
+     * Permanently removes a job — BOD-only (JobPolicy::delete), unlike
+     * archive() which just hides it from the Job Queue. Job documents
+     * cascade-delete via the DB FK; activity log and ledger entries are
+     * cleaned up explicitly here since they aren't hard-linked the same
+     * way (activity_log.job_id is nullable/nullOnDelete, and
+     * ledger_entries matches on the business job_id string, not a FK).
+     */
+    public function destroy(Job $job): RedirectResponse
+    {
+        $this->authorize('delete', $job);
+
+        $jobCode = $job->job_id;
+
+        ActivityLog::where('job_id', $job->id)->delete();
+        LedgerEntry::where('job_id', $jobCode)->delete();
+        $job->delete();
+
+        return redirect()->route('jobs.index')->with('success', "{$jobCode} deleted permanently.");
     }
 
     /** One step back — see ROLLBACK_MAP. Used by the Progress Stepper's backward clicks. */

@@ -79,6 +79,7 @@ $onHost('jobs', function () {
         Route::get('/jobs/quotation-notes', [DocumentController::class, 'quotationNotes'])->name('jobs.quotation-notes');
         Route::get('/jobs/{job}', [JobController::class, 'show'])->name('jobs.show');
         Route::put('/jobs/{job}', [JobController::class, 'update'])->name('jobs.update');
+        Route::delete('/jobs/{job}', [JobController::class, 'destroy'])->name('jobs.destroy');
         Route::put('/jobs/{job}/line-items', [JobController::class, 'updateLineItems'])->name('jobs.line-items.update');
         Route::post('/jobs/{job}/take-in', [JobController::class, 'takeIn'])->name('jobs.take-in');
         Route::post('/jobs/{job}/close-ticket', [JobController::class, 'closeTicket'])->name('jobs.close-ticket');

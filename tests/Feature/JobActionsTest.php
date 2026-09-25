@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\ActivityLog;
 use App\Models\Job;
+use App\Models\LedgerEntry;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -104,6 +106,45 @@ class JobActionsTest extends TestCase
         $this->actingAs($bod)->get(route('jobs.index'));
         $indexResponse = $this->actingAs($bod)->get(route('jobs.index'));
         $indexResponse->assertDontSee($job->job_id);
+    }
+
+    public function test_bod_can_permanently_delete_a_job_and_its_related_records(): void
+    {
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $job = $this->job();
+
+        ActivityLog::create([
+            'job_id' => $job->id,
+            'job_code' => $job->job_id,
+            'user_id' => $bod->id,
+            'user_name' => $bod->name,
+            'action' => 'edited',
+            'detail' => 'Test log entry.',
+        ]);
+        LedgerEntry::create([
+            'job_id' => $job->job_id,
+            'type' => 'invoice',
+            'description' => 'Test ledger entry',
+            'debit_account' => 'accounts_receivable',
+            'credit_account' => 'revenue',
+            'amount' => 100,
+        ]);
+
+        $response = $this->actingAs($bod)->delete(route('jobs.destroy', $job));
+
+        $response->assertRedirect(route('jobs.index'));
+        $this->assertDatabaseMissing('jobs', ['id' => $job->id]);
+        $this->assertDatabaseMissing('activity_log', ['job_code' => $job->job_id]);
+        $this->assertDatabaseMissing('ledger_entries', ['job_id' => $job->job_id]);
+    }
+
+    public function test_staff_cannot_delete_a_job(): void
+    {
+        $staff = User::factory()->create(['role' => User::ROLE_STAFF]);
+        $job = $this->job();
+
+        $this->actingAs($staff)->delete(route('jobs.destroy', $job))->assertForbidden();
+        $this->assertDatabaseHas('jobs', ['id' => $job->id]);
     }
 
     public function test_rollback_moves_status_back_one_stage(): void

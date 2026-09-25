@@ -24,7 +24,7 @@ class ItemLibraryTest extends TestCase
         $this->assertSame(1, ItemLibrary::count());
     }
 
-    public function test_search_matches_name_or_description_hides_inactive_and_puts_own_department_first(): void
+    public function test_search_matches_name_or_description_hides_inactive_and_scopes_to_department(): void
     {
         $user = User::factory()->create(['role' => User::ROLE_STAFF]);
         ItemLibrary::create(['department' => 'brand', 'item_name' => 'Banner Design', 'price' => 80]);
@@ -32,9 +32,13 @@ class ItemLibraryTest extends TestCase
         ItemLibrary::create(['department' => 'print', 'item_name' => 'Banner Old', 'active' => false]);
         ItemLibrary::create(['department' => 'print', 'item_name' => 'Sticker', 'description' => 'Vinyl banner-grade']);
 
+        // Scoped to 'print': matches print items only, brand's "Banner Design" is excluded entirely.
         $names = $this->actingAs($user)->getJson(route('items.search', ['q' => 'banner', 'dept' => 'print']))->assertOk()->json('*.name');
+        $this->assertSame(['Banner Print', 'Sticker'], $names);
 
-        $this->assertSame(['Banner Print', 'Sticker', 'Banner Design'], $names);
+        // A different department only sees its own items — none of print's.
+        $brandNames = $this->actingAs($user)->getJson(route('items.search', ['q' => 'banner', 'dept' => 'brand']))->assertOk()->json('*.name');
+        $this->assertSame(['Banner Design'], $brandNames);
     }
 
     public function test_only_bod_or_dept_head_can_edit_and_hiding_works(): void

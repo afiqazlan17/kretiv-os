@@ -137,7 +137,8 @@
                             <option value="{{ $key }}">{{ $bank['label'] }}</option>
                         @endforeach
                     </select>
-                    <input type="number" step="0.01" min="0" name="amount" placeholder="Amount (RM)" required class="rounded-md border-gray-300 shadow-sm text-sm">
+                    <x-money-input name="amount" required />
+                    <input type="date" name="date" value="{{ old('date', now()->toDateString()) }}" class="rounded-md border-gray-300 shadow-sm text-sm">
                     <input type="text" name="job_id" placeholder="Job ID (optional)" class="rounded-md border-gray-300 shadow-sm text-sm">
                     <input type="text" name="notes" placeholder="Notes" class="rounded-md border-gray-300 shadow-sm text-sm">
                     <div class="sm:col-span-3"><x-primary-button type="submit">Post Expense</x-primary-button></div>
@@ -150,7 +151,7 @@
                             <option value="{{ $key }}">{{ $bank['label'] }}</option>
                         @endforeach
                     </select>
-                    <input type="number" step="0.01" name="amount" placeholder="Amount (RM)" required class="rounded-md border-gray-300 shadow-sm text-sm">
+                    <x-money-input name="amount" required class="w-40" />
                     <x-primary-button type="submit">Adjust</x-primary-button>
                 </form>
 
@@ -166,7 +167,8 @@
                             <option value="{{ $key }}">{{ $bank['label'] }}</option>
                         @endforeach
                     </select>
-                    <input type="number" step="0.01" min="0" name="amount" placeholder="Amount (RM)" required class="rounded-md border-gray-300 shadow-sm text-sm">
+                    <x-money-input name="amount" required />
+                    <input type="date" name="date" value="{{ old('date', now()->toDateString()) }}" class="rounded-md border-gray-300 shadow-sm text-sm">
                     <input type="text" name="notes" placeholder="Notes" class="rounded-md border-gray-300 shadow-sm text-sm">
                     <div class="sm:col-span-3"><x-primary-button type="submit">Post Loan Entry</x-primary-button></div>
                 </form>
@@ -183,7 +185,8 @@
                             <option value="{{ $key }}">{{ $bank['label'] }}</option>
                         @endforeach
                     </select>
-                    <input type="number" step="0.01" min="0" name="amount" placeholder="Amount (RM)" required class="rounded-md border-gray-300 shadow-sm text-sm">
+                    <x-money-input name="amount" required class="w-40" />
+                    <input type="date" name="date" value="{{ old('date', now()->toDateString()) }}" class="rounded-md border-gray-300 shadow-sm text-sm">
                     <x-primary-button type="submit">Transfer</x-primary-button>
                 </form>
             </div>

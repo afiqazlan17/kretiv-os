@@ -34,7 +34,7 @@ class ItemLibraryController extends Controller
         ]);
     }
 
-    /** Typeahead for the dropdowns — the job's own department floats to the top. */
+    /** Typeahead for the dropdowns — scoped to the job's own department. */
     public function search(Request $request): JsonResponse
     {
         $this->authorize('viewAny', ItemLibrary::class);
@@ -44,13 +44,14 @@ class ItemLibraryController extends Controller
 
         $items = ItemLibrary::query()
             ->where('active', true)
+            ->when(
+                $dept !== '' && array_key_exists($dept, config('kretivco.departments')),
+                fn ($query) => $query->where('department', $dept)
+            )
             ->when($q !== '', fn ($query) => $query->where(fn ($w) => $w->where('item_name', 'like', "%{$q}%")->orWhere('description', 'like', "%{$q}%")))
             ->orderBy('item_name')
-            ->limit(100)
+            ->limit(15)
             ->get()
-            ->sortBy(fn ($i) => [$i->department === $dept ? 0 : 1, mb_strtolower($i->item_name)])
-            ->take(15)
-            ->values()
             ->map(fn ($i) => [
                 'id' => $i->id,
                 'name' => $i->item_name,

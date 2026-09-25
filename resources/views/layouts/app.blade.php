@@ -17,7 +17,11 @@
             <div class="md:ml-60">
                 <!-- Page Heading -->
                 @isset($header)
-                    <header class="bg-gradient-to-br from-[#E91E63] to-[#AD1457] px-6 py-6 md:px-8">
+                    {{-- pl-16 on phones clears the sidebar's fixed hamburger button
+                         (top-3 left-3, a 40px square) — every page's header content
+                         starts at the same top-left corner the button sits in, so
+                         without this the first line or two renders right behind it. --}}
+                    <header class="bg-gradient-to-br from-[#E91E63] to-[#AD1457] pl-16 pr-6 py-6 md:px-8">
                         {{ $header }}
                     </header>
                 @endisset

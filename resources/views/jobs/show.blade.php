@@ -4,7 +4,7 @@
             <div class="flex items-center justify-between">
                 <a href="{{ route('jobs.index') }}" class="inline-flex items-center gap-1 text-white/80 hover:text-white text-sm">&larr; Back</a>
 
-                @can('update', $job)
+                @canany(['update', 'delete'], $job)
                 <div class="relative" x-data="{ open: false }" @click.outside="open = false">
                     <button type="button" @click="open = !open" class="inline-flex items-center gap-1.5 px-4 py-2 bg-white/15 hover:bg-white/25 text-white text-xs font-semibold rounded-md">
                         Action <span class="text-[10px]">&#9662;</span>
@@ -36,9 +36,18 @@
                                 <button type="submit" class="w-full text-left px-4 py-2 hover:bg-gray-50 text-gray-500">🗄️ Archive</button>
                             </form>
                         @endif
+                        @can('delete', $job)
+                            <div class="border-t border-gray-100 my-1"></div>
+                            <form method="POST" action="{{ route('jobs.destroy', $job) }}"
+                                  onsubmit="return prompt('This permanently deletes {{ $job->job_id }} and all its notes, documents and cost records. This cannot be undone.\n\nType the Job ID to confirm:') === '{{ $job->job_id }}'">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="w-full text-left px-4 py-2 hover:bg-red-50 text-red-700 font-semibold">🗑️ Delete Job Permanently</button>
+                            </form>
+                        @endcan
                     </div>
                 </div>
-                @endcan
+                @endcanany
             </div>
 
             <div class="flex items-start justify-between flex-wrap gap-4">
@@ -57,7 +66,7 @@
                         <div class="text-sm text-white/70 mt-1">Project ID: {{ $job->project_id }}</div>
                     @endif
                 </div>
-                <div class="text-right">
+                <div class="text-left sm:text-right">
                     @php $st = config('kretivco.job_statuses.'.$job->status); @endphp
                     <div class="text-white font-semibold">Status: {{ $st['label'] ?? $job->status }}</div>
                     <div class="text-sm text-white/70">Current Responsible: {{ $job->pic ?? 'Not yet assigned' }}</div>

@@ -1,7 +1,12 @@
 import Alpine from 'alpinejs';
 import Quill from 'quill';
+import { createPdfPager } from './pdf-pager';
 
 window.Alpine = Alpine;
+// documentModal()/jobCreateForm() below are plain global functions (not ES
+// modules — Alpine's x-data references them by name straight from Blade),
+// so the pdf.js-backed pager needs to hang off window to reach them.
+window.createPdfPager = createPdfPager;
 
 // Cross-component state for the job detail page's Action dropdown (header)
 // and its corresponding form panels (main content) — two separate DOM

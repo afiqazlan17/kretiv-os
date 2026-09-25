@@ -22,6 +22,7 @@
         "@laravel/multiplex": "^0.4.1"
     },
     "dependencies": {
+        "pdfjs-dist": "^6.3.289",
         "quill": "^2.0.2"
     }
 }

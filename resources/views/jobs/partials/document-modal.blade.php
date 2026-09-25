@@ -21,7 +21,7 @@
         <div class="lg:hidden flex gap-2 px-5 pt-3">
             <button type="button" @click="mobileTab = 'form'" class="flex-1 text-xs font-semibold px-3 py-1.5 rounded-md border"
                     :class="mobileTab === 'form' ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 text-gray-600'">Form</button>
-            <button type="button" @click="mobileTab = 'preview'" class="flex-1 text-xs font-semibold px-3 py-1.5 rounded-md border"
+            <button type="button" @click="mobileTab = 'preview'; $nextTick(() => pager.render($refs.mobileCanvas))" class="flex-1 text-xs font-semibold px-3 py-1.5 rounded-md border"
                     :class="mobileTab === 'preview' ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 text-gray-600'">Preview</button>
         </div>
         <div class="flex-1 min-h-0 grid grid-cols-1 auto-rows-fr lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:auto-rows-auto">
@@ -104,14 +104,29 @@
                 </template>
             </div>
 
-            {{-- Live preview (real PDF) --}}
-            <div class="relative bg-gray-100 min-h-[300px]" :class="mobileTab === 'form' ? 'hidden lg:block' : ''">
+            {{-- Live preview (real PDF). Desktop keeps the native iframe viewer (scroll/zoom
+                 work fine with a mouse). Mobile can't reliably page or scroll a PDF embedded
+                 in an iframe, so it gets its own canvas render with Prev/Next controls. --}}
+            <div class="relative bg-gray-100 min-h-[300px] hidden lg:block">
                 {{-- Two stacked frames: the new render loads behind the visible one and swaps in on load, so typing never flashes blank. --}}
                 <template x-for="i in [0, 1]" :key="i">
                     <iframe class="absolute inset-0 w-full h-full border-0 bg-white" :class="active === i ? 'z-10' : 'z-0'" x-show="previewUrl"
                             :src="frameSrc[i] || 'about:blank'" @load="frameLoaded(i)"></iframe>
                 </template>
                 <div x-show="previewing" class="absolute top-3 right-4 text-xs text-gray-500 bg-white/90 rounded px-2 py-1 shadow">Updating preview…</div>
+            </div>
+            <div class="lg:hidden bg-gray-100 flex flex-col" :class="mobileTab === 'form' ? 'hidden' : 'flex'">
+                <div class="flex-1 overflow-auto flex items-start justify-center p-2">
+                    <canvas x-ref="mobileCanvas" class="shadow bg-white"></canvas>
+                </div>
+                <div class="flex items-center justify-center gap-3 px-3 py-2 border-t border-gray-200 bg-white text-sm">
+                    <button type="button" @click="pager.prev($refs.mobileCanvas)" :disabled="pager.pageNum <= 1"
+                            class="px-3 py-1 rounded-md border border-gray-200 disabled:opacity-30">‹ Prev</button>
+                    <span class="text-xs text-gray-500" x-text="`Page ${pager.pageNum} / ${pager.numPages}`"></span>
+                    <button type="button" @click="pager.next($refs.mobileCanvas)" :disabled="pager.pageNum >= pager.numPages"
+                            class="px-3 py-1 rounded-md border border-gray-200 disabled:opacity-30">Next ›</button>
+                </div>
+                <div x-show="previewing || pager.canvasBusy" class="absolute top-3 right-4 text-xs text-gray-500 bg-white/90 rounded px-2 py-1 shadow">Updating preview…</div>
             </div>
         </div>
 
@@ -137,6 +152,7 @@
             open: false, type: 'quotation', label: 'Quotation', loading: false, busy: false, previewing: false,
             error: '', notice: '', form: blank(), paymentMethods: [], invoiceNumber: null, invoiceTotal: null, customerPhone: '', docNumber: '',
             editNotes: false, notesText: '', defaultNotes: [], previewUrl: null, frameSrc: ['', ''], active: 0, pending: null, dirty: false, timer: null, seq: 0, pageDirty: false,
+            pager: window.createPdfPager(),
 
             url(action) { return this.urls[action].replace('__TYPE__', this.type); },
             token() { return document.querySelector('meta[name="csrf-token"]').content; },
@@ -180,6 +196,7 @@
             resetFrames() {
                 this.frameSrc.forEach((u) => u && URL.revokeObjectURL(u.split('#')[0]));
                 this.frameSrc = ['', '']; this.active = 0; this.pending = null; this.previewUrl = null;
+                this.pager.reset();
             },
             frameLoaded(i) {
                 if (this.pending !== i) return;
@@ -226,16 +243,11 @@
                 this.previewing = false;
                 if (!res.ok) { this.error = await this.failure(res); return; }
                 const url = URL.createObjectURL(await res.blob());
-                // FitH (fit width) leaves the page taller than the pane, and
-                // mobile browsers' embedded PDF viewer generally can't be
-                // scrolled inside the iframe — the bottom of the document
-                // (signatures, stamp) was simply unreachable. Fit (whole
-                // page) trades some readability for actually seeing it all.
-                const view = window.innerWidth < 1024 ? 'Fit' : 'FitH';
-                const src = url + `#toolbar=0&navpanes=0&view=${view}`;
+                const src = url + '#toolbar=0&navpanes=0&view=FitH';
                 const t = this.pending ?? (1 - this.active);
                 if (this.frameSrc[t]) URL.revokeObjectURL(this.frameSrc[t].split('#')[0]);
                 this.pending = t; this.frameSrc[t] = src; this.previewUrl = src;
+                this.pager.load(url, this.$refs.mobileCanvas);
             },
             async save() {
                 this.busy = true; this.error = ''; this.notice = '';

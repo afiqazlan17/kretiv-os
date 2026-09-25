@@ -16,7 +16,7 @@
             <div class="lg:hidden flex gap-2 mb-3">
                 <button type="button" @click="mobileTab = 'form'" class="flex-1 text-sm font-semibold px-3 py-2 rounded-md border"
                         :class="mobileTab === 'form' ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 text-gray-600 bg-white'">Form</button>
-                <button type="button" @click="mobileTab = 'preview'" class="flex-1 text-sm font-semibold px-3 py-2 rounded-md border"
+                <button type="button" @click="mobileTab = 'preview'; $nextTick(() => pvPager.render($refs.pvCanvas))" class="flex-1 text-sm font-semibold px-3 py-2 rounded-md border"
                         :class="mobileTab === 'preview' ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 text-gray-600 bg-white'">Quotation Preview</button>
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,700px)_minmax(0,1fr)] gap-4 items-start">
@@ -268,13 +268,30 @@
                         </template>
                     </div>
                 </div>
-                <div class="relative flex-1 bg-gray-100 min-h-0">
+                {{-- Desktop: native iframe viewer. Mobile can't reliably page/scroll a PDF
+                     embedded in an iframe, so it gets a canvas render + Prev/Next instead. --}}
+                <div class="relative flex-1 bg-gray-100 min-h-0 hidden lg:block">
                     <p x-show="!depts.length" class="absolute inset-0 flex items-center justify-center text-sm text-gray-400 px-6 text-center">Select a department to see the quotation fill in as you type.</p>
                     <template x-for="i in [0, 1]" :key="i">
                         <iframe class="absolute inset-0 w-full h-full border-0 bg-white" :class="pvActive === i ? 'z-10' : 'z-0'" x-show="depts.length && pvSrc[pvActive]"
                                 :src="pvSrc[i] || 'about:blank'" @load="pvLoaded(i)"></iframe>
                     </template>
                     <div x-show="pvBusy" x-cloak class="absolute z-20 top-2 right-3 text-xs text-gray-500 bg-white/90 rounded px-2 py-1 shadow">Updating preview…</div>
+                    <div x-show="pvError" x-cloak class="absolute z-20 bottom-2 left-3 right-3 text-xs text-red-600 bg-white rounded px-2 py-1 shadow" x-text="pvError"></div>
+                </div>
+                <div class="relative flex-1 bg-gray-100 min-h-0 flex flex-col lg:hidden">
+                    <p x-show="!depts.length" class="absolute inset-0 flex items-center justify-center text-sm text-gray-400 px-6 text-center">Select a department to see the quotation fill in as you type.</p>
+                    <div class="flex-1 overflow-auto flex items-start justify-center p-2">
+                        <canvas x-ref="pvCanvas" class="shadow bg-white" x-show="depts.length"></canvas>
+                    </div>
+                    <div x-show="depts.length" class="flex items-center justify-center gap-3 px-3 py-2 border-t border-gray-200 bg-white text-sm">
+                        <button type="button" @click="pvPager.prev($refs.pvCanvas)" :disabled="pvPager.pageNum <= 1"
+                                class="px-3 py-1 rounded-md border border-gray-200 disabled:opacity-30">‹ Prev</button>
+                        <span class="text-xs text-gray-500" x-text="`Page ${pvPager.pageNum} / ${pvPager.numPages}`"></span>
+                        <button type="button" @click="pvPager.next($refs.pvCanvas)" :disabled="pvPager.pageNum >= pvPager.numPages"
+                                class="px-3 py-1 rounded-md border border-gray-200 disabled:opacity-30">Next ›</button>
+                    </div>
+                    <div x-show="pvBusy || pvPager.canvasBusy" x-cloak class="absolute z-20 top-2 right-3 text-xs text-gray-500 bg-white/90 rounded px-2 py-1 shadow">Updating preview…</div>
                     <div x-show="pvError" x-cloak class="absolute z-20 bottom-2 left-3 right-3 text-xs text-red-600 bg-white rounded px-2 py-1 shadow" x-text="pvError"></div>
                 </div>
             </div>
@@ -294,6 +311,7 @@
                     editNotes: false, notesLines: [],
                 }])),
                 mobileTab: 'form',
+                pvPager: window.createPdfPager(),
                 previewDept: null, pvSrc: ['', ''], pvActive: 0, pvPending: null, pvBusy: false, pvError: '', pvTimer: null, pvSeq: 0,
                 customerId: '{{ old('customer_id', request('customer_id')) }}',
                 customerQuery: '',
@@ -354,13 +372,12 @@
                     if (mine !== this.pvSeq) return;
                     this.pvBusy = false;
                     if (!res.ok) { try { const j = await res.json(); this.pvError = j.message || 'Preview unavailable.'; } catch (e) { this.pvError = 'Preview unavailable.'; } return; }
-                    // See the same fix's note in document-modal.blade.php — mobile can't
-                    // scroll inside an embedded PDF, so fit the whole page there instead.
-                    const pvView = window.innerWidth < 1024 ? 'Fit' : 'FitH';
-                    const src = URL.createObjectURL(await res.blob()) + `#toolbar=0&navpanes=0&view=${pvView}`;
+                    const blobUrl = URL.createObjectURL(await res.blob());
+                    const src = blobUrl + '#toolbar=0&navpanes=0&view=FitH';
                     const t = this.pvPending ?? (1 - this.pvActive);
                     if (this.pvSrc[t]) URL.revokeObjectURL(this.pvSrc[t].split('#')[0]);
                     this.pvPending = t; this.pvSrc[t] = src;
+                    this.pvPager.load(blobUrl, this.$refs.pvCanvas);
                 },
                 pvLoaded(i) {
                     if (this.pvPending !== i) return;

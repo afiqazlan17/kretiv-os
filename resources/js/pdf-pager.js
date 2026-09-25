@@ -36,7 +36,7 @@ export function createPdfPager() {
             this.error = '';
             try {
                 const pdfjsLib = await loadPdfjs();
-                this.pdfDoc = await pdfjsLib.getDocument(blobUrl).promise;
+                this.pdfDoc = await pdfjsLib.getDocument({ url: blobUrl }).promise;
                 this.numPages = this.pdfDoc.numPages;
                 this.pageNum = 1;
                 await this.render(canvas);

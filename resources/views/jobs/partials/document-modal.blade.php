@@ -24,7 +24,7 @@
             <button type="button" @click="mobileTab = 'preview'" class="flex-1 text-xs font-semibold px-3 py-1.5 rounded-md border"
                     :class="mobileTab === 'preview' ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 text-gray-600'">Preview</button>
         </div>
-        <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
+        <div class="flex-1 min-h-0 grid grid-cols-1 auto-rows-fr lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:auto-rows-auto">
             {{-- Form --}}
             <div class="overflow-y-auto p-5 space-y-3 border-r border-gray-100 text-sm" :class="mobileTab === 'preview' ? 'hidden lg:block' : ''" @input="schedule()" @change="schedule()" @keyup="schedule()">
                 <p x-show="loading" class="text-gray-400 text-xs">Loading…</p>
@@ -154,6 +154,13 @@
                 this.$watch('form', () => this.schedule());
                 this.$watch('editNotes', () => this.schedule());
                 this.$watch('notesText', () => this.schedule());
+                // Without this the page behind the modal keeps scrolling on
+                // mobile (touch events bubble past the modal's own scroll
+                // areas to the body), which felt like the popup wasn't
+                // responding to touch at all.
+                this.$watch('open', (isOpen) => {
+                    document.body.style.overflow = isOpen ? 'hidden' : '';
+                });
             },
             async openFor(type) {
                 this.type = type; this.open = true; this.loading = true; this.error = ''; this.notice = ''; this.editNotes = false; this.mobileTab = 'form';

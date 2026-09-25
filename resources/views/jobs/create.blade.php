@@ -354,7 +354,10 @@
                     if (mine !== this.pvSeq) return;
                     this.pvBusy = false;
                     if (!res.ok) { try { const j = await res.json(); this.pvError = j.message || 'Preview unavailable.'; } catch (e) { this.pvError = 'Preview unavailable.'; } return; }
-                    const src = URL.createObjectURL(await res.blob()) + '#toolbar=0&navpanes=0&view=FitH';
+                    // See the same fix's note in document-modal.blade.php — mobile can't
+                    // scroll inside an embedded PDF, so fit the whole page there instead.
+                    const pvView = window.innerWidth < 1024 ? 'Fit' : 'FitH';
+                    const src = URL.createObjectURL(await res.blob()) + `#toolbar=0&navpanes=0&view=${pvView}`;
                     const t = this.pvPending ?? (1 - this.pvActive);
                     if (this.pvSrc[t]) URL.revokeObjectURL(this.pvSrc[t].split('#')[0]);
                     this.pvPending = t; this.pvSrc[t] = src;

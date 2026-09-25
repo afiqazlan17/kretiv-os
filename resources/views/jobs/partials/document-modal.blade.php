@@ -226,7 +226,13 @@
                 this.previewing = false;
                 if (!res.ok) { this.error = await this.failure(res); return; }
                 const url = URL.createObjectURL(await res.blob());
-                const src = url + '#toolbar=0&navpanes=0&view=FitH';
+                // FitH (fit width) leaves the page taller than the pane, and
+                // mobile browsers' embedded PDF viewer generally can't be
+                // scrolled inside the iframe — the bottom of the document
+                // (signatures, stamp) was simply unreachable. Fit (whole
+                // page) trades some readability for actually seeing it all.
+                const view = window.innerWidth < 1024 ? 'Fit' : 'FitH';
+                const src = url + `#toolbar=0&navpanes=0&view=${view}`;
                 const t = this.pending ?? (1 - this.active);
                 if (this.frameSrc[t]) URL.revokeObjectURL(this.frameSrc[t].split('#')[0]);
                 this.pending = t; this.frameSrc[t] = src; this.previewUrl = src;

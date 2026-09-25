@@ -29,15 +29,20 @@ export function createPdfPager() {
         pageNum: 1,
         numPages: 1,
         canvasBusy: false,
+        error: '',
 
         async load(blobUrl, canvas) {
             this.canvasBusy = true;
+            this.error = '';
             try {
                 const pdfjsLib = await loadPdfjs();
                 this.pdfDoc = await pdfjsLib.getDocument(blobUrl).promise;
                 this.numPages = this.pdfDoc.numPages;
                 this.pageNum = 1;
                 await this.render(canvas);
+            } catch (e) {
+                console.error('pdf-pager: failed to render preview', e);
+                this.error = 'Preview unavailable on this device — use Download PDF below instead.';
             } finally {
                 this.canvasBusy = false;
             }
@@ -74,6 +79,7 @@ export function createPdfPager() {
             this.pdfDoc = null;
             this.pageNum = 1;
             this.numPages = 1;
+            this.error = '';
         },
     };
 }

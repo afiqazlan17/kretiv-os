@@ -117,7 +117,8 @@
             </div>
             <div class="lg:hidden bg-gray-100 flex flex-col" :class="mobileTab === 'form' ? 'hidden' : 'flex'">
                 <div class="flex-1 overflow-auto flex items-start justify-center p-2">
-                    <canvas x-ref="mobileCanvas" class="shadow bg-white"></canvas>
+                    <p x-show="pager.error" x-text="pager.error" class="text-xs text-red-600 text-center p-4"></p>
+                    <canvas x-show="!pager.error" x-ref="mobileCanvas" class="shadow bg-white"></canvas>
                 </div>
                 <div class="flex items-center justify-center gap-3 px-3 py-2 border-t border-gray-200 bg-white text-sm">
                     <button type="button" @click="pager.prev($refs.mobileCanvas)" :disabled="pager.pageNum <= 1"

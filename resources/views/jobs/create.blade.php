@@ -282,7 +282,8 @@
                 <div class="relative flex-1 bg-gray-100 min-h-0 flex flex-col lg:hidden">
                     <p x-show="!depts.length" class="absolute inset-0 flex items-center justify-center text-sm text-gray-400 px-6 text-center">Select a department to see the quotation fill in as you type.</p>
                     <div class="flex-1 overflow-auto flex items-start justify-center p-2">
-                        <canvas x-ref="pvCanvas" class="shadow bg-white" x-show="depts.length"></canvas>
+                        <p x-show="pvPager.error" x-text="pvPager.error" class="text-xs text-red-600 text-center p-4"></p>
+                        <canvas x-show="depts.length && !pvPager.error" x-ref="pvCanvas" class="shadow bg-white"></canvas>
                     </div>
                     <div x-show="depts.length" class="flex items-center justify-center gap-3 px-3 py-2 border-t border-gray-200 bg-white text-sm">
                         <button type="button" @click="pvPager.prev($refs.pvCanvas)" :disabled="pvPager.pageNum <= 1"

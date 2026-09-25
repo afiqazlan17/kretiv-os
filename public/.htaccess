@@ -1,3 +1,12 @@
+# pdf.js ships its worker as an ES module (.mjs). Some Apache/cPanel
+# configs don't have a MIME mapping for that extension and serve it as
+# application/octet-stream or text/plain, which makes the browser refuse
+# to load it as a module worker — pdf.js then fails silently and the
+# mobile preview renders as a blank canvas stuck on "Page 1 / 1".
+<IfModule mod_mime.c>
+    AddType text/javascript .mjs
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

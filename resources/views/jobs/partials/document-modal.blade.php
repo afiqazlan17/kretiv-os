@@ -8,7 +8,7 @@
      @open-document.window="openFor($event.detail.type)"
      @keydown.escape.window="open && close()"
      x-show="open" x-cloak
-     class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-6">
+     class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-2 sm:p-6">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[92vh] flex flex-col overflow-hidden">
         <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100">
             <h2 class="text-base font-bold text-gray-900" x-text="`Preview ${label} — ${jobCode}`"></h2>

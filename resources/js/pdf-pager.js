@@ -30,6 +30,7 @@ export function createPdfPager() {
         numPages: 1,
         canvasBusy: false,
         error: '',
+        renderTask: null,
 
         async load(blobUrl, canvas) {
             this.canvasBusy = true;
@@ -50,8 +51,19 @@ export function createPdfPager() {
 
         async render(canvas) {
             if (!this.pdfDoc || !canvas) return;
+            // pdf.js only allows one render task per canvas at a time — the
+            // automatic render from load() and a re-render triggered by
+            // switching to the Preview tab (before the first one finished)
+            // could otherwise collide and throw deep inside pdf.js's
+            // internals ("Cannot read private member ... from an object
+            // whose class did not declare it").
+            if (this.renderTask) {
+                this.renderTask.cancel();
+                this.renderTask = null;
+            }
             const page = await this.pdfDoc.getPage(this.pageNum);
-            const scale = Math.min(2, (canvas.parentElement?.clientWidth || 600) / page.getViewport({ scale: 1 }).width);
+            const width = canvas.parentElement?.clientWidth || 600;
+            const scale = Math.min(2, width / page.getViewport({ scale: 1 }).width);
             const viewport = page.getViewport({ scale });
             const dpr = window.devicePixelRatio || 1;
             canvas.width = viewport.width * dpr;
@@ -60,7 +72,16 @@ export function createPdfPager() {
             canvas.style.height = viewport.height + 'px';
             const ctx = canvas.getContext('2d');
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            await page.render({ canvasContext: ctx, viewport }).promise;
+            const task = page.render({ canvasContext: ctx, viewport });
+            this.renderTask = task;
+            try {
+                await task.promise;
+            } catch (e) {
+                if (e?.name === 'RenderingCancelledException') return;
+                throw e;
+            } finally {
+                if (this.renderTask === task) this.renderTask = null;
+            }
         },
 
         async next(canvas) {

@@ -30,7 +30,19 @@ export function createPdfPager() {
         numPages: 1,
         canvasBusy: false,
         error: '',
-        renderTask: null,
+        // pdf.js only allows one render task per canvas at a time — the
+        // automatic render kicked off by load() and a re-render fired by
+        // switching to the Preview tab can easily overlap (both start
+        // before either has finished its own `await`s), and a bare
+        // cancel-the-previous-task guard has a race window right at the
+        // start of render() where two calls can both see "no task running
+        // yet" and both proceed. That collision throws deep inside pdf.js
+        // ("Cannot read private member #n from an object whose class did
+        // not declare it") and leaves the canvas blank. Chaining every
+        // render() call onto this promise serializes them completely —
+        // each one only starts once the previous has fully finished — so
+        // there's no window for two to overlap on the same canvas.
+        _queue: Promise.resolve(),
 
         async load(blobUrl, canvas) {
             this.canvasBusy = true;
@@ -49,18 +61,17 @@ export function createPdfPager() {
             }
         },
 
-        async render(canvas) {
+        render(canvas) {
+            const run = this._queue.then(() => this._renderNow(canvas)).catch((e) => {
+                console.error('pdf-pager: render failed', e);
+                this.error = 'Preview unavailable on this device — use Download PDF below instead.';
+            });
+            this._queue = run;
+            return run;
+        },
+
+        async _renderNow(canvas) {
             if (!this.pdfDoc || !canvas) return;
-            // pdf.js only allows one render task per canvas at a time — the
-            // automatic render from load() and a re-render triggered by
-            // switching to the Preview tab (before the first one finished)
-            // could otherwise collide and throw deep inside pdf.js's
-            // internals ("Cannot read private member ... from an object
-            // whose class did not declare it").
-            if (this.renderTask) {
-                this.renderTask.cancel();
-                this.renderTask = null;
-            }
             const page = await this.pdfDoc.getPage(this.pageNum);
             const width = canvas.parentElement?.clientWidth || 600;
             const scale = Math.min(2, width / page.getViewport({ scale: 1 }).width);
@@ -72,16 +83,7 @@ export function createPdfPager() {
             canvas.style.height = viewport.height + 'px';
             const ctx = canvas.getContext('2d');
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            const task = page.render({ canvasContext: ctx, viewport });
-            this.renderTask = task;
-            try {
-                await task.promise;
-            } catch (e) {
-                if (e?.name === 'RenderingCancelledException') return;
-                throw e;
-            } finally {
-                if (this.renderTask === task) this.renderTask = null;
-            }
+            await page.render({ canvasContext: ctx, viewport }).promise;
         },
 
         async next(canvas) {

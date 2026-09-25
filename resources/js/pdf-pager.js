@@ -23,67 +23,73 @@ function loadPdfjs() {
     return pdfjsLibPromise;
 }
 
+// createPdfPager() is called from inside an Alpine x-data() object, so
+// whatever it returns gets deep-wrapped in Alpine's (@vue/reactivity)
+// Proxy. pdf.js's PDFDocumentProxy/PDFPageProxy instances use real ES
+// private class fields (#foo) internally — a Proxy standing in for `this`
+// breaks that private-field brand check with "Cannot read private member
+// #n from an object whose class did not declare it" the moment any of
+// pdf.js's own methods run against the proxied instance. Keeping pdfDoc
+// (and the in-flight render queue) in a closure instead of as a property
+// on the returned object means Alpine never sees or wraps them — they're
+// plain, un-proxied references from pdf.js's point of view.
 export function createPdfPager() {
+    let pdfDoc = null;
+    let queue = Promise.resolve();
+
+    async function renderNow(canvas, pageNum) {
+        if (!pdfDoc || !canvas) return;
+        const page = await pdfDoc.getPage(pageNum);
+        const width = canvas.parentElement?.clientWidth || 600;
+        const scale = Math.min(2, width / page.getViewport({ scale: 1 }).width);
+        const viewport = page.getViewport({ scale });
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = viewport.width * dpr;
+        canvas.height = viewport.height * dpr;
+        canvas.style.width = viewport.width + 'px';
+        canvas.style.height = viewport.height + 'px';
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+    }
+
     return {
-        pdfDoc: null,
+        // Only plain primitives live here — safe for Alpine to make
+        // reactive, since the UI (page counter, Prev/Next disabled state,
+        // error message) binds directly to these.
         pageNum: 1,
         numPages: 1,
         canvasBusy: false,
         error: '',
-        // pdf.js only allows one render task per canvas at a time — the
-        // automatic render kicked off by load() and a re-render fired by
-        // switching to the Preview tab can easily overlap (both start
-        // before either has finished its own `await`s), and a bare
-        // cancel-the-previous-task guard has a race window right at the
-        // start of render() where two calls can both see "no task running
-        // yet" and both proceed. That collision throws deep inside pdf.js
-        // ("Cannot read private member #n from an object whose class did
-        // not declare it") and leaves the canvas blank. Chaining every
-        // render() call onto this promise serializes them completely —
-        // each one only starts once the previous has fully finished — so
-        // there's no window for two to overlap on the same canvas.
-        _queue: Promise.resolve(),
 
         async load(blobUrl, canvas) {
             this.canvasBusy = true;
             this.error = '';
             try {
                 const pdfjsLib = await loadPdfjs();
-                this.pdfDoc = await pdfjsLib.getDocument({ url: blobUrl }).promise;
-                this.numPages = this.pdfDoc.numPages;
+                pdfDoc = await pdfjsLib.getDocument({ url: blobUrl }).promise;
+                this.numPages = pdfDoc.numPages;
                 this.pageNum = 1;
                 await this.render(canvas);
             } catch (e) {
-                console.error('pdf-pager: failed to render preview', e);
+                console.error('pdf-pager: failed to load preview', e);
                 this.error = 'Preview unavailable on this device — use Download PDF below instead.';
             } finally {
                 this.canvasBusy = false;
             }
         },
 
+        // Every render() call is chained onto the previous one so two
+        // render tasks never touch the same canvas concurrently — pdf.js
+        // only tolerates one render task per canvas at a time.
         render(canvas) {
-            const run = this._queue.then(() => this._renderNow(canvas)).catch((e) => {
+            const pageNum = this.pageNum;
+            const run = queue.then(() => renderNow(canvas, pageNum)).catch((e) => {
                 console.error('pdf-pager: render failed', e);
                 this.error = 'Preview unavailable on this device — use Download PDF below instead.';
             });
-            this._queue = run;
+            queue = run;
             return run;
-        },
-
-        async _renderNow(canvas) {
-            if (!this.pdfDoc || !canvas) return;
-            const page = await this.pdfDoc.getPage(this.pageNum);
-            const width = canvas.parentElement?.clientWidth || 600;
-            const scale = Math.min(2, width / page.getViewport({ scale: 1 }).width);
-            const viewport = page.getViewport({ scale });
-            const dpr = window.devicePixelRatio || 1;
-            canvas.width = viewport.width * dpr;
-            canvas.height = viewport.height * dpr;
-            canvas.style.width = viewport.width + 'px';
-            canvas.style.height = viewport.height + 'px';
-            const ctx = canvas.getContext('2d');
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            await page.render({ canvasContext: ctx, viewport }).promise;
         },
 
         async next(canvas) {
@@ -99,7 +105,8 @@ export function createPdfPager() {
         },
 
         reset() {
-            this.pdfDoc = null;
+            pdfDoc = null;
+            queue = Promise.resolve();
             this.pageNum = 1;
             this.numPages = 1;
             this.error = '';

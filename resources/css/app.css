@@ -72,7 +72,15 @@
     z-index: 0;
     border-radius: inherit;
 }
-.os-card > * {
+/* Only REAL interactive descendants need to sit above the stretched link
+   (so a specific job row or button still gets its own click instead of
+   triggering the tile's general "open this module" link). Elevating every
+   direct child (the old ".os-card > *" rule) was a bug: plain content like
+   the card's image/title/description isn't a link, so raising it above
+   .os-card-link intercepted every click and made the whole tile dead —
+   nothing happened no matter where on the card you clicked. */
+.os-card a:not(.os-card-link),
+.os-card button {
     position: relative;
     z-index: 1;
 }

@@ -12,8 +12,7 @@
                  placeholders for now; they need a real attendance_logs table
                  and backend before they do anything. --}}
             <div class="os-card rounded-2xl p-5 flex flex-col">
-                <div class="flex items-start justify-between gap-3"
-                     x-data="{ time: '', date: '' }"
+                <div x-data="{ time: '', date: '' }"
                      x-init="
                         const tick = () => {
                             const now = new Date();
@@ -23,9 +22,9 @@
                         tick();
                         setInterval(tick, 1000);
                      ">
-                    <h1 class="text-2xl font-semibold text-white">{{ $greeting }}, {{ $first }}</h1>
-                    <div class="text-right shrink-0">
-                        <div class="font-mono text-2xl font-semibold text-[#FCB03C] tracking-wide" x-text="time"></div>
+                    <h1 class="text-2xl font-semibold text-white leading-snug">{{ $greeting }}, {{ $first }}</h1>
+                    <div class="mt-4">
+                        <div class="font-mono text-3xl font-semibold text-[#FCB03C] tracking-wide" x-text="time"></div>
                         <div class="text-xs text-white/50 mt-1" x-text="date"></div>
                     </div>
                 </div>

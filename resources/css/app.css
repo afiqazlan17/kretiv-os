@@ -43,9 +43,14 @@
     background: linear-gradient(160deg, #100904 0%, #1a0e08 45%, #2a0f16 100%);
 }
 
-/* Same brand gradient as the login stage, but static — this is a page staff
-   look at all day, not a one-off splash, so nothing here drifts or floats. */
-.os-stage {
+/* Same brand gradient as the login stage, but static — these are pages
+   staff look at all day, not a one-off splash, so nothing here drifts or
+   floats. .app-stage is the jobs.kretiv.co shell (sidebar layout); shares
+   the exact background so the whole app reads as one consistent theme
+   instead of the OS launcher/login being an island of dark inside an
+   otherwise light-gray app. */
+.os-stage,
+.app-stage {
     background: linear-gradient(160deg, #100904 0%, #1a0e08 45%, #2a0f16 100%);
 }
 
@@ -83,6 +88,44 @@
 .os-card button {
     position: relative;
     z-index: 1;
+}
+
+/* Small stat-row cards (dashboard) sit one notch quieter than the main
+   content cards (Needs Attention, charts, Recent Jobs) — a flatter surface
+   with no blur/shadow, so the coloured icon badge inside each one is what
+   pops, and the page reads as having a top row of quick numbers feeding
+   into the "real" cards below it, instead of every box looking identical. */
+.os-card--stat {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+}
+
+/* .os-card's 6% white wash barely registers against the OS launcher's
+   near-black stage because big product-photo tiles carry the page's visual
+   weight there. Inside .app-stage (jobs.kretiv.co's data-heavy pages —
+   Dashboard, tables, forms) there are no images to break things up, so the
+   same recipe read as "everything is one flat dark blob". Scoped override,
+   not a change to .os-card itself, so the already-approved OS launcher and
+   login screens are untouched. */
+.app-stage .os-card {
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.app-stage .os-card--stat {
+    background: rgba(255, 255, 255, 0.09);
+}
+
+/* Small uppercase captions (card labels like "Total jobs", "Pipeline
+   value") were sitting at white/40-50 opacity, which reads as flat grey
+   and disappears into the dark card behind it. A soft glow instead of
+   pure dimming keeps them readable without competing with the big number
+   underneath for attention. */
+.text-glow {
+    color: rgba(255, 255, 255, 0.82);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
 }
 
 .guest-glow {

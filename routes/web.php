@@ -125,5 +125,6 @@ $onHost('jobs', function () {
         Route::post('/finance/opening-balance', [FinanceController::class, 'storeOpeningBalance'])->name('finance.opening-balance.store');
         Route::post('/finance/director-loan', [FinanceController::class, 'storeDirectorLoan'])->name('finance.director-loan.store');
         Route::post('/finance/bank-transfer', [FinanceController::class, 'storeBankTransfer'])->name('finance.bank-transfer.store');
+        Route::get('/finance/ledger/{entry}/receipt', [FinanceController::class, 'showReceipt'])->name('finance.ledger.receipt');
     });
 });

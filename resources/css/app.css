@@ -33,3 +33,161 @@
         font-size: 16px !important;
     }
 }
+
+/* Login / guest pages (layouts/guest.blade.php) — a dark brand-gradient
+   stage with two slow-drifting colour glows and a gently floating logo.
+   Kept to one deliberate motion (the float) plus a static background;
+   nothing else on the page moves, so that one bit of motion actually reads
+   instead of competing with itself. */
+.guest-stage {
+    background: linear-gradient(160deg, #100904 0%, #1a0e08 45%, #2a0f16 100%);
+}
+
+/* Same brand gradient as the login stage, but static — this is a page staff
+   look at all day, not a one-off splash, so nothing here drifts or floats. */
+.os-stage {
+    background: linear-gradient(160deg, #100904 0%, #1a0e08 45%, #2a0f16 100%);
+}
+
+/* Dark glass cards for the OS launcher — same recipe as .guest-card. A
+   "stretched link" (.os-card-link, absolutely positioned over the whole
+   card) makes the entire tile clickable while real nested links/buttons on
+   top of it (job rows, action buttons) still intercept their own clicks. */
+.os-card {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    transition: border-color 0.15s ease, transform 0.15s ease;
+    position: relative;
+}
+.os-card.os-card--clickable:hover {
+    border-color: rgba(255, 255, 255, 0.28);
+    transform: translateY(-2px);
+}
+.os-card-link {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+}
+.os-card > * {
+    position: relative;
+    z-index: 1;
+}
+
+.guest-glow {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(90px);
+    opacity: 0.35;
+    pointer-events: none;
+}
+.guest-glow--pink {
+    width: 26rem;
+    height: 26rem;
+    top: -6rem;
+    left: -8rem;
+    background: #E91E63;
+    animation: guest-drift-a 16s ease-in-out infinite;
+}
+.guest-glow--orange {
+    width: 22rem;
+    height: 22rem;
+    bottom: -7rem;
+    right: -6rem;
+    background: #FCB03C;
+    animation: guest-drift-b 20s ease-in-out infinite;
+}
+
+.guest-logo-float {
+    display: inline-block;
+    animation: guest-float 5s ease-in-out infinite;
+}
+
+@keyframes guest-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+@keyframes guest-drift-a {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(2rem, 3rem); }
+}
+@keyframes guest-drift-b {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-2rem, -2rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .guest-logo-float, .guest-glow--pink, .guest-glow--orange {
+        animation: none;
+    }
+}
+
+/* Dark glass login card — descendant overrides only, scoped to .guest-card,
+   so the shared x-input-label/x-text-input/x-primary-button components
+   (used everywhere else in the app on light backgrounds) stay untouched. */
+.guest-card {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.guest-card label {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+.guest-card input[type="text"],
+.guest-card input[type="email"],
+.guest-card input[type="password"] {
+    background: rgba(255, 255, 255, 0.07) !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
+    color: #fff !important;
+}
+.guest-card input[type="text"]::placeholder,
+.guest-card input[type="email"]::placeholder,
+.guest-card input[type="password"]::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+}
+.guest-card input[type="text"]:focus,
+.guest-card input[type="email"]:focus,
+.guest-card input[type="password"]:focus {
+    border-color: #FCB03C !important;
+    box-shadow: 0 0 0 3px rgba(252, 176, 60, 0.25) !important;
+}
+.guest-card input[type="checkbox"] {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+.guest-card .text-gray-600,
+.guest-card .text-gray-900 {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+.guest-card a.underline {
+    color: rgba(255, 255, 255, 0.6) !important;
+}
+.guest-card a.underline:hover {
+    color: #fff !important;
+}
+.guest-card x-primary-button,
+.guest-card button[type="submit"] {
+    background: linear-gradient(135deg, #E91E63, #AD1457) !important;
+}
+.guest-card button[type="submit"]:hover {
+    filter: brightness(1.1);
+}
+
+/* Password show/hide toggle — a plain eye icon button absolutely
+   positioned inside the same relative wrapper as the input. */
+.guest-password-toggle {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+}
+.guest-password-toggle:hover {
+    color: rgba(255, 255, 255, 0.9);
+}

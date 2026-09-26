@@ -10,7 +10,9 @@ use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\Response;
 
 // Reports & Finance is a Dept Head+ capability (Staff/Intern cannot access
 // it at all — matches the Access Reference table in the old app's
@@ -124,7 +126,17 @@ class FinanceController extends Controller
             'bank' => ['required', 'in:'.implode(',', array_keys(config('kretivco.banks')))],
             'date' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
+            // Proof of the actual bank transaction (e.g. a director topping
+            // up the company AFFIN account) — optional, same 20MB cap as
+            // job attachments.
+            'receipt' => ['nullable', 'file', 'max:20480'],
         ]);
+
+        if ($request->hasFile('receipt')) {
+            $file = $request->file('receipt');
+            $validated['receipt_path'] = $file->storeAs('ledger-receipts', time().'_'.$file->getClientOriginalName(), 'public');
+            $validated['receipt_name'] = $file->getClientOriginalName();
+        }
 
         $ledger->postDirectorLoan($validated, $request->user()->name);
 
@@ -146,6 +158,17 @@ class FinanceController extends Controller
         $ledger->postBankTransfer($validated, $request->user()->name);
 
         return back()->with('success', 'Bank transfer posted.');
+    }
+
+    /** Download the proof-of-transaction file attached to a ledger entry. */
+    public function showReceipt(Request $request, LedgerEntry $entry): Response
+    {
+        $this->authorizeFinance($request);
+
+        abort_unless($entry->receipt_path, 404);
+        abort_unless(Storage::disk('public')->exists($entry->receipt_path), 404);
+
+        return Storage::disk('public')->response($entry->receipt_path, $entry->receipt_name);
     }
 
     private function authorizeFinance(Request $request): void

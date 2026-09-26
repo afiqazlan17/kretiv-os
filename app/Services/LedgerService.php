@@ -356,6 +356,8 @@ class LedgerService
             'amount' => $amt,
             'bank' => $bank,
             'created_by' => $userName ?: 'System',
+            'receipt_path' => $data['receipt_path'] ?? null,
+            'receipt_name' => $data['receipt_name'] ?? null,
         ]);
     }
 

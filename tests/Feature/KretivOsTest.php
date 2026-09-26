@@ -94,7 +94,7 @@ class KretivOsTest extends TestCase
         $staff = User::factory()->create(['role' => User::ROLE_STAFF]);
 
         $this->actingAs($bod)->get(route('os.home'))->assertSee('Users &amp; Access', false);
-        $this->actingAs($staff)->get(route('os.home'))->assertDontSee('Users &amp; Access', false)->assertSee('No access. Ask BOD if you need it.');
+        $this->actingAs($staff)->get(route('os.home'))->assertDontSee('Users &amp; Access', false)->assertSee('No access — ask BOD');
     }
 
     public function test_finance_role_can_use_the_finance_module_across_all_departments(): void

@@ -7,89 +7,114 @@
     @endphp
 
     <div class="space-y-4">
-        <div class="bg-white rounded-xl shadow-sm p-5 flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <h1 class="text-lg font-semibold">{{ $greeting }}, {{ $first }}</h1>
-                <p class="text-sm text-gray-500">{{ now()->translatedFormat('l, j F Y') }}</p>
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 items-stretch">
+            {{-- Greeting + attendance (Clock In/Out, WFH/WFO) — both are visual
+                 placeholders for now; they need a real attendance_logs table
+                 and backend before they do anything. --}}
+            <div class="os-card rounded-2xl p-5 flex flex-col">
+                <div class="flex items-start justify-between gap-3"
+                     x-data="{ time: '', date: '' }"
+                     x-init="
+                        const tick = () => {
+                            const now = new Date();
+                            time = now.toLocaleTimeString('en-GB', { hour12: false });
+                            date = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                        };
+                        tick();
+                        setInterval(tick, 1000);
+                     ">
+                    <h1 class="text-2xl font-semibold text-white">{{ $greeting }}, {{ $first }}</h1>
+                    <div class="text-right shrink-0">
+                        <div class="font-mono text-2xl font-semibold text-[#FCB03C] tracking-wide" x-text="time"></div>
+                        <div class="text-xs text-white/50 mt-1" x-text="date"></div>
+                    </div>
+                </div>
+
+                <div class="mt-5 pt-4 border-t border-white/10">
+                    <p class="text-[11px] uppercase tracking-wide text-white/30 mb-2">Attendance · Coming soon</p>
+                    <div class="grid grid-cols-2 gap-1.5 p-1 rounded-lg bg-white/5 text-xs font-semibold text-white/40 mb-2">
+                        <span class="text-center py-1.5 rounded-md">Work From Office</span>
+                        <span class="text-center py-1.5 rounded-md">Work From Home</span>
+                    </div>
+                    <button type="button" disabled class="w-full text-xs font-semibold py-2 rounded-md bg-white/5 text-white/30 cursor-not-allowed">
+                        Clock In
+                    </button>
+                </div>
+            </div>
+
+            {{-- Module launcher tiles — simple/uniform, the whole tile is
+                 clickable (.os-card-link). Details (job lists, alerts) live in
+                 the Notifications panel below instead of cluttering these. --}}
+            <div class="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="os-card rounded-2xl p-5 pt-0 flex flex-col items-center text-center overflow-hidden {{ $user->canAccess('jobs') ? 'os-card--clickable' : 'opacity-50' }}">
+                    @if ($user->canAccess('jobs'))
+                        <a href="{{ route('dashboard') }}" target="_blank" rel="noopener" class="os-card-link" aria-label="Open Jobs"></a>
+                    @endif
+                    <div class="-mx-5 mb-3 aspect-square w-[calc(100%+2.5rem)] overflow-hidden">
+                        <img src="{{ asset('images/os-cards/jobs.jpg') }}" alt="" class="w-full h-full object-cover">
+                    </div>
+                    <h2 class="font-semibold text-white">Jobs</h2>
+                    <p class="text-xs text-white/50 mt-1">{{ $user->canAccess('jobs') ? 'Projects & Clients' : 'No access — ask BOD' }}</p>
+                </div>
+
+                <div class="os-card rounded-2xl p-5 pt-0 flex flex-col items-center text-center overflow-hidden opacity-50">
+                    <div class="-mx-5 mb-3 aspect-square w-[calc(100%+2.5rem)] overflow-hidden">
+                        <img src="{{ asset('images/os-cards/hr.jpg') }}" alt="" class="w-full h-full object-cover">
+                    </div>
+                    <h2 class="font-semibold text-white">HR</h2>
+                    <p class="text-xs text-white/50 mt-1">People & Culture</p>
+                    <span class="mt-2 text-[10px] font-semibold px-2 py-0.5 rounded bg-white/10 text-white/40">Coming soon</span>
+                </div>
+
+                <div class="os-card rounded-2xl p-5 pt-0 flex flex-col items-center text-center overflow-hidden {{ $user->canAccess('finance') ? 'os-card--clickable' : 'opacity-50' }}">
+                    @if ($user->canAccess('finance'))
+                        <a href="{{ route('finance.index') }}" target="_blank" rel="noopener" class="os-card-link" aria-label="Open Finance"></a>
+                    @endif
+                    <div class="-mx-5 mb-3 aspect-square w-[calc(100%+2.5rem)] overflow-hidden">
+                        <img src="{{ asset('images/os-cards/finance.jpg') }}" alt="" class="w-full h-full object-cover">
+                    </div>
+                    <h2 class="font-semibold text-white">Finance</h2>
+                    <p class="text-xs text-white/50 mt-1">{{ $user->canAccess('finance') ? 'Numbers & Reports' : 'No access — ask BOD' }}</p>
+                </div>
             </div>
         </div>
 
-        @if ($dueJobs->isNotEmpty() || $queueCount > 0)
+        {{-- Notifications — one merged feed. Job alerts are real (deadline /
+             queue data already computed in OsController); Memo and
+             Announcement are placeholders until an HR/announcements module
+             actually exists. --}}
+        <div class="os-card rounded-2xl p-5">
+            <h2 class="font-semibold text-white mb-3">Notifications</h2>
+
             <div class="space-y-2">
-                @foreach ($dueJobs as $job)
-                    <a href="{{ route('jobs.show', $job) }}" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-lg bg-red-50 text-red-700 text-sm px-4 py-2.5 hover:bg-red-100">
+                @forelse ($dueJobs as $job)
+                    <a href="{{ route('jobs.show', $job) }}" target="_blank" rel="noopener" class="flex items-center gap-3 text-sm px-3 py-2.5 rounded-lg bg-red-500/10 hover:bg-red-500/15">
                         <span>⚠️</span>
-                        <span><strong>{{ $job->job_id }}</strong> {{ $job->job_type }} — {{ $job->deadline->startOfDay()->eq($today) ? 'deadline today' : 'overdue since '.$job->deadline->format('j M') }}</span>
-                        <span class="ml-auto text-xs underline">Open</span>
+                        <span class="text-red-300"><strong class="text-white">{{ $job->job_id }}</strong> {{ $job->job_type }} — {{ $job->deadline->startOfDay()->eq($today) ? 'deadline today' : 'overdue since '.$job->deadline->format('j M') }}</span>
+                        <span class="ml-auto text-xs underline text-white/50">Open</span>
                     </a>
-                @endforeach
+                @empty
+                @endforelse
+
                 @if ($queueCount > 0)
-                    <a href="{{ route('jobs.index', ['view' => 'queue']) }}" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-lg bg-amber-50 text-amber-800 text-sm px-4 py-2.5 hover:bg-amber-100">
-                        <span>📥</span><span>{{ $queueCount }} {{ \Illuminate\Support\Str::plural('job', $queueCount) }} in the queue waiting to be taken in</span>
-                        <span class="ml-auto text-xs underline">View queue</span>
+                    <a href="{{ route('jobs.index', ['view' => 'queue']) }}" target="_blank" rel="noopener" class="flex items-center gap-3 text-sm px-3 py-2.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/15">
+                        <span>📥</span><span class="text-amber-300">{{ $queueCount }} {{ \Illuminate\Support\Str::plural('job', $queueCount) }} in the queue waiting to be taken in</span>
+                        <span class="ml-auto text-xs underline text-white/50">View queue</span>
                     </a>
                 @endif
-            </div>
-        @endif
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-            {{-- Jobs --}}
-            <div class="bg-white rounded-xl shadow-sm p-5 flex flex-col {{ $user->canAccess('jobs') ? '' : 'opacity-50' }}">
-                <div class="flex items-center gap-2 mb-1"><span class="text-xl">📋</span><h2 class="font-semibold">Jobs</h2></div>
-                @if ($user->canAccess('jobs'))
-                    <p class="text-xs text-gray-500">{{ $user->isBod() ? 'Your jobs in progress' : 'My jobs in progress' }}</p>
-                    <p class="text-2xl font-semibold mt-1">{{ $myJobs->count() }}</p>
-                    <div class="mt-3 flex-1 divide-y divide-gray-100 text-sm">
-                        @forelse ($myJobs as $job)
-                            @php $days = $job->deadline ? (int) $today->diffInDays($job->deadline->startOfDay(), false) : null; @endphp
-                            <a href="{{ route('jobs.show', $job) }}" target="_blank" rel="noopener" class="flex items-center justify-between gap-2 py-2 hover:bg-gray-50">
-                                <span class="truncate"><span class="text-xs text-gray-400 mr-1">{{ $job->job_id }}</span>{{ $job->job_type }}</span>
-                                @if ($days === null)
-                                    <span class="text-[11px] px-2 py-0.5 rounded bg-gray-100 text-gray-500 whitespace-nowrap">No deadline</span>
-                                @elseif ($days <= 0)
-                                    <span class="text-[11px] px-2 py-0.5 rounded bg-red-100 text-red-700 whitespace-nowrap">{{ $days === 0 ? 'Today' : abs($days).'d late' }}</span>
-                                @elseif ($days <= 3)
-                                    <span class="text-[11px] px-2 py-0.5 rounded bg-amber-100 text-amber-800 whitespace-nowrap">{{ $days }}d</span>
-                                @else
-                                    <span class="text-[11px] px-2 py-0.5 rounded bg-gray-100 text-gray-500 whitespace-nowrap">{{ $days }}d</span>
-                                @endif
-                            </a>
-                        @empty
-                            <p class="py-2 text-gray-400">Nothing assigned to you right now.</p>
-                        @endforelse
-                    </div>
-                    <div class="mt-4 flex flex-wrap gap-2">
-                        @if (\Illuminate\Support\Facades\Gate::allows('create', \App\Models\Job::class))
-                            <a href="{{ route('jobs.create') }}" target="_blank" rel="noopener" class="text-xs font-semibold px-3 py-1.5 rounded-md bg-[#E91E63] text-white hover:opacity-90">+ New job</a>
-                        @endif
-                        <a href="{{ route('dashboard') }}" target="_blank" rel="noopener" class="text-xs font-semibold px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">Open Jobs</a>
-                        <a href="{{ route('jobs.index', ['view' => 'queue']) }}" target="_blank" rel="noopener" class="text-xs font-semibold px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">Queue{{ $queueCount ? " ({$queueCount})" : '' }}</a>
-                    </div>
-                @else
-                    <p class="text-sm text-gray-500 mt-2">No access. Ask BOD if you need it.</p>
+                @if ($dueJobs->isEmpty() && $queueCount === 0)
+                    <p class="text-sm text-white/30 px-3 py-2">Nothing needs your attention right now.</p>
                 @endif
-            </div>
 
-            {{-- Finance --}}
-            <div class="bg-white rounded-xl shadow-sm p-5 flex flex-col {{ $user->canAccess('finance') ? '' : 'opacity-50' }}">
-                <div class="flex items-center gap-2 mb-1"><span class="text-xl">💰</span><h2 class="font-semibold">Finance</h2></div>
-                @if ($user->canAccess('finance'))
-                    <p class="text-sm text-gray-500 flex-1">Ledger, reports and vendor payments.</p>
-                    <div class="mt-4"><a href="{{ route('finance.index') }}" target="_blank" rel="noopener" class="text-xs font-semibold px-3 py-1.5 rounded-md border border-gray-200 hover:bg-gray-50">Open Finance</a></div>
-                @else
-                    <p class="text-sm text-gray-500 mt-2">No access. Ask BOD if you need it.</p>
-                @endif
-            </div>
-
-            {{-- HR --}}
-            <div class="bg-white rounded-xl shadow-sm p-5 flex flex-col {{ $user->canAccess('hr') ? '' : 'opacity-50' }}">
-                <div class="flex items-center gap-2 mb-1"><span class="text-xl">👥</span><h2 class="font-semibold">HR</h2></div>
-                @if ($user->canAccess('hr'))
-                    <p class="text-sm text-gray-500 flex-1">Leave, announcements, payslips and more.</p>
-                    <div class="mt-4"><span class="text-xs font-semibold px-3 py-1.5 rounded-md bg-gray-100 text-gray-500">Coming soon</span></div>
-                @else
-                    <p class="text-sm text-gray-500 mt-2">No access. Ask BOD if you need it.</p>
-                @endif
+                <div class="flex items-center gap-3 text-sm px-3 py-2.5 rounded-lg bg-white/[0.03] text-white/30">
+                    <span>📝</span><span>No memos from HR yet</span>
+                    <span class="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded bg-white/10">Coming soon</span>
+                </div>
+                <div class="flex items-center gap-3 text-sm px-3 py-2.5 rounded-lg bg-white/[0.03] text-white/30">
+                    <span>📣</span><span>No announcements yet</span>
+                    <span class="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded bg-white/10">Coming soon</span>
+                </div>
             </div>
         </div>
     </div>

@@ -155,7 +155,7 @@
                     <x-primary-button type="submit">Adjust</x-primary-button>
                 </form>
 
-                <form method="POST" action="{{ route('finance.director-loan.store') }}" x-show="tab === 'loan'" x-cloak class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <form method="POST" action="{{ route('finance.director-loan.store') }}" enctype="multipart/form-data" x-show="tab === 'loan'" x-cloak class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     @csrf
                     <select name="direction" required class="rounded-md border-gray-300 shadow-sm text-sm">
                         <option value="in">Loan In (Director → Company)</option>
@@ -170,6 +170,10 @@
                     <x-money-input name="amount" required />
                     <input type="date" name="date" value="{{ old('date', now()->toDateString()) }}" class="rounded-md border-gray-300 shadow-sm text-sm">
                     <input type="text" name="notes" placeholder="Notes" class="rounded-md border-gray-300 shadow-sm text-sm">
+                    <div>
+                        <label class="text-xs text-gray-500">Receipt / proof of transaction (optional)</label>
+                        <input type="file" name="receipt" accept="image/*,.pdf" class="block w-full text-sm text-gray-600 rounded-md border-gray-300 shadow-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200">
+                    </div>
                     <div class="sm:col-span-3"><x-primary-button type="submit">Post Loan Entry</x-primary-button></div>
                 </form>
 
@@ -222,7 +226,12 @@
                                 @endphp
                                 <tr class="{{ $entry->reversed ? 'opacity-50' : '' }}">
                                     <td class="px-4 py-3 whitespace-nowrap">{{ $entry->date->format('d F Y') }}</td>
-                                    <td class="px-4 py-3">{{ $entry->description }}</td>
+                                    <td class="px-4 py-3">
+                                        {{ $entry->description }}
+                                        @if ($entry->receipt_path)
+                                            <a href="{{ route('finance.ledger.receipt', $entry) }}" target="_blank" class="ml-1 text-gray-400 hover:text-gray-600" title="{{ $entry->receipt_name }}">📎</a>
+                                        @endif
+                                    </td>
                                     <td class="px-4 py-3 text-gray-600">{{ \App\Support\ChartOfAccounts::describe($entry->debit_account)['name'] }}</td>
                                     <td class="px-4 py-3 text-gray-600">{{ \App\Support\ChartOfAccounts::describe($entry->credit_account)['name'] }}</td>
                                     <td class="px-4 py-3">{{ $entry->department ? (\App\Http\Controllers\JobController::DEPT_CODES[$entry->department] ?? strtoupper($entry->department)) : '—' }}</td>

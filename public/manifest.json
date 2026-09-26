@@ -2,7 +2,7 @@
     "name": "Kretiv OS",
     "short_name": "Kretiv OS",
     "description": "Kretivco Mediaworks — job, finance and HR workspace",
-    "start_url": "/os",
+    "start_url": "/",
     "display": "standalone",
     "background_color": "#100904",
     "theme_color": "#100904",

@@ -39,6 +39,16 @@
                         Clock In
                     </button>
                 </div>
+
+                {{-- Quick link out to the public marketing site. --}}
+                <a href="https://kretiv.co" target="_blank" rel="noopener" class="mt-4 flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 px-4 py-3.5 hover:border-white/25 transition-colors">
+                    <img src="{{ asset('images/kretivco-logo.png') }}" alt="" class="w-10 h-10 shrink-0">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-white">Visit our website</p>
+                        <p class="text-xs text-white/40">kretiv.co</p>
+                    </div>
+                    <span class="text-white/40 text-lg">→</span>
+                </a>
             </div>
 
             {{-- Module launcher tiles — simple/uniform, the whole tile is

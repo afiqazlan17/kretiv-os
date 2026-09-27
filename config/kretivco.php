@@ -82,12 +82,12 @@ return [
     ],
 
     'roles' => [
-        'bod' => ['label' => 'BOD', 'color' => '#E91E63', 'desc' => 'Full access: all departments, reports, settings'],
-        'dept_head' => ['label' => 'Dept Head', 'color' => '#3A86FF', 'desc' => 'Own department(s): jobs, reports'],
+        'bod' => ['label' => 'BOD', 'full' => 'Board Of Directors', 'color' => '#E91E63', 'desc' => 'Full access: all departments, reports, settings'],
+        'dept_head' => ['label' => 'Dept Head', 'full' => 'Head of Department', 'color' => '#3A86FF', 'desc' => 'Own department(s): jobs, reports'],
         'staff' => ['label' => 'Staff', 'color' => '#6B7280', 'desc' => 'Own department(s): jobs, no reports/finance/settings'],
         'intern' => ['label' => 'Intern', 'color' => '#10B981', 'desc' => 'Own department(s): same access as Staff'],
         'finance' => ['label' => 'Finance', 'color' => '#8B5CF6', 'desc' => 'Finance module only: ledger and vendor payments'],
-        'hr' => ['label' => 'HR', 'color' => '#7C3AED', 'desc' => 'HR management: staff records, onboarding, payroll'],
+        'hr' => ['label' => 'HR', 'full' => 'Human Resources', 'color' => '#7C3AED', 'desc' => 'HR management: staff records, onboarding, payroll'],
     ],
 
     'company_email_domain' => 'kretiv.co',

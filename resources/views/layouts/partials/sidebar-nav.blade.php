@@ -175,7 +175,7 @@
             <div class="flex-1 min-w-0">
                 <div class="text-xs font-semibold text-gray-800 truncate">{{ $user->name }}</div>
                 <div class="text-[10px] font-medium mt-0.5" style="color: {{ config('kretivco.roles.'.$user->role.'.color', '#3A86FF') }}">
-                    {{ $user->isBod() ? 'Board Of Directors' : config('kretivco.roles.'.$user->role.'.label', $user->role) }}
+                    {{ config('kretivco.roles.'.$user->role.'.full', config('kretivco.roles.'.$user->role.'.label', $user->role)) }}
                 </div>
                 @if ($user->title)
                     <div class="text-[10px] text-gray-500 leading-snug">{{ $user->title }}</div>

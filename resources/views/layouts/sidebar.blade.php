@@ -1,6 +1,6 @@
 <div x-data="{ mobileOpen: false }">
     {{-- Mobile hamburger --}}
-    <button @click="mobileOpen = true" class="md:hidden fixed top-3 left-3 z-[60] w-10 h-10 rounded-lg bg-gradient-to-br from-[#E91E63] to-[#F25C54] text-white text-xl flex items-center justify-center shadow-lg">
+    <button @click="mobileOpen = true" x-show="!mobileOpen" class="md:hidden fixed top-3 left-3 z-[60] w-10 h-10 rounded-lg bg-gradient-to-br from-[#E91E63] to-[#F25C54] text-white text-xl flex items-center justify-center shadow-lg">
         ☰
     </button>
 

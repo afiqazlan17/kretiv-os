@@ -63,6 +63,7 @@
                 ['section' => 'Me'],
                 ['label' => 'My Profile', 'url' => route('hr.home'), 'icon' => 'user-check', 'active' => request()->routeIs('hr.home')],
                 ['label' => 'My Attendance', 'url' => route('hr.attendance.mine'), 'icon' => 'clock', 'active' => request()->routeIs('hr.attendance.mine')],
+                ['label' => 'My Payslips', 'url' => route('hr.payslips'), 'icon' => 'receipt', 'active' => request()->routeIs('hr.payslips')],
                 ['label' => 'Public Holidays', 'url' => route('hr.holidays'), 'icon' => 'calendar', 'active' => request()->routeIs('hr.holidays')],
             ];
             if (\App\Services\AttendanceService::canViewTeam($user)) {
@@ -75,6 +76,7 @@
             if ($user->canManageHr()) {
                 $hrNav[] = ['section' => 'Manage'];
                 $hrNav[] = ['label' => 'Staff', 'url' => route('hr.staff.index'), 'icon' => 'users', 'active' => request()->routeIs('hr.staff.index', 'hr.staff.show')];
+                $hrNav[] = ['label' => 'Payroll', 'url' => route('hr.payroll'), 'icon' => 'banknote', 'active' => request()->routeIs('hr.payroll*')];
                 $hrNav[] = ['label' => 'New Joiner', 'url' => route('hr.staff.create'), 'icon' => 'user-plus', 'active' => request()->routeIs('hr.staff.create')];
                 $hrNav[] = ['label' => 'Profile Requests', 'url' => route('hr.requests'), 'icon' => 'inbox', 'active' => request()->routeIs('hr.requests'), 'badge' => \App\Models\ProfileChangeRequest::where('status', 'pending')->where('user_id', '!=', $user->id)->count()];
             }

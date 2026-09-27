@@ -85,6 +85,18 @@ return [
     'company_email_domain' => 'kretiv.co',
 
     // HR: fixed allowance types offered in a staff package (amounts set per person).
+    // Payroll. Rates as at 2026; each statutory amount is pre-filled from
+    // these and can be adjusted by HR on a draft run before it's finalised.
+    'payroll' => [
+        'pay_day' => 25,
+        'ot_cutoff_day' => 15,          // OT from the 16th of last month to the 15th
+        'ot_divisor_days' => 26,        // Employment Act: ordinary daily rate = monthly / 26
+        'ot_daily_hours' => 8,
+        'epf' => ['employee' => 0.11, 'employer_low' => 0.13, 'employer_high' => 0.12, 'high_from' => 5000, 'over60_employer' => 0.04],
+        'socso' => ['ceiling' => 6000, 'employee' => 0.005, 'employer' => 0.0175, 'over60_employer' => 0.0125],
+        'eis' => ['ceiling' => 6000, 'employee' => 0.002, 'employer' => 0.002],
+    ],
+
     'allowance_types' => ['transport' => 'Transport', 'phone' => 'Phone', 'meal' => 'Meal', 'other' => 'Other'],
 
     // Flexible hours: clock in from `earliest` (earlier counts from then),

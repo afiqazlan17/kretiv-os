@@ -35,11 +35,18 @@
 {{-- Kretiv OS module switcher --}}
 <div class="flex flex-wrap gap-1.5 px-4 pb-4 text-[11px]">
     <a href="{{ route('os.home') }}" class="px-2.5 py-1 rounded-full bg-[#FFF1EC] text-[#C2185B] font-medium hover:bg-[#FFE3DA]">← KretivOS</a>
-    @if (($inFinance || $inHr) && $user->canAccess('jobs'))
-        <a href="{{ route('dashboard') }}" class="px-2.5 py-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-800">Jobs</a>
-    @elseif (! $inFinance && $user->canAccess('finance') && $user->canManageFinance())
-        <a href="{{ route('finance.index') }}" class="px-2.5 py-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-800">Finance</a>
-    @endif
+    {{-- The other modules this person can open (the current one is left out). --}}
+    @php
+        $inJobs = ! $inFinance && ! $inHr;
+        $switch = array_filter([
+            'Jobs' => ! $inJobs && $user->canAccess('jobs') ? route('dashboard') : null,
+            'Finance' => ! $inFinance && $user->canAccess('finance') && $user->canManageFinance() ? route('finance.index') : null,
+            'HR' => ! $inHr && $user->canAccess('hr') ? route('hr.home') : null,
+        ]);
+    @endphp
+    @foreach ($switch as $label => $url)
+        <a href="{{ $url }}" class="px-2.5 py-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-800">{{ $label }}</a>
+    @endforeach
 </div>
 
 {{-- Navigation --}}

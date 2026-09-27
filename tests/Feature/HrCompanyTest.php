@@ -42,4 +42,24 @@ class HrCompanyTest extends TestCase
 
         $this->actingAs($staff)->get(route('departments.index'))->assertRedirect(route('hr.departments'));
     }
+
+    public function test_board_data_fix_expands_titles_and_puts_the_ceo_on_top(): void
+    {
+        $ceo = User::factory()->create(['role' => User::ROLE_BOD, 'name' => 'Amirul Hafiz', 'title' => 'CEO']);
+        $coo = User::factory()->create(['role' => User::ROLE_BOD, 'name' => 'Afiq Azlan', 'title' => 'COO']);
+        $cmo = User::factory()->create(['role' => User::ROLE_BOD, 'name' => 'Nurfadilah Rahmat', 'title' => 'CMO']);
+        $cmo->employee()->create(['basic_salary' => 5000]);
+
+        (require database_path('migrations/2026_10_02_200000_board_titles_and_reporting.php'))->up();
+
+        $this->assertSame('Amirul Hafiz Zulkefly', $ceo->refresh()->name);
+        $this->assertSame('Chief Operation Officer (COO)', $coo->refresh()->title);
+        $this->assertEquals($ceo->id, $coo->employee->reports_to_user_id);
+        $this->assertEquals($ceo->id, $cmo->refresh()->employee->reports_to_user_id);
+        $this->assertEquals(5000, $cmo->employee->basic_salary); // existing record kept
+
+        $page = $this->actingAs($coo)->get(route('hr.org-chart'));
+        $this->assertTrue($page->viewData('top')->contains($ceo));
+        $this->assertCount(2, $page->viewData('second'));
+    }
 }

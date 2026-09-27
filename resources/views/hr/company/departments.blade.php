@@ -26,7 +26,7 @@
 
                         <div x-show="!edit" class="mt-4 space-y-4">
                             @if ($u['head'])
-                                <x-org-person :person="$u['head']" :color="$c" :tag="$d->head_interim ? 'Interim head' : 'Head'" />
+                                <x-org-person :person="$u['head']" :color="$c" :tag="$d->head_interim ? 'Interim head' : 'Head'" :show-title="! $u['head']->isBod()" />
                             @else
                                 <div class="rounded-2xl border-2 border-dashed border-black/10 px-3.5 py-3 text-xs text-gray-400">Head not set</div>
                             @endif

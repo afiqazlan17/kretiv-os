@@ -1,4 +1,4 @@
-@props(['person', 'color' => '#7C3AED', 'tag' => null, 'size' => 'md', 'stack' => false])
+@props(['person', 'color' => '#7C3AED', 'tag' => null, 'size' => 'md', 'stack' => false, 'showTitle' => true])
 @php
     $initials = \Illuminate\Support\Str::of($person->name)->explode(' ')
         ->reject(fn ($w) => in_array(strtolower($w), ['bin', 'binti', 'bt', 'b.', 'bte', 'a/l', 'a/p'], true))
@@ -12,7 +12,9 @@
               style="background: linear-gradient(135deg, {{ $color }}, {{ $color }}B3)">{{ strtoupper($initials) }}</span>
         <div class="min-w-0">
             <p class="{{ $big ? 'text-base' : 'text-[13px]' }} font-bold text-gray-900 leading-tight break-words">{{ $person->name }}</p>
-            <p class="{{ $big ? 'text-sm' : 'text-xs' }} text-gray-500 leading-snug break-words mt-0.5">{{ $title }}</p>
+            @if ($showTitle)
+                <p class="{{ $big ? 'text-sm' : 'text-xs' }} text-gray-500 leading-snug break-words mt-0.5">{{ $title }}</p>
+            @endif
             @if ($tag)
                 <span class="inline-block mt-1.5 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded whitespace-nowrap" style="color: {{ $color }}; background: {{ $color }}14">{{ $tag }}</span>
             @endif

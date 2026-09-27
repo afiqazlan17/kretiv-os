@@ -69,7 +69,7 @@
                                     <span class="text-[11px] font-semibold text-gray-400 shrink-0">{{ $u['members']->count() + ($u['head'] ? 1 : 0) }}</span>
                                 </div>
                                 @if ($u['head'])
-                                    <x-org-person :person="$u['head']" :color="$c" :tag="$u['dept']->head_interim ? 'Interim head' : 'Head'" stack style="border-top: 3px solid {{ $c }}" />
+                                    <x-org-person :person="$u['head']" :color="$c" :tag="$u['dept']->head_interim ? 'Interim head' : 'Head'" :show-title="! $u['head']->isBod()" stack style="border-top: 3px solid {{ $c }}" />
                                 @else
                                     <div class="rounded-2xl border-2 border-dashed border-black/10 px-3.5 py-3 text-xs text-gray-400">Head not set</div>
                                 @endif

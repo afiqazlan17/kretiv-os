@@ -17,8 +17,8 @@ return [
         'print' => [
             'lead' => 'Nurfadilah (Interim)',
             'services' => [
-                'Large Format — banner, bunting, backdrop',
-                'Small Format — business card, flyer, brochure, menu card',
+                'Large Format: banner, bunting, backdrop',
+                'Small Format: business card, flyer, brochure, menu card',
                 'Corporate Gifts & Souvenirs',
                 'Packaging & Label',
                 'Digital & Offset Printing',
@@ -32,7 +32,7 @@ return [
         'tech' => [
             'lead' => 'Amnan Syahmi',
             'services' => ['Website Creation', 'Application Development', 'Sales Page / Landing Page'],
-            'products' => ['Undangan.my — Digital Wedding Invitation', 'Restu.ai — Digital Wedding Planner', 'Wedding Planner by Ila — Notion-based'],
+            'products' => ['Undangan.my: Digital Wedding Invitation', 'Restu.ai: Digital Wedding Planner', 'Wedding Planner by Ila (Notion-based)'],
         ],
         'event' => [
             'lead' => 'Afiq Azlan (Interim)',
@@ -73,11 +73,11 @@ return [
     ],
 
     'roles' => [
-        'bod' => ['label' => 'BOD', 'color' => '#E91E63', 'desc' => 'Full access — all departments, reports, settings'],
-        'dept_head' => ['label' => 'Dept Head', 'color' => '#3A86FF', 'desc' => 'Own department(s) — jobs, reports'],
-        'staff' => ['label' => 'Staff', 'color' => '#6B7280', 'desc' => 'Own department(s) — jobs, no reports/finance/settings'],
-        'intern' => ['label' => 'Intern', 'color' => '#10B981', 'desc' => 'Own department(s) — same access as Staff'],
-        'finance' => ['label' => 'Finance', 'color' => '#8B5CF6', 'desc' => 'Finance module only — ledger and vendor payments'],
+        'bod' => ['label' => 'BOD', 'color' => '#E91E63', 'desc' => 'Full access: all departments, reports, settings'],
+        'dept_head' => ['label' => 'Dept Head', 'color' => '#3A86FF', 'desc' => 'Own department(s): jobs, reports'],
+        'staff' => ['label' => 'Staff', 'color' => '#6B7280', 'desc' => 'Own department(s): jobs, no reports/finance/settings'],
+        'intern' => ['label' => 'Intern', 'color' => '#10B981', 'desc' => 'Own department(s): same access as Staff'],
+        'finance' => ['label' => 'Finance', 'color' => '#8B5CF6', 'desc' => 'Finance module only: ledger and vendor payments'],
     ],
 
     'job_types' => [
@@ -101,7 +101,7 @@ return [
                 'segments' => [
                     [
                         'key' => 'end_user',
-                        'label' => 'End User — Direct Customer',
+                        'label' => 'End User (Direct Customer)',
                         'packages' => [
                             [
                                 'key' => 'vip',
@@ -125,7 +125,7 @@ return [
                     ],
                     [
                         'key' => 'vendor',
-                        'label' => 'Vendor — Wedding Planner',
+                        'label' => 'Vendor (Wedding Planner)',
                         'packages' => [
                             [
                                 'key' => 'dloveweddingplanner',

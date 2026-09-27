@@ -11,6 +11,7 @@ use App\Services\LedgerService;
 use App\Support\DocumentData;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -31,6 +32,7 @@ class DocumentController extends Controller
         $this->ensureAllowed($job, $type);
 
         $invoice = $this->invoiceEntry($job);
+        $paidBefore = $type === 'receipt' ? DocumentData::paidSoFar($job) : 0.0;
 
         return response()->json([
             'doc_number' => DocumentData::number($type, $job),
@@ -38,8 +40,11 @@ class DocumentController extends Controller
             'customer_phone' => $job->customer?->phone,
             'invoice_number' => $invoice?->doc_number,
             'invoice_total' => $invoice ? (float) $invoice->amount : null,
+            'paid_before' => $paidBefore,
             'payment_methods' => DocumentData::PAYMENT_METHODS,
-            'defaults' => DocumentData::defaults($job, $type, $request->user()->name, $invoice ? (float) $invoice->amount : null),
+            'defaults' => DocumentData::defaults($job, $type, $request->user()->name, $invoice ? (float) $invoice->amount : null, $paidBefore),
+            'standard_notes' => DocumentData::defaultNotes($type, DocumentData::bank($job)),
+            'notes_custom' => DocumentData::customNotes($job, $type) !== null,
         ]);
     }
 
@@ -143,6 +148,7 @@ class DocumentController extends Controller
             'discount_amount' => $doc['discount'] ?: null,
             'estimation_value' => $doc['total'],
         ]);
+        $this->rememberNotes($request, $job, $type);
 
         if ((float) $oldValue !== (float) $doc['total']) {
             ActivityLog::create([
@@ -174,9 +180,13 @@ class DocumentController extends Controller
         }
 
         if ($type === 'receipt') {
-            abort_if($doc['amount_paid'] > $doc['invoice_total'] + 0.005, 422, 'Amount paid cannot be more than the invoice total.');
-            abort_unless($ledger->postReceiptEntry($job, $docNumber, $userName, $doc['amount_paid']), 422, 'Nothing to post — the amount paid is empty.');
+            $owed = round($doc['invoice_total'] - $doc['paid_before'], 2);
+            abort_if($owed <= 0, 422, 'This invoice is already fully paid.');
+            abort_if($doc['amount_paid'] > $owed + 0.005, 422, 'Amount paid is more than the balance still owed (RM '.number_format($owed, 2).').');
+            abort_unless($ledger->postReceiptEntry($job, $docNumber, $userName, $doc['amount_paid']), 422, 'Enter the amount paid.');
         }
+
+        $this->rememberNotes($request, $job, $type);
 
         $bytes = Pdf::loadView('documents.pdf', ['doc' => $doc])->output();
         $filename = "{$docNumber}_{$job->job_id}.pdf";
@@ -228,6 +238,7 @@ class DocumentController extends Controller
         abort_if($jobs->pluck('status')->unique()->count() > 1, 422, "Job statuses don't match — align the statuses first before combining.");
 
         $type = $validated['doc_type'];
+        abort_unless($request->user()->canIssueDocument($type), 403);
         $docNumber = DocumentData::number($type, $job).'-C';
 
         $amounts = $jobs->mapWithKeys(function (Job $j) use ($type, $ledger, $request, $docNumber) {
@@ -267,6 +278,32 @@ class DocumentController extends Controller
         ]);
     }
 
+    /**
+     * Cancels one recorded payment (e.g. keyed in twice, or the wrong amount).
+     * The receipt's ledger entry is reversed; its PDF stays in history, marked
+     * Voided. It changes what the books say was collected, so BOD and
+     * Finance only.
+     */
+    public function voidPayment(Request $request, Job $job, LedgerEntry $entry, LedgerService $ledger): RedirectResponse
+    {
+        $this->authorize('update', $job);
+        abort_unless($request->user()->canVoidPayments(), 403);
+        abort_unless($entry->job_id === $job->job_id && $entry->type === 'receipt' && ! $entry->reversed, 404);
+
+        $ledger->voidReceipt($entry, $request->user()->name);
+
+        ActivityLog::create([
+            'job_id' => $job->id,
+            'job_code' => $job->job_id,
+            'user_id' => $request->user()->id,
+            'user_name' => $request->user()->name,
+            'action' => 'edited',
+            'detail' => "voided payment {$entry->doc_number} (RM ".number_format((float) $entry->amount, 2).')',
+        ]);
+
+        return back()->with('success', "Payment {$entry->doc_number} voided.");
+    }
+
     /** Downloads a previously generated document from storage — see JobDocument. */
     public function showDocument(Job $job, JobDocument $document): Response
     {
@@ -286,6 +323,7 @@ class DocumentController extends Controller
     private function ensureAllowed(Job $job, string $type): void
     {
         abort_unless(in_array($type, DocumentData::TYPES, true), 404);
+        abort_unless(request()->user()?->canIssueDocument($type), 403, 'Your role cannot issue a '.DocumentData::label($type).'.');
 
         abort_unless(
             in_array($job->status, [Job::STATUS_IN_PROGRESS, Job::STATUS_COMPLETED], true),
@@ -308,6 +346,8 @@ class DocumentController extends Controller
             'company' => ['nullable', 'string', 'max:255'],
             'address_line_1' => ['nullable', 'string', 'max:255'],
             'address_line_2' => ['nullable', 'string', 'max:500'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'due_date' => ['nullable', 'date'],
             'title' => ['required', 'string', 'max:255'],
             'by_staff' => ['nullable', 'string', 'max:255'],
             'items' => ['nullable', 'array', 'max:50'],
@@ -318,6 +358,7 @@ class DocumentController extends Controller
             'delivery' => ['nullable', 'numeric', 'min:0'],
             'discount' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'use_default_notes' => ['nullable', 'boolean'],
             'payment_method' => ['nullable', Rule::in(DocumentData::PAYMENT_METHODS)],
             'amount_paid' => ['nullable', 'numeric', 'min:0'],
         ]);
@@ -331,7 +372,29 @@ class DocumentController extends Controller
             DocumentData::number($type, $job),
             $request->user()->name,
             $invoice ? (float) $invoice->amount : null,
+            $invoice?->doc_number,
+            $type === 'receipt' ? DocumentData::paidSoFar($job) : 0.0,
         );
+    }
+
+    /**
+     * Keeps the modal's note wording on the job, so a document whose notes
+     * were edited reopens (and regenerates) with the same wording instead of
+     * falling back to the standard notes. "Use default" clears it again.
+     */
+    private function rememberNotes(Request $request, Job $job, string $type): void
+    {
+        $saved = $job->document_notes ?? [];
+
+        if ($request->boolean('use_default_notes')) {
+            unset($saved[$type]);
+        } elseif (($lines = DocumentData::noteLines($request->input('notes'))) !== []) {
+            $saved[$type] = $lines;
+        } else {
+            return;
+        }
+
+        $job->update(['document_notes' => $saved ?: null]);
     }
 
     private function archiveDocument(string $type, Job $job, string $docNumber, string $path, string $filename, Request $request, string $suffix = ''): void

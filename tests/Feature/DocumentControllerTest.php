@@ -139,6 +139,51 @@ class DocumentControllerTest extends TestCase
         $this->assertSame(0, LedgerEntry::where('type', 'receipt')->count());
     }
 
+    public function test_a_deposit_then_the_balance_are_two_receipts_and_both_stay_on_the_ledger(): void
+    {
+        Storage::fake('public');
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $job = $this->job();
+        $this->generate($bod, $job, 'invoice')->assertOk();
+        $year = now()->year;
+
+        $this->generate($bod, $job, 'receipt', ['amount_paid' => 800])->assertOk();
+
+        // The second receipt defaults to what's still owed and gets its own number.
+        $draft = $this->actingAs($bod)->getJson(route('jobs.documents.draft', [$job, 'receipt']))->json();
+        $this->assertSame("RC-{$year}-001-2", $draft['doc_number']);
+        $this->assertEquals(800, $draft['paid_before']);
+        $this->assertEquals(200, $draft['defaults']['amount_paid']);
+
+        $this->generate($bod, $job, 'receipt', ['amount_paid' => 250])->assertStatus(422); // more than owed
+        $this->generate($bod, $job, 'receipt', ['amount_paid' => 200])->assertOk();
+
+        $this->assertSame(2, LedgerEntry::where('type', 'receipt')->where('reversed', false)->count());
+        $this->assertEquals(1000, DocumentData::paidSoFar($job));
+        $this->assertDatabaseHas('ledger_entries', ['doc_number' => "RC-{$year}-001-1", 'amount' => 800, 'reversed' => false]);
+        $this->assertDatabaseHas('ledger_entries', ['doc_number' => "RC-{$year}-001-2", 'amount' => 200, 'reversed' => false]);
+
+        $this->generate($bod, $job, 'receipt', ['amount_paid' => 1])->assertStatus(422); // fully paid
+    }
+
+    public function test_finance_can_void_a_payment_but_staff_cannot(): void
+    {
+        Storage::fake('public');
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $staff = User::factory()->create(['role' => User::ROLE_STAFF, 'department' => 'print']);
+        $job = $this->job();
+        $this->generate($bod, $job, 'invoice')->assertOk();
+        $this->generate($bod, $job, 'receipt', ['amount_paid' => 300])->assertOk();
+        $entry = LedgerEntry::where('type', 'receipt')->first();
+
+        $this->actingAs($staff)->post(route('jobs.payments.void', [$job, $entry]))->assertForbidden();
+        $this->actingAs($bod)->post(route('jobs.payments.void', [$job, $entry]))->assertRedirect();
+
+        $this->assertTrue($entry->refresh()->reversed);
+        $this->assertEquals(0, DocumentData::paidSoFar($job));
+        $this->actingAs($bod)->get(route('jobs.show', $job))->assertSee('(Voided)');
+    }
+
     public function test_the_draft_hands_the_modal_its_defaults_and_the_invoice_to_pay_against(): void
     {
         Storage::fake('public');
@@ -148,7 +193,7 @@ class DocumentControllerTest extends TestCase
 
         $draft = $this->actingAs($bod)->getJson(route('jobs.documents.draft', [$job, 'receipt']))->assertOk()->json();
 
-        $this->assertSame('RC-'.now()->year.'-001', $draft['doc_number']);
+        $this->assertSame('RC-'.now()->year.'-001-1', $draft['doc_number']);
         $this->assertSame('INV-'.now()->year.'-001', $draft['invoice_number']);
         $this->assertEquals(1000, $draft['invoice_total']);
         $this->assertEquals(1000, $draft['defaults']['amount_paid']);
@@ -191,6 +236,73 @@ class DocumentControllerTest extends TestCase
         $this->assertDatabaseHas('activity_log', ['job_id' => $job->id, 'field_changed' => 'estimation_value', 'new_value' => '210.00']);
     }
 
+    public function test_edited_notes_are_kept_for_the_job_and_reopen_in_the_modal(): void
+    {
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $job = $this->job();
+
+        $this->actingAs($bod)->postJson(route('jobs.documents.save', [$job, 'quotation']), [
+            'title' => 'Banner',
+            'notes' => "Special price for Acme only.\n\nValid until end of month.",
+        ])->assertOk();
+
+        $this->assertSame(['Special price for Acme only.', 'Valid until end of month.'], $job->refresh()->document_notes['quotation']);
+
+        $draft = $this->actingAs($bod)->getJson(route('jobs.documents.draft', [$job, 'quotation']))->assertOk();
+        $draft->assertJsonPath('notes_custom', true);
+        $draft->assertJsonPath('defaults.notes', ['Special price for Acme only.', 'Valid until end of month.']);
+        $draft->assertJsonPath('standard_notes', DocumentData::defaultNotes('quotation', DocumentData::bank($job)));
+
+        // Other document types keep the standard wording.
+        $this->actingAs($bod)->getJson(route('jobs.documents.draft', [$job, 'invoice']))->assertJsonPath('notes_custom', false);
+    }
+
+    public function test_use_default_notes_clears_the_jobs_saved_notes(): void
+    {
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $job = $this->job();
+        $job->update(['document_notes' => ['quotation' => ['Old custom line']]]);
+
+        $this->actingAs($bod)->postJson(route('jobs.documents.save', [$job, 'quotation']), [
+            'title' => 'Banner',
+            'use_default_notes' => true,
+        ])->assertOk();
+
+        $this->assertNull($job->refresh()->document_notes);
+    }
+
+    public function test_generating_a_document_also_keeps_its_edited_notes(): void
+    {
+        Storage::fake('public');
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $job = $this->job();
+
+        $this->generate($bod, $job, 'invoice', ['notes' => 'Pay by Friday please.'])->assertOk();
+
+        $this->assertSame(['Pay by Friday please.'], $job->refresh()->document_notes['invoice']);
+    }
+
+    public function test_quotation_is_valid_14_days_and_invoice_due_date_defaults_to_7_days_but_can_be_set(): void
+    {
+        $job = $this->job();
+
+        $this->assertSame(['Valid until', now()->addDays(14)->format('d M Y')], DocumentData::build($job, 'quotation', [], 'QT-1', 'Afiq')['header_extra']);
+        $this->assertSame(['Due', now()->addDays(7)->format('d M Y')], DocumentData::build($job, 'invoice', [], 'INV-1', 'Afiq')['header_extra']);
+        $this->assertSame(['Due', '15 Oct 2026'], DocumentData::build($job, 'invoice', ['due_date' => '2026-10-15'], 'INV-1', 'Afiq')['header_extra']);
+        $this->assertNull(DocumentData::build($job, 'receipt', [], 'RC-1', 'Afiq', 1000)['header_extra']);
+    }
+
+    public function test_receipt_references_its_invoice_and_documents_show_the_customer_phone(): void
+    {
+        $job = $this->job();
+        $job->customer->update(['phone' => '012-3456789']);
+
+        $doc = DocumentData::build($job->refresh(), 'receipt', [], 'RC-1', 'Afiq', 1000, 'INV-2026-001');
+
+        $this->assertSame('INV-2026-001', $doc['invoice_number']);
+        $this->assertSame('012-3456789', $doc['customer']['phone']);
+    }
+
     public function test_note_wording_differs_by_document_type(): void
     {
         $bank = config('kretivco.bank_details.mbb');
@@ -200,14 +312,14 @@ class DocumentControllerTest extends TestCase
         $receipt = implode("\n", DocumentData::defaultNotes('receipt', $bank));
 
         $this->assertStringContainsString('80% deposit', $quotation);
-        $this->assertStringContainsString('This quotation follows the specifications listed above.', $quotation);
+        $this->assertStringContainsString('Prices are based on the specifications above.', $quotation);
         $this->assertSame('AFFIN', config('kretivco.bank_details.affin.label'));
         $this->assertSame('105630012033', config('kretivco.bank_details.affin.acct'));
-        $this->assertStringContainsString('Payment due within 7 days from the invoice date.', $invoice);
-        $this->assertStringContainsString('surcharge as agreed in the service agreement', $invoice);
+        $this->assertStringContainsString('Please make payment by the due date shown above.', $invoice);
+        $this->assertStringContainsString('surcharge as stated in the service agreement', $invoice);
         $this->assertStringNotContainsString('80% deposit', $invoice);
         $this->assertSame($invoice, implode("\n", DocumentData::defaultNotes('proforma', $bank)));
-        $this->assertStringContainsString('Please retain this receipt for your reference.', $receipt);
+        $this->assertStringContainsString('Please keep this receipt for your records.', $receipt);
         $this->assertStringNotContainsString('Please make payment to', $receipt);
     }
 
@@ -356,7 +468,7 @@ class DocumentControllerTest extends TestCase
         $response = $this->actingAs($bod)->getJson(route('jobs.quotation-notes', ['bank' => 'affin']));
 
         $response->assertOk();
-        $this->assertStringContainsString('This quotation follows the specifications listed above.', $response->json('notes.0'));
+        $this->assertStringContainsString('Prices are based on the specifications above.', $response->json('notes.0'));
     }
 
     public function test_new_job_preview_can_override_the_notes(): void

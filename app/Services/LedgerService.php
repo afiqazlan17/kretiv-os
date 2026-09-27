@@ -240,18 +240,25 @@ class LedgerService
     public function postReceiptEntry($job, string $docNumber, string $userName, $amountOverride = null): ?LedgerEntry
     {
         $amount = $this->computeReceiptAmount($job, $amountOverride);
-        $decision = $this->decideDocPosting($job->job_id, 'receipt', $amount);
 
-        if ($decision === 'skip') {
+        if (! $amount) {
             return null;
         }
 
-        if ($decision === 'unchanged') {
-            return LedgerEntry::where('job_id', $job->job_id)->where('type', 'receipt')->where('reversed', false)->first();
+        // A job can take several payments (deposit, then balance), each with its
+        // own receipt number. Only a receipt with the SAME number is superseded
+        // here, so a second payment never wipes out the first one.
+        $existing = LedgerEntry::where('job_id', $job->job_id)->where('type', 'receipt')
+            ->where('doc_number', $docNumber)->where('reversed', false)->first();
+
+        if ($existing && (float) $existing->amount === (float) $amount) {
+            return $existing;
         }
 
         $bank = $job->bank ?: 'mbb';
-        $this->reverseEntries(fn ($e) => $e->job_id === $job->job_id && $e->type === 'receipt', $userName);
+        if ($existing) {
+            $this->reverseEntries(fn ($e) => $e->id === $existing->id, $userName);
+        }
 
         return $this->addEntry([
             'date' => now(),
@@ -266,6 +273,12 @@ class LedgerService
             'bank' => $bank,
             'created_by' => $userName ?: 'System',
         ]);
+    }
+
+    /** Cancels one recorded payment (e.g. keyed in twice by mistake) by reversing its entry. */
+    public function voidReceipt(LedgerEntry $entry, string $userName): void
+    {
+        $this->reverseEntries(fn ($e) => $e->id === $entry->id, $userName);
     }
 
     // Plain-language expense entry — department set = cost of service for

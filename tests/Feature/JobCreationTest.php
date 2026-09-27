@@ -32,6 +32,17 @@ class JobCreationTest extends TestCase
         ], $overrides);
     }
 
+    public function test_quotation_notes_edited_on_the_new_job_form_are_kept_on_the_job(): void
+    {
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $payload = $this->payload(['print']);
+        $payload['per_dept']['print']['quotation_notes'] = "Line one\nLine two";
+
+        $this->actingAs($bod)->post(route('jobs.store'), $payload);
+
+        $this->assertSame(['quotation' => ['Line one', 'Line two']], Job::first()->document_notes);
+    }
+
     public function test_a_single_department_submission_creates_one_job_with_no_project_id(): void
     {
         $bod = User::factory()->create(['role' => User::ROLE_BOD]);

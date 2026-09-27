@@ -6,6 +6,7 @@
                 <p class="text-xs text-white/60 mt-0.5">Revenue, expense &amp; ledger</p>
             </div>
             <div class="flex items-center gap-2">
+                @if ($companyView)
                 <div class="relative" @click.outside="more = false">
                     <button type="button" @click="more = !more" class="px-4 py-2 bg-white/15 hover:bg-white/25 text-white text-xs font-semibold rounded-md">More &#9662;</button>
                     <div x-show="more" x-cloak class="absolute right-0 mt-2 w-52 bg-white rounded-md shadow-lg py-1 z-20 text-sm text-gray-700" @click="more = false">
@@ -14,6 +15,7 @@
                         <button type="button" @click="$dispatch('finance-tab', 'transfer')" class="w-full text-left px-4 py-2 hover:bg-gray-50">+ Transfer Bank</button>
                     </div>
                 </div>
+                @endif
                 <button type="button" @click="$dispatch('finance-tab', 'expense')" class="px-4 py-2 bg-white text-pink-600 text-xs font-semibold rounded-md hover:bg-pink-50">+ Add Expense</button>
             </div>
         </div>
@@ -62,6 +64,7 @@
                 </div>
             </div>
 
+            @if ($companyView)
             <div class="bg-white shadow-sm sm:rounded-lg p-6">
                 <h3 class="text-base font-bold text-gray-900">Bank Balance <span class="text-xs font-normal text-gray-400">(click to filter Ledger)</span></h3>
                 <p class="text-xs text-gray-400 mb-3">Current balance (all-time) — not limited to the P&amp;L period above</p>
@@ -74,6 +77,7 @@
                     @endforeach
                 </div>
             </div>
+            @endif
 
             <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden">
                 <div class="p-4 border-b border-gray-100">
@@ -114,9 +118,11 @@
                 <h3 class="text-sm font-semibold text-gray-500 uppercase mb-4">Post an Entry</h3>
                 <div class="flex flex-wrap gap-2 mb-4">
                     <button type="button" @click="tab = tab === 'expense' ? null : 'expense'" class="text-xs font-semibold px-3 py-2 rounded-md" :class="tab === 'expense' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'">Expense</button>
+                    @if ($companyView)
                     <button type="button" @click="tab = tab === 'opening' ? null : 'opening'" class="text-xs font-semibold px-3 py-2 rounded-md" :class="tab === 'opening' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'">Opening Balance</button>
                     <button type="button" @click="tab = tab === 'loan' ? null : 'loan'" class="text-xs font-semibold px-3 py-2 rounded-md" :class="tab === 'loan' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'">Director Loan</button>
                     <button type="button" @click="tab = tab === 'transfer' ? null : 'transfer'" class="text-xs font-semibold px-3 py-2 rounded-md" :class="tab === 'transfer' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'">Bank Transfer</button>
+                    @endif
                 </div>
 
                 <form method="POST" action="{{ route('finance.expense.store') }}" x-show="tab === 'expense'" x-cloak class="grid grid-cols-1 sm:grid-cols-3 gap-3">

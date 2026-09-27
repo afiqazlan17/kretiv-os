@@ -25,8 +25,8 @@ class DepartmentPageTest extends TestCase
 
         $response = $this->actingAs($bod)->get(route('departments.index'))->assertOk();
 
-        $response->assertSee('Large Format — banner, bunting, backdrop');
-        $response->assertSee('Undangan.my — Digital Wedding Invitation');
+        $response->assertSee('Large Format: banner, bunting, backdrop');
+        $response->assertSee('Undangan.my: Digital Wedding Invitation');
         $print = $response->viewData('departments')['print'];
         $this->assertSame(2, $print['active']);
         $this->assertSame(1, $print['completed']);

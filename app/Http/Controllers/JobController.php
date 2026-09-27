@@ -7,7 +7,9 @@ use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\Job;
 use App\Models\LedgerEntry;
+use App\Models\User;
 use App\Models\Vendor;
+use App\Support\DocumentData;
 use App\Support\NoteSanitizer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -168,6 +170,7 @@ class JobController extends Controller
             'per_dept.*.start_date' => ['nullable', 'date'],
             'per_dept.*.deadline' => ['nullable', 'date'],
             'per_dept.*.notes' => ['nullable', 'string'],
+            'per_dept.*.quotation_notes' => ['nullable', 'string', 'max:5000'],
             'per_dept.*.delivery_amount' => ['nullable', 'numeric', 'min:0'],
             'per_dept.*.discount_amount' => ['nullable', 'numeric', 'min:0'],
             'per_dept.*.line_items' => ['nullable', 'array'],
@@ -261,6 +264,7 @@ class JobController extends Controller
                 'delivery_amount' => $fields['delivery_amount'] ?? null,
                 'discount_amount' => $fields['discount_amount'] ?? null,
                 'line_items' => $resolved['line_items'],
+                'document_notes' => ($quotationNotes = DocumentData::noteLines($fields['quotation_notes'] ?? null)) ? ['quotation' => $quotationNotes] : null,
                 'status' => Job::STATUS_POTENTIAL,
                 'created_by' => $request->user()->id,
             ]);
@@ -356,18 +360,41 @@ class JobController extends Controller
         // The newest row of a given doc_type is "current"; anything older
         // of the same type is superseded (re-generating the doc reuses the
         // same doc_number, so this is derived from ordering, not stored).
-        $seenDocTypes = [];
-        $documents = $job->documents->map(function ($doc) use (&$seenDocTypes) {
-            $doc->is_current = ! in_array($doc->doc_type, $seenDocTypes, true);
-            $seenDocTypes[] = $doc->doc_type;
+        // Receipts are per payment (each its own number), so they're only
+        // superseded by a regeneration of the same number, and a receipt whose
+        // payment was voided is flagged rather than hidden.
+        $receiptEntries = LedgerEntry::where('job_id', $job->job_id)->where('type', 'receipt')->orderBy('id')->get();
+        $voidedReceipts = $receiptEntries->where('reversed', true)->pluck('doc_number')
+            ->diff($receiptEntries->where('reversed', false)->pluck('doc_number'))->all();
+        $seenDocKeys = [];
+        $documents = $job->documents->map(function ($doc) use (&$seenDocKeys, $voidedReceipts) {
+            $key = $doc->doc_type === 'receipt' ? 'receipt:'.$doc->doc_number : $doc->doc_type;
+            $doc->is_current = ! in_array($key, $seenDocKeys, true);
+            $doc->is_voided = $doc->doc_type === 'receipt' && in_array($doc->doc_number, $voidedReceipts, true);
+            $seenDocKeys[] = $key;
 
             return $doc;
         });
 
+        $invoice = DocumentController::invoiceEntry($job);
+        $payments = $receiptEntries->where('reversed', false)->values();
+        $paid = (float) $payments->sum('amount');
+
         return view('jobs.show', [
             'job' => $job,
             'documents' => $documents,
-            'hasInvoice' => DocumentController::invoiceEntry($job) !== null,
+            'hasInvoice' => $invoice !== null,
+            // Money owed vs received for this job, straight from the ledger.
+            'payment' => $invoice ? [
+                'invoiced' => (float) $invoice->amount,
+                'invoice_number' => $invoice->doc_number,
+                'paid' => $paid,
+                'balance' => max(0.0, round((float) $invoice->amount - $paid, 2)),
+                'entries' => $payments,
+            ] : null,
+            // Active staff for Change Current Responsible — a picked name, not free
+            // text, so it always matches the user's name that My Jobs filters on.
+            'staffNames' => User::where('active', true)->orderBy('name')->pluck('name'),
             'vendors' => Vendor::orderBy('name')->get(),
             'siblings' => $job->project_id
                 ? Job::where('project_id', $job->project_id)->where('id', '!=', $job->id)->get()

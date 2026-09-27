@@ -25,9 +25,10 @@ class CustomerPolicy
     }
 
     /** Matches customers_update_bod_depthead — BOD and Dept Head only. */
+    /** Anyone in Jobs can correct customer details (e.g. a phone typo); only BOD deletes. */
     public function update(User $user, Customer $customer): bool
     {
-        return $user->isBod() || $user->isDeptHead();
+        return true;
     }
 
     /** Matches customers_delete_bod — BOD only. */

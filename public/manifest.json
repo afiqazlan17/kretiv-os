@@ -1,6 +1,6 @@
 {
-    "name": "Kretiv OS",
-    "short_name": "Kretiv OS",
+    "name": "KretivOS",
+    "short_name": "KretivOS",
     "description": "Kretivco Mediaworks — job, finance and HR workspace",
     "start_url": "/",
     "display": "standalone",

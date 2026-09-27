@@ -2,37 +2,34 @@
     <x-slot name="header">
         <div class="flex items-center justify-between flex-wrap gap-3">
             <div>
-                <h2 class="font-semibold text-xl text-white leading-tight">{{ \App\Http\Controllers\JobController::VIEW_META[$view]['title'] }}</h2>
-                <p class="text-xs text-white/60 mt-0.5">{{ $jobs->count() }} jobs shown · {{ \App\Http\Controllers\JobController::VIEW_META[$view]['sub'] }}</p>
+                <h2 class="font-bold text-2xl text-white leading-tight">{{ \App\Http\Controllers\JobController::VIEW_META[$view]['title'] }}</h2>
             </div>
-            <a href="{{ route('jobs.create') }}" class="inline-flex items-center gap-1.5 px-4 py-2 bg-white/15 hover:bg-white/25 text-white text-xs font-semibold rounded-md">
-                <span class="text-sm leading-none">+</span> New Job
+            <a href="{{ route('jobs.create') }}" class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white text-[#C2185B] hover:bg-[#FFF1EC] text-sm font-semibold rounded-xl shadow-sm">
+                <x-icon name="plus" class="w-4 h-4" /> New Job
             </a>
         </div>
     </x-slot>
 
-    <div class="p-6 space-y-4">
+    <div class="p-5 md:p-7 space-y-4">
 
         @if (session('success'))
-            <div class="rounded-md bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3">{{ session('success') }}</div>
+            <div class="rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3">{{ session('success') }}</div>
         @endif
 
         {{-- Filters --}}
-        <form method="GET" action="{{ route('jobs.index') }}" class="bg-white rounded-xl shadow-sm p-4 flex flex-wrap gap-3 items-center">
+        <form method="GET" action="{{ route('jobs.index') }}" class="k-card p-3 md:p-4 flex flex-wrap gap-3 items-center">
             <input type="hidden" name="view" value="{{ $view }}">
             <div class="relative flex-1 min-w-[220px]">
-                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                </span>
-                <input type="text" name="search" value="{{ $search }}" placeholder="Search job, customer, PIC..." class="w-full pl-9 rounded-md border-gray-300 shadow-sm text-sm">
+                <x-icon name="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input type="text" name="search" value="{{ $search }}" placeholder="Search job, customer, PIC..." class="w-full pl-10 rounded-xl border-[#EFE3DE] bg-[#FFFCFA] text-sm focus:border-[#F48FB1] focus:ring-[#F8BBD0]">
             </div>
-            <select name="department" class="rounded-md border-gray-300 shadow-sm text-sm">
+            <select name="department" class="rounded-xl border-[#EFE3DE] bg-[#FFFCFA] text-sm focus:border-[#F48FB1] focus:ring-[#F8BBD0]">
                 <option value="">All Departments</option>
                 @foreach (config('kretivco.departments') as $key => $dept)
                     <option value="{{ $key }}" {{ $department === $key ? 'selected' : '' }}>{{ $dept['label'] }}</option>
                 @endforeach
             </select>
-            <select name="status" class="rounded-md border-gray-300 shadow-sm text-sm">
+            <select name="status" class="rounded-xl border-[#EFE3DE] bg-[#FFFCFA] text-sm focus:border-[#F48FB1] focus:ring-[#F8BBD0]">
                 <option value="">All Statuses</option>
                 @foreach (config('kretivco.job_statuses') as $key => $st)
                     <option value="{{ $key }}" {{ $status === $key ? 'selected' : '' }}>{{ $st['label'] }}</option>
@@ -41,43 +38,41 @@
                     <option value="{{ $key }}" {{ $status === $key ? 'selected' : '' }}>{{ $hs['label'] }}</option>
                 @endforeach
             </select>
-            <button type="submit" class="text-xs font-semibold px-3 py-2 rounded-md bg-gray-800 text-white hover:bg-gray-900">Filter</button>
+            <button type="submit" class="text-sm font-semibold px-4 py-2 rounded-xl text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110">Filter</button>
             @if ($department || $status || $search)
                 <a href="{{ route('jobs.index', ['view' => $view]) }}" class="text-xs text-gray-500 hover:underline">Reset</a>
             @endif
         </form>
 
-        {{-- Table --}}
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+        {{-- Table. Related fields are stacked two-per-cell (ID over dept,
+        customer over job name, PIC over vendor, deadline over last change)
+        so the whole row fits without sideways scrolling; PIC and Deadline
+        drop out on narrow screens where there's no room for them anyway. --}}
+        <div class="k-card overflow-hidden">
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-100 text-sm">
-                    <thead class="bg-gray-50">
-                        <tr class="text-left text-xs text-gray-500 uppercase">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-[11px] font-semibold text-gray-400 uppercase tracking-wide border-b border-[#F5ECE8]">
                             @php
                                 $cols = [
-                                    ['k' => 'id', 'l' => 'Job ID'],
-                                    ['k' => 'customer', 'l' => 'Customer'],
-                                    ['k' => 'dept', 'l' => 'Dept'],
-                                    ['k' => null, 'l' => 'Job Name'],
-                                    ['k' => null, 'l' => 'Vendor'],
-                                    ['k' => 'status', 'l' => 'Status'],
-                                    ['k' => 'value', 'l' => 'Est. Value'],
-                                    ['k' => null, 'l' => 'PIC'],
-                                    ['k' => 'deadline', 'l' => 'Deadline'],
-                                    ['k' => 'touched', 'l' => 'Last Changed'],
+                                    ['k' => 'id', 'l' => 'Job'],
+                                    ['k' => 'customer', 'l' => 'Customer & job'],
+                                    ['k' => 'status', 'l' => 'Status', 'cls' => 'hidden sm:table-cell'],
+                                    ['k' => null, 'l' => 'PIC', 'cls' => 'hidden lg:table-cell'],
+                                    ['k' => 'deadline', 'l' => 'Deadline', 'cls' => 'hidden md:table-cell'],
+                                    ['k' => 'value', 'l' => 'Value', 'cls' => 'hidden sm:table-cell text-right'],
                                 ];
                             @endphp
                             @foreach ($cols as $col)
-                                <th class="px-4 py-3 whitespace-nowrap ">
+                                <th class="px-4 py-3 whitespace-nowrap {{ $col['cls'] ?? '' }}">
                                     @if ($col['k'])
-                                        @php $nextDir = ($sortCol === $col['k'] && $sortDir === 'asc') ? 'desc' : 'asc'; @endphp
-                                        <a href="{{ request()->fullUrlWithQuery(['sort' => $col['k'], 'dir' => $nextDir]) }}" class="hover:text-gray-700">
+                                        @php
+                                            $on = $sortCol === $col['k'];
+                                            $nextDir = ($on && $sortDir === 'asc') ? 'desc' : 'asc';
+                                        @endphp
+                                        <a href="{{ request()->fullUrlWithQuery(['sort' => $col['k'], 'dir' => $nextDir]) }}" class="inline-flex items-center gap-1 hover:text-gray-700 {{ $on ? 'text-[#C2185B]' : '' }}">
                                             {{ $col['l'] }}
-                                            @if ($sortCol === $col['k'])
-                                                <span class="text-gray-700">{{ $sortDir === 'asc' ? '↑' : '↓' }}</span>
-                                            @else
-                                                <span class="text-gray-300">⇅</span>
-                                            @endif
+                                            <x-icon :name="$on ? ($sortDir === 'asc' ? 'arrow-up' : 'arrow-down') : 'arrow-up-down'" class="w-3 h-3 {{ $on ? '' : 'text-gray-300' }}" :stroke="2.5" />
                                         </a>
                                     @else
                                         {{ $col['l'] }}
@@ -86,80 +81,91 @@
                             @endforeach
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100">
+                    <tbody class="divide-y divide-[#F5ECE8]">
                         @forelse ($jobs as $job)
                             @php
                                 $st = config('kretivco.job_statuses.'.$job->status);
                                 $dept = config('kretivco.departments.'.$job->department);
                                 $siblingCount = $job->project_id ? ($siblingsByProject[$job->project_id] ?? collect())->count() - 1 : 0;
+                                $jobLine = collect([$job->job_type, $job->customer?->company])->filter()->join(' · ');
                             @endphp
-                            <tr class="cursor-pointer hover:bg-gray-50" onclick="window.location='{{ route('jobs.show', $job) }}'">
-                                <td class="px-4 py-3 font-mono text-xs font-semibold whitespace-nowrap">
-                                    {{ $job->job_id }}
-                                    @if ($siblingCount > 0)
-                                        <span title="Part of Project {{ $job->project_id }} — {{ $siblingCount }} other job(s)">🔗</span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3 text-gray-800 whitespace-nowrap">
-                                    {{ $job->customer?->name ?? '—' }}
-                                    @if ($job->customer?->company)
-                                        <span class="text-gray-400">· {{ $job->customer->company }}</span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3 whitespace-nowrap">
+                            <tr class="cursor-pointer hover:bg-[#FFF7F3] transition-colors" onclick="window.location='{{ route('jobs.show', $job) }}'">
+                                <td class="px-4 py-3.5 align-top whitespace-nowrap">
+                                    <div class="flex items-center gap-1 font-mono text-xs font-semibold text-gray-800">
+                                        {{ $job->job_id }}
+                                        @if ($siblingCount > 0)
+                                            <span title="Part of project {{ $job->project_id }}, with {{ $siblingCount }} other {{ \Illuminate\Support\Str::plural('job', $siblingCount) }}" class="text-gray-400"><x-icon name="link" class="w-3.5 h-3.5" /></span>
+                                        @endif
+                                    </div>
                                     @if ($dept)
-                                        <span class="text-[11px] font-semibold rounded px-2 py-0.5" style="color:{{ $dept['color'] }};background:{{ $dept['color'] }}15">{{ $dept['label'] }}</span>
+                                        <span class="inline-block mt-1.5 text-[11px] font-semibold rounded-full px-2 py-0.5" style="color:{{ $dept['color'] }};background:{{ $dept['color'] }}14">{{ $dept['label'] }}</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-gray-600 whitespace-nowrap">
-                                    {{ $job->job_type }}
-                                    @if ($job->has_unpaid_vendor_cost)
-                                        <span class="ml-1 text-[10px] font-semibold rounded-full px-2 py-0.5 bg-amber-50 text-amber-600" title="Vendor cost recorded but not yet marked as paid">🏭 Unpaid</span>
-                                    @endif
+                                <td class="px-4 py-3.5 align-top max-w-0 w-full">
+                                    <div class="font-semibold text-gray-800 truncate">{{ $job->customer?->name ?? 'No customer' }}</div>
+                                    <div class="flex items-center gap-2 mt-0.5 min-w-0">
+                                        <span class="text-gray-500 truncate" title="{{ $jobLine }}">{{ $jobLine }}</span>
+                                        @if ($job->has_unpaid_vendor_cost)
+                                            <span class="shrink-0 text-[10px] font-semibold rounded-full px-2 py-0.5 bg-amber-50 text-amber-700" title="Vendor cost recorded but not yet marked as paid">Unpaid vendor</span>
+                                        @endif
+                                    </div>
+                                    {{-- Phones: Status and Value columns are hidden, so show them here --}}
+                                    <div class="sm:hidden flex items-center gap-2 mt-2">
+                                        @if ($st)
+                                            <span class="text-[11px] font-semibold rounded-full px-2.5 py-0.5" style="color:{{ $st['color'] }};background:{{ $st['color'] }}14">{{ $st['label'] }}</span>
+                                        @endif
+                                        <span class="text-xs font-bold text-gray-900">RM {{ number_format($job->estimation_value ?? 0, 2) }}</span>
+                                    </div>
                                 </td>
-                                <td class="px-4 py-3 text-gray-600 whitespace-nowrap">{{ $job->vendor_names->isEmpty() ? '—' : $job->vendor_names->join(', ') }}</td>
-                                <td class="px-4 py-3 whitespace-nowrap">
+                                <td class="px-4 py-3.5 align-top whitespace-nowrap hidden sm:table-cell">
                                     @if ($st)
-                                        <span class="text-xs font-semibold rounded-full px-3 py-1" style="color:{{ $st['color'] }};background:{{ $st['color'] }}15">{{ $st['icon'] ?? '' }} {{ $st['label'] }}</span>
+                                        <span class="inline-block text-xs font-semibold rounded-full px-3 py-1" style="color:{{ $st['color'] }};background:{{ $st['color'] }}14">{{ $st['label'] }}</span>
                                     @endif
                                     @if ($job->hold_status)
                                         @php $hs = config('kretivco.hold_statuses.'.$job->hold_status); @endphp
                                         @if ($hs)
-                                            <span class="text-xs font-semibold rounded-full px-2 py-1 ml-1" style="color:{{ $hs['color'] }};background:{{ $hs['color'] }}15">{{ $hs['icon'] }} {{ $hs['label'] }}</span>
+                                            <span class="block w-fit mt-1 text-[11px] font-semibold rounded-full px-2.5 py-0.5" style="color:{{ $hs['color'] }};background:{{ $hs['color'] }}14">{{ $hs['label'] }}</span>
                                         @endif
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 font-semibold whitespace-nowrap">RM {{ number_format($job->estimation_value ?? 0, 2) }}</td>
-                                <td class="px-4 py-3 text-gray-600 whitespace-nowrap">{{ $job->pic ?? '—' }}</td>
-                                <td class="px-4 py-3 whitespace-nowrap">
+                                <td class="px-4 py-3.5 align-top whitespace-nowrap hidden lg:table-cell">
+                                    <div class="text-gray-700">{{ $job->pic ?: 'Unassigned' }}</div>
+                                    @if ($job->vendor_names->isNotEmpty())
+                                        <div class="text-xs text-gray-400 mt-0.5 max-w-[160px] truncate" title="{{ $job->vendor_names->join(', ') }}">{{ $job->vendor_names->join(', ') }}</div>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3.5 align-top whitespace-nowrap hidden md:table-cell">
                                     @if (in_array($job->status, ['completed', 'cancelled']))
-                                        <span class="text-xs text-gray-400">{{ $job->deadline?->format('d M Y') ?? '—' }}</span>
+                                        <div class="text-xs text-gray-400">{{ $job->deadline?->format('d M Y') ?? 'No deadline' }}</div>
                                     @elseif ($job->deadline)
                                         @php $days = (int) now()->startOfDay()->diffInDays($job->deadline, false); @endphp
                                         @if ($days < 0)
-                                            <span class="text-xs font-semibold text-red-500">{{ $job->deadline->format('d M Y') }} <span class="text-[10px] bg-red-50 rounded-full px-1.5 py-0.5">Overdue</span></span>
+                                            <div class="text-xs font-semibold text-red-600">{{ $job->deadline->format('d M Y') }} <span class="text-[10px] bg-red-50 rounded-full px-1.5 py-0.5">Overdue</span></div>
                                         @elseif ($days <= 3)
-                                            <span class="text-xs font-semibold text-amber-500">{{ $job->deadline->format('d M Y') }} <span class="text-[10px] bg-amber-50 rounded-full px-1.5 py-0.5">{{ $days }}d</span></span>
+                                            <div class="text-xs font-semibold text-amber-600">{{ $job->deadline->format('d M Y') }} <span class="text-[10px] bg-amber-50 rounded-full px-1.5 py-0.5">{{ $days === 0 ? 'Today' : $days.'d' }}</span></div>
                                         @else
-                                            <span class="text-xs text-gray-700">{{ $job->deadline->format('d M Y') }}</span>
+                                            <div class="text-xs text-gray-700">{{ $job->deadline->format('d M Y') }}</div>
                                         @endif
                                     @else
-                                        <span class="text-xs text-gray-400">—</span>
+                                        <div class="text-xs text-gray-400">No deadline</div>
+                                    @endif
+                                    @if ($job->last_touched)
+                                        <div class="text-[11px] text-gray-400 mt-1" title="{{ $job->last_touched->format('d M Y, g:ia') }}">Updated {{ $job->last_touched->format('d M') }}</div>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-gray-400 whitespace-nowrap text-xs">{{ $job->last_touched?->format('d M Y, g:ia') ?? '—' }}</td>
+                                <td class="px-4 py-3.5 align-top whitespace-nowrap text-right font-bold text-gray-900 hidden sm:table-cell">RM {{ number_format($job->estimation_value ?? 0, 2) }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="9" class="px-4 py-8 text-center text-gray-400">No jobs found.</td></tr>
+                            <tr><td colspan="6" class="px-4 py-10 text-center text-gray-400">No jobs found. Try a different filter.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <div class="flex justify-between text-xs text-gray-400 px-1">
-            <span>{{ $jobs->count() }} jobs</span>
-            <span>Pipeline: RM {{ number_format($pipelineValue, 2) }}</span>
+        <div class="flex justify-between text-xs text-gray-500 px-1">
+            <span>{{ $jobs->count() }} {{ \Illuminate\Support\Str::plural('job', $jobs->count()) }}</span>
+            <span>Pipeline: <span class="font-semibold text-gray-700">RM {{ number_format($pipelineValue, 2) }}</span></span>
         </div>
     </div>
 </x-app-layout>

@@ -9,24 +9,24 @@
      @keydown.escape.window="open && close()"
      x-show="open" x-cloak
      class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-2 sm:p-6">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[92vh] flex flex-col overflow-hidden">
-        <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-            <h2 class="text-base font-bold text-gray-900" x-text="`Preview ${label} — ${jobCode}`"></h2>
-            <button type="button" @click="close()" class="text-gray-400 hover:text-gray-700 text-xl leading-none">×</button>
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[92vh] flex flex-col overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-3.5 border-b border-[#F5ECE8]">
+            <h2 class="text-base font-bold text-gray-900" x-text="`Preview ${label} · ${jobCode}`"></h2>
+            <button type="button" @click="close()" class="text-gray-400 hover:text-gray-700" aria-label="Close"><x-icon name="x" class="w-5 h-5" /></button>
         </div>
 
         {{-- On phones, the form and the live PDF preview used to be squeezed into one
              scrolling column with no fixed height, which made typing feel like it was
              fighting the preview for space. A tab switch lets you fully hide one side. --}}
         <div class="lg:hidden flex gap-2 px-5 pt-3">
-            <button type="button" @click="mobileTab = 'form'" class="flex-1 text-xs font-semibold px-3 py-1.5 rounded-md border"
-                    :class="mobileTab === 'form' ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 text-gray-600'">Form</button>
-            <button type="button" @click="mobileTab = 'preview'; $nextTick(() => pager.render($refs.mobileCanvas))" class="flex-1 text-xs font-semibold px-3 py-1.5 rounded-md border"
-                    :class="mobileTab === 'preview' ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 text-gray-600'">Preview</button>
+            <button type="button" @click="mobileTab = 'form'" class="flex-1 text-xs font-semibold px-3 py-1.5 rounded-xl border"
+                    :class="mobileTab === 'form' ? 'bg-[#C2185B] text-white border-[#C2185B]' : 'border-[#EFE3DE] text-gray-600'">Form</button>
+            <button type="button" @click="mobileTab = 'preview'; $nextTick(() => pager.render($refs.mobileCanvas))" class="flex-1 text-xs font-semibold px-3 py-1.5 rounded-xl border"
+                    :class="mobileTab === 'preview' ? 'bg-[#C2185B] text-white border-[#C2185B]' : 'border-[#EFE3DE] text-gray-600'">Preview</button>
         </div>
         <div class="flex-1 min-h-0 grid grid-cols-1 auto-rows-fr lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:auto-rows-auto">
             {{-- Form --}}
-            <div class="overflow-y-auto p-5 space-y-3 border-r border-gray-100 text-sm" :class="mobileTab === 'preview' ? 'hidden lg:block' : ''" @input="schedule()" @change="schedule()" @keyup="schedule()">
+            <div class="overflow-y-auto p-5 space-y-3 border-r border-[#F5ECE8] text-sm" :class="mobileTab === 'preview' ? 'hidden lg:block' : ''" @input="schedule()" @change="schedule()" @keyup="schedule()">
                 <p x-show="loading" class="text-gray-400 text-xs">Loading…</p>
                 <template x-if="!loading">
                     <div class="space-y-3">
@@ -34,6 +34,8 @@
                             <input type="text" x-model="form.customer_name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></div>
                         <div><label class="text-xs font-semibold text-gray-500">Company</label>
                             <input type="text" x-model="form.company" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></div>
+                        <div><label class="text-xs font-semibold text-gray-500">Phone</label>
+                            <input type="text" x-model="form.phone" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></div>
                         <div><label class="text-xs font-semibold text-gray-500">Address Line 1</label>
                             <input type="text" x-model="form.address_line_1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></div>
                         <div><label class="text-xs font-semibold text-gray-500">Address Line 2</label>
@@ -46,12 +48,12 @@
                         <div>
                             <div class="flex items-center justify-between">
                                 <label class="text-xs font-semibold text-gray-500">Item</label>
-                                <button type="button" @click="addItem()" class="text-xs font-bold text-pink-600 hover:underline">+ Add</button>
+                                <button type="button" @click="addItem()" class="inline-flex items-center gap-1 text-xs font-bold text-[#C2185B] hover:underline"><x-icon name="plus" class="w-3.5 h-3.5" /> Add</button>
                             </div>
                             <div class="mt-1 space-y-2">
                                 <template x-for="(row, idx) in form.items" :key="idx">
-                                    <div class="rounded-lg border border-gray-200 p-3 space-y-2">
-                                        <div class="relative" x-data="itemCombo('{{ route('items.search') }}', '{{ $job->department }}', 'doc')" @click.outside="open = false"><label class="text-[11px] text-gray-400">Item Name — search the library or type your own</label>
+                                    <div class="rounded-xl border border-[#EFE3DE] p-3 space-y-2">
+                                        <div class="relative" x-data="itemCombo('{{ route('items.search') }}', '{{ $job->department }}', 'doc')" @click.outside="open = false"><label class="text-[11px] text-gray-400">Item Name (search the library or type your own)</label>
                                             <textarea rows="2" x-model="row.item" autocomplete="off" @focus="search(row.item)" @input="search(row.item)" @keydown.escape.stop="open = false" class="block w-full rounded-md border-gray-300 shadow-sm text-sm"></textarea>
                                             <x-item-dropdown /></div>
                                         <div><label class="text-[11px] text-gray-400">Description</label>
@@ -61,7 +63,7 @@
                                                 <input type="number" min="0" step="any" x-model="row.qty" class="block w-full rounded-md border-gray-300 shadow-sm text-sm"></div>
                                             <div class="flex-1"><label class="text-[11px] text-gray-400">Price (RM)</label>
                                                 <input type="number" min="0" step="0.01" x-model="row.price" class="block w-full rounded-md border-gray-300 shadow-sm text-sm"></div>
-                                            <button type="button" @click="removeItem(idx)" class="text-red-500 text-lg leading-none pb-2" title="Remove item">×</button>
+                                            <button type="button" @click="removeItem(idx)" class="text-gray-400 hover:text-red-500 pb-2.5" title="Remove item" aria-label="Remove item"><x-icon name="trash-2" class="w-4 h-4" /></button>
                                         </div>
                                     </div>
                                 </template>
@@ -77,28 +79,38 @@
                             </div>
                         </template>
 
+                        <template x-if="type === 'invoice'">
+                            <div><label class="text-xs font-semibold text-gray-500">Due Date</label>
+                                <input type="date" x-model="form.due_date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                                <p class="mt-1 text-[11px] text-gray-400">Defaults to 7 days from today.</p></div>
+                        </template>
+
                         <template x-if="type === 'receipt'">
                             <div class="space-y-3">
                                 <div><label class="text-xs font-semibold text-gray-500">Payment Method</label>
                                     <select x-model="form.payment_method" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
                                         <template x-for="m in paymentMethods" :key="m"><option :value="m" x-text="m"></option></template>
                                     </select></div>
-                                <div><label class="text-xs font-semibold text-gray-500">Amount Paid (RM)</label>
+                                <div x-show="paidBefore > 0" class="rounded-lg bg-[#ECFDF5] px-3 py-2 text-xs text-[#047857]">
+                                    Already paid on earlier receipts: <b x-text="'RM ' + paidBefore.toFixed(2)"></b>. This receipt records the next payment.
+                                </div>
+                                <div><label class="text-xs font-semibold text-gray-500">Amount Paid Now (RM)</label>
                                     <input type="number" min="0" step="0.01" x-model="form.amount_paid" :placeholder="invoiceNumber ? `Auto from Invoice ${invoiceNumber}` : ''" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></div>
                                 <div><label class="text-xs font-semibold text-gray-500">Balance Due (RM)</label>
-                                    <input type="text" :value="balanceDue.toFixed(2)" readonly class="mt-1 block w-full rounded-md border-gray-200 bg-gray-50 shadow-sm text-sm"></div>
+                                    <input type="text" :value="balanceDue.toFixed(2)" readonly class="mt-1 block w-full rounded-md border-gray-200 !bg-[#F7F1EE] shadow-sm text-sm"></div>
                             </div>
                         </template>
 
                         <div>
                             <div class="flex items-center justify-between">
                                 <label class="text-xs font-semibold text-gray-500">Note</label>
-                                <button type="button" @click="toggleNotes()" class="text-xs font-semibold text-gray-500 hover:text-gray-800" x-text="editNotes ? '↺ Use default' : '✏️ Edit Notes'"></button>
+                                <button type="button" @click="toggleNotes()" class="text-xs font-semibold text-gray-500 hover:text-gray-800" x-text="editNotes ? 'Use default' : 'Edit Notes'"></button>
                             </div>
                             <template x-if="editNotes">
                                 <textarea rows="8" x-model="notesText" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm" placeholder="One note per line"></textarea>
                             </template>
-                            <p x-show="!editNotes" class="mt-1 text-xs text-gray-400">Default wording for <span x-text="label.toLowerCase() + 's'"></span> — click "Edit Notes" to adjust for this document.</p>
+                            <p x-show="!editNotes" class="mt-1 text-xs text-gray-400">Uses the default wording for <span x-text="label.toLowerCase() + 's'"></span>. Click "Edit Notes" to change it for this job.</p>
+                            <p x-show="editNotes" class="mt-1 text-xs text-gray-400">These notes are kept for this job once you Save or Download. "Use default" switches back to the standard wording.</p>
                         </div>
                     </div>
                 </template>
@@ -107,7 +119,7 @@
             {{-- Live preview (real PDF). Desktop keeps the native iframe viewer (scroll/zoom
                  work fine with a mouse). Mobile can't reliably page or scroll a PDF embedded
                  in an iframe, so it gets its own canvas render with Prev/Next controls. --}}
-            <div class="relative bg-gray-100 min-h-[300px] hidden lg:block">
+            <div class="relative bg-[#F7F1EE] min-h-[300px] hidden lg:block">
                 {{-- Two stacked frames: the new render loads behind the visible one and swaps in on load, so typing never flashes blank. --}}
                 <template x-for="i in [0, 1]" :key="i">
                     <iframe class="absolute inset-0 w-full h-full border-0 bg-white" :class="active === i ? 'z-10' : 'z-0'" x-show="previewUrl"
@@ -115,30 +127,30 @@
                 </template>
                 <div x-show="previewing" class="absolute top-3 right-4 text-xs text-gray-500 bg-white/90 rounded px-2 py-1 shadow">Updating preview…</div>
             </div>
-            <div class="lg:hidden bg-gray-100 flex flex-col" :class="mobileTab === 'form' ? 'hidden' : 'flex'">
+            <div class="lg:hidden bg-[#F7F1EE] flex flex-col" :class="mobileTab === 'form' ? 'hidden' : 'flex'">
                 <div class="flex-1 overflow-auto flex items-start justify-center p-2">
                     <p x-show="pager.error" x-text="pager.error" class="text-xs text-red-600 text-center p-4"></p>
                     <canvas x-show="!pager.error" x-ref="mobileCanvas" class="shadow bg-white"></canvas>
                 </div>
-                <div class="flex items-center justify-center gap-3 px-3 py-2 border-t border-gray-200 bg-white text-sm">
+                <div class="flex items-center justify-center gap-3 px-3 py-2 border-t border-[#F5ECE8] bg-white text-sm">
                     <button type="button" @click="pager.prev($refs.mobileCanvas)" :disabled="pager.pageNum <= 1"
-                            class="px-3 py-1 rounded-md border border-gray-200 disabled:opacity-30">‹ Prev</button>
+                            class="inline-flex items-center gap-1 px-3 py-1 rounded-lg border border-[#EFE3DE] disabled:opacity-30"><x-icon name="chevron-right" class="w-4 h-4 rotate-180" /> Prev</button>
                     <span class="text-xs text-gray-500" x-text="`Page ${pager.pageNum} / ${pager.numPages}`"></span>
                     <button type="button" @click="pager.next($refs.mobileCanvas)" :disabled="pager.pageNum >= pager.numPages"
-                            class="px-3 py-1 rounded-md border border-gray-200 disabled:opacity-30">Next ›</button>
+                            class="inline-flex items-center gap-1 px-3 py-1 rounded-lg border border-[#EFE3DE] disabled:opacity-30">Next <x-icon name="chevron-right" class="w-4 h-4" /></button>
                 </div>
                 <div x-show="previewing || pager.canvasBusy" class="absolute top-3 right-4 text-xs text-gray-500 bg-white/90 rounded px-2 py-1 shadow">Updating preview…</div>
             </div>
         </div>
 
-        <div class="flex flex-wrap items-center justify-end gap-2 px-5 py-3 border-t border-gray-100">
+        <div class="flex flex-wrap items-center justify-end gap-2 px-5 py-3 border-t border-[#F5ECE8]">
             <p x-show="error" x-text="error" class="mr-auto text-xs text-red-600"></p>
             <p x-show="notice && !error" x-text="notice" class="mr-auto text-xs text-green-600"></p>
-            <button type="button" @click="close()" class="text-sm font-semibold px-4 py-2 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50">Cancel</button>
-            <button type="button" @click="save()" :disabled="busy || loading" class="text-sm font-semibold px-4 py-2 rounded-md border border-green-500 text-green-600 hover:bg-green-50 disabled:opacity-40">Save</button>
-            <button type="button" @click="print()" :disabled="busy || !previewUrl" class="text-sm font-semibold px-4 py-2 rounded-md border border-blue-500 text-blue-600 hover:bg-blue-50 disabled:opacity-40">🖨 Print</button>
-            <button type="button" @click="whatsapp()" :disabled="loading" class="text-sm font-semibold px-4 py-2 rounded-md border border-green-500 text-green-600 hover:bg-green-50 disabled:opacity-40">💬 WhatsApp</button>
-            <button type="button" @click="download()" :disabled="busy || loading" class="text-sm font-bold px-4 py-2 rounded-md text-white disabled:opacity-40" style="background: #E91E63" x-text="busy ? 'Working…' : 'Download PDF'"></button>
+            <button type="button" @click="close()" class="text-sm font-semibold px-4 py-2 rounded-xl border border-[#EFE3DE] text-gray-700 hover:bg-[#FFF7F3]">Cancel</button>
+            <button type="button" @click="save()" :disabled="busy || loading" class="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl border border-green-500 text-green-700 hover:bg-green-50 disabled:opacity-40"><x-icon name="save" class="w-4 h-4" /> Save</button>
+            <button type="button" @click="print()" :disabled="busy || !previewUrl" class="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl border border-blue-500 text-blue-600 hover:bg-blue-50 disabled:opacity-40"><x-icon name="printer" class="w-4 h-4" /> Print</button>
+            <button type="button" @click="whatsapp()" :disabled="loading" class="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl border border-green-500 text-green-700 hover:bg-green-50 disabled:opacity-40"><x-icon name="message-circle" class="w-4 h-4" /> WhatsApp</button>
+            <button type="button" @click="download()" :disabled="busy || loading" class="text-sm font-bold px-4 py-2 rounded-xl text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110 disabled:opacity-40" x-text="busy ? 'Working…' : 'Download PDF'"></button>
         </div>
     </div>
 </div>
@@ -146,12 +158,12 @@
 @push('scripts')
 <script>
     function documentModal(cfg) {
-        const blank = () => ({ customer_name: '', company: '', address_line_1: '', address_line_2: '', title: '', by_staff: '',
+        const blank = () => ({ customer_name: '', company: '', phone: '', address_line_1: '', address_line_2: '', title: '', by_staff: '', due_date: '',
             items: [], delivery: 0, discount: 0, payment_method: 'Bank Transfer', amount_paid: null });
         return {
             jobCode: cfg.jobCode, urls: cfg.urls, mobileTab: 'form',
             open: false, type: 'quotation', label: 'Quotation', loading: false, busy: false, previewing: false,
-            error: '', notice: '', form: blank(), paymentMethods: [], invoiceNumber: null, invoiceTotal: null, customerPhone: '', docNumber: '',
+            error: '', notice: '', form: blank(), paymentMethods: [], invoiceNumber: null, invoiceTotal: null, paidBefore: 0, customerPhone: '', docNumber: '',
             editNotes: false, notesText: '', defaultNotes: [], previewUrl: null, frameSrc: ['', ''], active: 0, pending: null, dirty: false, timer: null, seq: 0, pageDirty: false,
             pager: window.createPdfPager(),
 
@@ -186,8 +198,9 @@
                 if (!res.ok) { this.error = await this.failure(res); this.loading = false; return; }
                 const d = await res.json();
                 this.label = d.label; this.docNumber = d.doc_number; this.customerPhone = d.customer_phone || '';
-                this.invoiceNumber = d.invoice_number; this.invoiceTotal = d.invoice_total; this.paymentMethods = d.payment_methods;
-                this.defaultNotes = d.defaults.notes; this.notesText = d.defaults.notes.join('\n');
+                this.invoiceNumber = d.invoice_number; this.invoiceTotal = d.invoice_total; this.paidBefore = d.paid_before || 0; this.paymentMethods = d.payment_methods;
+                // Standard wording for "Use default"; the job's own saved notes (if any) open in edit mode.
+                this.defaultNotes = d.standard_notes; this.notesText = d.defaults.notes.join('\n'); this.editNotes = d.notes_custom;
                 const f = d.defaults; delete f.notes;
                 this.loading = false;
                 this.form = f;
@@ -220,7 +233,7 @@
                 const p = { ...JSON.parse(JSON.stringify(this.form)) };
                 if (this.type === 'receipt') { p.delivery = 0; p.discount = 0; }
                 else { delete p.payment_method; delete p.amount_paid; }
-                if (this.editNotes) p.notes = this.notesText;
+                if (this.editNotes) p.notes = this.notesText; else p.use_default_notes = true;
                 return p;
             },
             get total() {
@@ -228,8 +241,8 @@
                 return sub + (parseFloat(this.form.delivery) || 0) - (parseFloat(this.form.discount) || 0);
             },
             get balanceDue() {
-                const paid = parseFloat(this.form.amount_paid); const inv = parseFloat(this.invoiceTotal) || 0;
-                return Math.max(0, inv - (isNaN(paid) ? inv : paid));
+                const paid = parseFloat(this.form.amount_paid); const owed = (parseFloat(this.invoiceTotal) || 0) - this.paidBefore;
+                return Math.max(0, owed - (isNaN(paid) ? owed : paid));
             },
             schedule() {
                 if (!this.open || this.loading) return;

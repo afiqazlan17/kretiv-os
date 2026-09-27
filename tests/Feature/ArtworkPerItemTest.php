@@ -34,7 +34,7 @@ class ArtworkPerItemTest extends TestCase
         $this->assertSame(2, $att['design']);
 
         $this->actingAs($bod)->get(route('jobs.show', $job))
-            ->assertOk()->assertSee('📎 Sticker')->assertSee('+ Add another design')->assertSee('d2.png');
+            ->assertOk()->assertSee('Sticker')->assertSee('Add another design')->assertSee('d2.png');
     }
 
     public function test_departments_match_the_official_site_four_divisions(): void

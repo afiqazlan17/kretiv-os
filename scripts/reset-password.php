@@ -1,5 +1,9 @@
 <?php
 
+use App\Models\User;
+use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Support\Facades\Hash;
+
 // One-off: reset a single user's password directly (used when outbound mail
 // isn't configured on the server, so "Forgot password" can't deliver an
 // email). Usage: ea-php84 scripts/reset-password.php <email> <new-password>
@@ -7,7 +11,7 @@
 
 require __DIR__.'/../vendor/autoload.php';
 $app = require __DIR__.'/../bootstrap/app.php';
-$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel = $app->make(Kernel::class);
 $kernel->bootstrap();
 
 [$script, $email, $password] = $argv + [null, null, null];
@@ -22,13 +26,13 @@ if (strlen($password) < 8) {
     exit(1);
 }
 
-$user = App\Models\User::where('email', $email)->first();
+$user = User::where('email', $email)->first();
 
 if (! $user) {
     fwrite(STDERR, "No user found with email {$email}\n");
     exit(1);
 }
 
-$user->update(['password' => Illuminate\Support\Facades\Hash::make($password)]);
+$user->update(['password' => Hash::make($password)]);
 
 echo "Password updated for {$user->name} ({$user->email}).\n";

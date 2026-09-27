@@ -1,26 +1,26 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-white leading-tight">New Job</h2>
+        <h2 class="font-bold text-2xl text-white leading-tight">New Job</h2>
     </x-slot>
 
-    <div class="py-8"
+    <div class="p-5 md:p-7"
          x-data="jobCreateForm(
              {{ $customers->map(fn ($c) => ['id' => $c->id, 'customer_id' => $c->customer_id, 'label' => $c->customer_type === 'company' ? ($c->company ?: $c->name) : $c->name])->values()->toJson() }},
              {{ json_encode(array_keys($departments)) }},
              {{ json_encode(config('kretivco.package_catalog')) }}
          )">
-        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div>
             {{-- Mobile-only Form/Preview switch — on phones the two panels used to stack
                  with the preview's 80vh iframe below, so editing meant fighting a huge
                  frame; this lets you fully hide one side instead. --}}
             <div class="lg:hidden flex gap-2 mb-3">
-                <button type="button" @click="mobileTab = 'form'" class="flex-1 text-sm font-semibold px-3 py-2 rounded-md border"
-                        :class="mobileTab === 'form' ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 text-gray-600 bg-white'">Form</button>
-                <button type="button" @click="mobileTab = 'preview'; $nextTick(() => pvPager.render($refs.pvCanvas))" class="flex-1 text-sm font-semibold px-3 py-2 rounded-md border"
-                        :class="mobileTab === 'preview' ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 text-gray-600 bg-white'">Quotation Preview</button>
+                <button type="button" @click="mobileTab = 'form'" class="flex-1 text-sm font-semibold px-3 py-2 rounded-xl border"
+                        :class="mobileTab === 'form' ? 'bg-[#C2185B] text-white border-[#C2185B]' : 'border-[#EFE3DE] text-gray-600 bg-white'">Form</button>
+                <button type="button" @click="mobileTab = 'preview'; $nextTick(() => pvPager.render($refs.pvCanvas))" class="flex-1 text-sm font-semibold px-3 py-2 rounded-xl border"
+                        :class="mobileTab === 'preview' ? 'bg-[#C2185B] text-white border-[#C2185B]' : 'border-[#EFE3DE] text-gray-600 bg-white'">Quotation Preview</button>
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,700px)_minmax(0,1fr)] gap-4 items-start">
-            <div class="bg-white shadow-sm sm:rounded-lg p-6" :class="mobileTab === 'preview' ? 'hidden lg:block' : ''">
+            <div class="k-card p-5 md:p-6" :class="mobileTab === 'preview' ? 'hidden lg:block' : ''">
                 <form method="POST" action="{{ route('jobs.store') }}" @invalid.capture="formError = 'Fill in the highlighted field before saving. It might be in a department section above.'" @submit="formError = null">
                     @csrf
 
@@ -32,21 +32,21 @@
                                    x-bind:placeholder="selectedCustomer ? selectedCustomer.customer_id + ' · ' + selectedCustomer.label : 'Search or click to browse customers...'"
                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
                             <input type="hidden" name="customer_id" x-model="customerId" required>
-                            <div x-show="customerOpen" x-cloak class="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-gray-200 rounded-md shadow-lg">
+                            <div x-show="customerOpen" x-cloak class="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-[#F5E7E1] rounded-xl shadow-lg">
                                 <template x-for="c in filteredCustomers" :key="c.id">
-                                    <div @click="selectCustomer(c)" class="px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 border-b border-gray-50">
+                                    <div @click="selectCustomer(c)" class="px-3 py-2 text-sm cursor-pointer hover:bg-[#FFF5F1] border-b border-[#FBF3EF]">
                                         <span class="font-semibold" x-text="c.customer_id + ' · ' + c.label"></span>
                                     </div>
                                 </template>
                                 <div x-show="filteredCustomers.length === 0" class="px-3 py-2 text-sm text-gray-400">No customers found.</div>
                             </div>
                         </div>
-                        <button type="button" @click="showInlineCustomer = !showInlineCustomer" class="mt-1.5 text-xs font-semibold text-indigo-600 hover:underline" x-show="!showInlineCustomer">+ New Customer</button>
+                        <button type="button" @click="showInlineCustomer = !showInlineCustomer" class="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-[#C2185B] hover:underline" x-show="!showInlineCustomer"><x-icon name="plus" class="w-3.5 h-3.5" /> New Customer</button>
 
-                        <div x-show="showInlineCustomer" x-cloak class="mt-2 p-3.5 bg-gray-50 rounded-lg border border-gray-100">
+                        <div x-show="showInlineCustomer" x-cloak class="mt-2 p-3.5 bg-[#FFF9F6] rounded-xl border border-[#F5ECE8]">
                             <div class="flex items-center justify-between mb-2">
                                 <span class="text-xs font-semibold text-gray-600">New Customer</span>
-                                <button type="button" @click="showInlineCustomer = false" class="text-gray-400 text-sm">×</button>
+                                <button type="button" @click="showInlineCustomer = false" class="text-gray-400 hover:text-gray-700" aria-label="Close"><x-icon name="x" class="w-4 h-4" /></button>
                             </div>
                             <div class="grid grid-cols-2 gap-2 mb-2">
                                 <input type="text" x-model="inlineCustomer.name" placeholder="Name *" class="rounded-md border-gray-300 shadow-sm text-xs h-9">
@@ -61,7 +61,7 @@
                             </select>
                             <div x-show="inlineError" x-cloak class="text-xs text-red-600 mb-2" x-text="inlineError"></div>
                             <button type="button" @click="saveInlineCustomer()" :disabled="inlineSaving || !inlineCustomer.name.trim()"
-                                    class="text-xs font-semibold px-3 py-1.5 rounded-md bg-indigo-600 text-white disabled:opacity-40">
+                                    class="text-xs font-semibold px-3.5 py-1.5 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110 disabled:opacity-40">
                                 <span x-text="inlineSaving ? 'Saving...' : 'Save Customer'"></span>
                             </button>
                         </div>
@@ -72,22 +72,22 @@
                         <x-input-label value="Department * (you can select more than one)" />
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
                             @foreach ($departments as $key => $dept)
-                                <label class="flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold cursor-pointer"
-                                       :class="depts.includes('{{ $key }}') ? 'border-2' : 'border-gray-200'"
+                                <label class="flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-semibold cursor-pointer transition-colors"
+                                       :class="depts.includes('{{ $key }}') ? 'border-2' : 'border-[#EFE3DE] text-gray-600 hover:bg-[#FFF7F3]'"
                                        :style="depts.includes('{{ $key }}') ? 'border-color: {{ $dept['color'] }}; color: {{ $dept['color'] }}; background: {{ $dept['color'] }}10' : ''">
                                     <input type="checkbox" name="departments[]" value="{{ $key }}" x-model="depts" class="hidden">
                                     {{ $dept['label'] }}
                                 </label>
                             @endforeach
                         </div>
-                        <div x-show="depts.length > 1" x-cloak class="mt-2 px-3 py-2 rounded-md bg-pink-50 border border-dashed border-pink-300 text-xs text-gray-700">
+                        <div x-show="depts.length > 1" x-cloak class="mt-2 px-3 py-2 rounded-xl bg-[#FFF0F5] border border-dashed border-[#F48FB1] text-xs text-gray-700">
                             <span x-text="depts.length"></span> departments selected. One Project ID will be generated to group these jobs together, and each department still gets its own Job ID and status.
                         </div>
                     </div>
 
                     {{-- Per-department fields --}}
                     @foreach ($departments as $key => $dept)
-                        <div x-show="depts.includes('{{ $key }}')" x-cloak class="mb-4 p-3.5 rounded-lg border" style="border-color: {{ $dept['color'] }}30; background: {{ $dept['color'] }}08">
+                        <div x-show="depts.includes('{{ $key }}')" x-cloak class="mb-4 p-4 rounded-2xl border" style="border-color: {{ $dept['color'] }}30; background: {{ $dept['color'] }}08">
                             <div class="flex items-center gap-2 mb-3">
                                 <span class="text-[10px] font-bold px-2 py-1 rounded" style="color: {{ $dept['color'] }}; background: {{ $dept['color'] }}18">{{ \App\Http\Controllers\JobController::DEPT_CODES[$key] ?? strtoupper($key) }}</span>
                                 <span class="text-sm font-bold">{{ $dept['label'] }}</span>
@@ -114,7 +114,7 @@
                             </div>
 
                             @if (! empty(config('kretivco.package_catalog.'.$key)))
-                                <div x-show="perDept.{{ $key }}.jobTypeCategory === 'product_sale'" x-cloak class="mb-3 p-3 rounded-md bg-white border border-dashed border-gray-300">
+                                <div x-show="perDept.{{ $key }}.jobTypeCategory === 'product_sale'" x-cloak class="mb-3 p-3 rounded-xl bg-white border border-dashed border-[#E8D5CD]">
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div>
                                             <x-input-label value="Product" />
@@ -147,7 +147,7 @@
                                             </template>
                                         </select>
                                         <template x-if="findPackageTier('{{ $key }}', perDept.{{ $key }}.productLine, perDept.{{ $key }}.segment, perDept.{{ $key }}.pkg)">
-                                            <div class="mt-2 p-2.5 rounded-md bg-gray-50 text-xs text-gray-600 leading-relaxed">
+                                            <div class="mt-2 p-2.5 rounded-xl bg-[#FFF9F6] text-xs text-gray-600 leading-relaxed">
                                                 <template x-for="line in packageItemLines('{{ $key }}', perDept.{{ $key }}.productLine, perDept.{{ $key }}.segment, perDept.{{ $key }}.pkg)" :key="line">
                                                     <div x-text="'• ' + line"></div>
                                                 </template>
@@ -178,7 +178,7 @@
                                 <x-input-label value="Line Items (optional, shown on the quotation PDF)" />
                                 <div class="mt-1 space-y-2">
                                     <template x-for="(row, idx) in perDept.{{ $key }}.lineItems" :key="idx">
-                                        <div class="rounded-lg border border-gray-200 bg-white p-2.5 space-y-1.5">
+                                        <div class="rounded-xl border border-[#EFE3DE] bg-white p-2.5 space-y-1.5">
                                             <div class="flex items-start gap-1.5">
                                                 <div class="flex-1 relative" x-data="itemCombo('{{ route('items.search') }}', '{{ $key }}', 'create')" @click.outside="open = false">
                                                     <label class="text-[10px] text-gray-400">Item name</label>
@@ -186,7 +186,7 @@
                                                            @focus="search(row.item)" @input="search(row.item)" @keydown.escape="open = false" class="block w-full rounded-md border-gray-300 shadow-sm text-xs">
                                                     <x-item-dropdown />
                                                 </div>
-                                                <button type="button" @click="perDept.{{ $key }}.lineItems.splice(idx, 1)" class="mt-4 text-red-500 text-sm leading-none" title="Remove item">✕</button>
+                                                <button type="button" @click="perDept.{{ $key }}.lineItems.splice(idx, 1)" class="mt-5 text-gray-400 hover:text-red-500" title="Remove item" aria-label="Remove item"><x-icon name="trash-2" class="w-4 h-4" /></button>
                                             </div>
                                             <div>
                                                 <label class="text-[10px] text-gray-400">Description (optional)</label>
@@ -204,7 +204,7 @@
                                             </div>
                                         </div>
                                     </template>
-                                    <button type="button" @click="perDept.{{ $key }}.lineItems.push({ item: '', desc: '', qty: 1, price: 0 })" class="text-xs font-semibold text-indigo-600 hover:underline">+ Add Line Item</button>
+                                    <button type="button" @click="perDept.{{ $key }}.lineItems.push({ item: '', desc: '', qty: 1, price: 0 })" class="inline-flex items-center gap-1 text-xs font-semibold text-[#C2185B] hover:underline"><x-icon name="plus" class="w-3.5 h-3.5" /> Add Line Item</button>
                                 </div>
                             </div>
 
@@ -219,24 +219,26 @@
                                 </div>
                             </div>
 
-                            {{-- Preview-only: lets staff see and tweak the quotation's wording before the job is saved. Not persisted with the job — the document modal is where the final wording for a generated document is set. --}}
-                            <div class="mb-3 p-3 rounded-md bg-white border border-dashed border-gray-300">
-                                <div class="flex items-center justify-between">
+                            {{-- Lets staff tweak the quotation's wording before the job is saved. Edited notes are stored on the job (document_notes.quotation) and are what the Quotation modal opens with later. --}}
+                            <div class="mb-3 p-3 rounded-xl bg-white border border-dashed border-[#E8D5CD]">
+                                <div class="flex items-center justify-between gap-2">
                                     <span class="text-xs font-semibold text-gray-700">Quotation notes</span>
                                     <button type="button" @click="toggleQuotationNotes('{{ $key }}')" :disabled="!depts.includes('{{ $key }}')"
-                                            class="text-xs font-semibold px-2.5 py-1 rounded-md border border-indigo-200 text-indigo-600 hover:bg-indigo-50 disabled:opacity-40"
-                                            x-text="perDept.{{ $key }}.editNotes ? 'Use default notes' : '✎ Edit notes shown on quotation'"></button>
+                                            class="text-xs font-semibold px-2.5 py-1 rounded-lg border border-[#F8D7E3] text-[#C2185B] hover:bg-[#FFF0F5] disabled:opacity-40"
+                                            x-text="perDept.{{ $key }}.editNotes ? 'Use default notes' : 'Edit notes shown on quotation'"></button>
                                 </div>
-                                <p x-show="!perDept.{{ $key }}.editNotes" class="mt-1 text-xs text-gray-400">Uses the standard payment terms for the selected bank. Edit them here only if this quotation needs different wording.</p>
+                                <p x-show="!perDept.{{ $key }}.editNotes" class="mt-1 text-xs text-gray-400">Uses the standard notes. Edit them here only if this quotation needs different wording; your version is kept for this job.</p>
+                                {{-- Submitted only while editing, so the job keeps these as its own quotation notes. --}}
+                                <input type="hidden" name="per_dept[{{ $key }}][quotation_notes]" :value="perDept.{{ $key }}.notesLines.join('\n')" :disabled="!depts.includes('{{ $key }}') || !perDept.{{ $key }}.editNotes">
                                 <div x-show="perDept.{{ $key }}.editNotes" x-cloak class="mt-2 space-y-1.5">
                                     <template x-for="(line, i) in perDept.{{ $key }}.notesLines" :key="i">
                                         <div class="flex items-start gap-1.5">
                                             <span class="mt-1.5 text-xs text-gray-400 w-4 text-right" x-text="(i + 1) + '.'"></span>
                                             <input type="text" x-model="perDept.{{ $key }}.notesLines[i]" class="flex-1 rounded-md border-gray-300 shadow-sm text-xs">
-                                            <button type="button" @click="perDept.{{ $key }}.notesLines.splice(i, 1)" class="mt-1.5 text-red-500 text-xs" title="Remove line">✕</button>
+                                            <button type="button" @click="perDept.{{ $key }}.notesLines.splice(i, 1)" class="mt-2 text-gray-400 hover:text-red-500" title="Remove line" aria-label="Remove line"><x-icon name="x" class="w-4 h-4" /></button>
                                         </div>
                                     </template>
-                                    <button type="button" @click="perDept.{{ $key }}.notesLines.push('')" class="text-xs font-semibold text-indigo-600 hover:underline">+ Add line</button>
+                                    <button type="button" @click="perDept.{{ $key }}.notesLines.push('')" class="inline-flex items-center gap-1 text-xs font-semibold text-[#C2185B] hover:underline"><x-icon name="plus" class="w-3.5 h-3.5" /> Add line</button>
                                 </div>
                             </div>
 
@@ -257,20 +259,20 @@
             </div>
 
             {{-- Live quotation preview — same PDF the job's Quotation button produces --}}
-            <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden flex-col lg:sticky lg:top-4 h-[80vh] lg:h-[88vh]"
+            <div class="k-card overflow-hidden flex-col lg:sticky lg:top-4 h-[80vh] lg:h-[88vh]"
                  :class="mobileTab === 'preview' ? 'flex' : 'hidden lg:flex'">
-                <div class="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-gray-100">
-                    <h3 class="text-sm font-semibold text-gray-700">Quotation preview</h3>
+                <div class="flex items-center justify-between gap-2 px-4 py-3 border-b border-[#F5ECE8]">
+                    <h3 class="text-sm font-bold text-gray-900">Quotation preview</h3>
                     <div class="flex gap-1" x-show="depts.length > 1" x-cloak>
                         <template x-for="d in depts" :key="d">
-                            <button type="button" @click="previewDept = d" class="text-[11px] font-semibold px-2 py-1 rounded border"
-                                    :class="activeDept === d ? 'bg-gray-800 text-white border-gray-800' : 'border-gray-200 text-gray-600'" x-text="d.toUpperCase()"></button>
+                            <button type="button" @click="previewDept = d" class="text-[11px] font-semibold px-2 py-1 rounded-lg border"
+                                    :class="activeDept === d ? 'bg-[#C2185B] text-white border-[#C2185B]' : 'border-[#EFE3DE] text-gray-600'" x-text="d.toUpperCase()"></button>
                         </template>
                     </div>
                 </div>
                 {{-- Desktop: native iframe viewer. Mobile can't reliably page/scroll a PDF
                      embedded in an iframe, so it gets a canvas render + Prev/Next instead. --}}
-                <div class="relative flex-1 bg-gray-100 min-h-0 hidden lg:block">
+                <div class="relative flex-1 bg-[#F7F1EE] min-h-0 hidden lg:block">
                     <p x-show="!depts.length" class="absolute inset-0 flex items-center justify-center text-sm text-gray-400 px-6 text-center">Select a department to see the quotation fill in as you type.</p>
                     <template x-for="i in [0, 1]" :key="i">
                         <iframe class="absolute inset-0 w-full h-full border-0 bg-white" :class="pvActive === i ? 'z-10' : 'z-0'" x-show="depts.length && pvSrc[pvActive]"
@@ -279,18 +281,18 @@
                     <div x-show="pvBusy" x-cloak class="absolute z-20 top-2 right-3 text-xs text-gray-500 bg-white/90 rounded px-2 py-1 shadow">Updating preview…</div>
                     <div x-show="pvError" x-cloak class="absolute z-20 bottom-2 left-3 right-3 text-xs text-red-600 bg-white rounded px-2 py-1 shadow" x-text="pvError"></div>
                 </div>
-                <div class="relative flex-1 bg-gray-100 min-h-0 flex flex-col lg:hidden">
+                <div class="relative flex-1 bg-[#F7F1EE] min-h-0 flex flex-col lg:hidden">
                     <p x-show="!depts.length" class="absolute inset-0 flex items-center justify-center text-sm text-gray-400 px-6 text-center">Select a department to see the quotation fill in as you type.</p>
                     <div class="flex-1 overflow-auto flex items-start justify-center p-2">
                         <p x-show="pvPager.error" x-text="pvPager.error" class="text-xs text-red-600 text-center p-4"></p>
                         <canvas x-show="depts.length && !pvPager.error" x-ref="pvCanvas" class="shadow bg-white"></canvas>
                     </div>
-                    <div x-show="depts.length" class="flex items-center justify-center gap-3 px-3 py-2 border-t border-gray-200 bg-white text-sm">
+                    <div x-show="depts.length" class="flex items-center justify-center gap-3 px-3 py-2 border-t border-[#F5ECE8] bg-white text-sm">
                         <button type="button" @click="pvPager.prev($refs.pvCanvas)" :disabled="pvPager.pageNum <= 1"
-                                class="px-3 py-1 rounded-md border border-gray-200 disabled:opacity-30">‹ Prev</button>
+                                class="inline-flex items-center gap-1 px-3 py-1 rounded-lg border border-[#EFE3DE] disabled:opacity-30"><x-icon name="chevron-right" class="w-4 h-4 rotate-180" /> Prev</button>
                         <span class="text-xs text-gray-500" x-text="`Page ${pvPager.pageNum} / ${pvPager.numPages}`"></span>
                         <button type="button" @click="pvPager.next($refs.pvCanvas)" :disabled="pvPager.pageNum >= pvPager.numPages"
-                                class="px-3 py-1 rounded-md border border-gray-200 disabled:opacity-30">Next ›</button>
+                                class="inline-flex items-center gap-1 px-3 py-1 rounded-lg border border-[#EFE3DE] disabled:opacity-30">Next <x-icon name="chevron-right" class="w-4 h-4" /></button>
                     </div>
                     <div x-show="pvBusy || pvPager.canvasBusy" x-cloak class="absolute z-20 top-2 right-3 text-xs text-gray-500 bg-white/90 rounded px-2 py-1 shadow">Updating preview…</div>
                     <div x-show="pvError" x-cloak class="absolute z-20 bottom-2 left-3 right-3 text-xs text-red-600 bg-white rounded px-2 py-1 shadow" x-text="pvError"></div>
@@ -398,7 +400,7 @@
                     if (!seg) return [];
                     return seg.packages.flatMap(pkg => pkg.tiers.map(tier => ({
                         value: `${pkg.key}:${tier.pcs}`,
-                        label: `${pkg.label} — ${tier.pcs}pcs (RM ${Number(tier.price).toFixed(2)})`,
+                        label: `${pkg.label}, ${tier.pcs}pcs (RM ${Number(tier.price).toFixed(2)})`,
                         pkg, tier,
                     })));
                 },

@@ -78,6 +78,38 @@ class User extends Authenticatable
         return $this->role === self::ROLE_FINANCE;
     }
 
+    /**
+     * Company-level finance (all bank balances, director loans, bank
+     * transfers, company-wide books): BOD and the Finance role only. A Dept
+     * Head works with their own department's figures.
+     */
+    public function seesCompanyFinance(): bool
+    {
+        return $this->isBod() || $this->isFinance();
+    }
+
+    /**
+     * Who may issue each document. Quotations are for everyone in Jobs; an
+     * invoice is an official bill, so not interns; a receipt confirms money
+     * has actually been received, so it's kept to people accountable for
+     * finance, separate from whoever made the sale.
+     */
+    public function canIssueDocument(string $type): bool
+    {
+        return match ($type) {
+            'quotation', 'proforma' => true,
+            'invoice' => $this->role !== self::ROLE_INTERN,
+            'receipt' => $this->canManageFinance(),
+            default => false,
+        };
+    }
+
+    /** Voiding a recorded payment changes what the books say was collected: BOD and Finance only. */
+    public function canVoidPayments(): bool
+    {
+        return $this->seesCompanyFinance();
+    }
+
     /** Who can work in the Finance module: BOD, Dept Head and the Finance role. */
     public function canManageFinance(): bool
     {

@@ -79,6 +79,54 @@ a.k-card:hover, .k-card--hover:hover {
     box-shadow: 0 1px 2px rgba(120, 40, 40, 0.05), 0 18px 36px -16px rgba(233, 30, 99, 0.30);
 }
 
+/* Form controls and the shared x-primary/x-secondary buttons, restyled
+   only inside the Jobs shell. Scoped to .app-stage (not changed in the
+   components themselves) because the login page uses the same components
+   and keeps its own dark-glass look. */
+.app-stage input[type="text"],
+.app-stage input[type="email"],
+.app-stage input[type="number"],
+.app-stage input[type="date"],
+.app-stage input[type="tel"],
+.app-stage input[type="url"],
+.app-stage input[type="search"],
+.app-stage input[type="password"],
+.app-stage select,
+.app-stage textarea {
+    border-color: #EFE3DE;
+    border-radius: 0.75rem;
+    background-color: #FFFCFA;
+}
+.app-stage input[type="text"]:focus,
+.app-stage input[type="email"]:focus,
+.app-stage input[type="number"]:focus,
+.app-stage input[type="date"]:focus,
+.app-stage input[type="tel"]:focus,
+.app-stage input[type="url"]:focus,
+.app-stage input[type="search"]:focus,
+.app-stage input[type="password"]:focus,
+.app-stage select:focus,
+.app-stage textarea:focus {
+    border-color: #F48FB1;
+    box-shadow: 0 0 0 3px rgba(233, 30, 99, 0.12);
+}
+.app-stage .k-btn,
+.app-stage .k-btn-secondary {
+    border-radius: 0.75rem;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.875rem;
+}
+.app-stage .k-btn {
+    background: linear-gradient(90deg, #E91E63, #F46A3A);
+}
+.app-stage .k-btn:hover {
+    filter: brightness(1.08);
+}
+.app-stage .k-btn-secondary {
+    border-color: #EFE3DE;
+}
+
 /* Dark glass cards for the OS launcher — same recipe as .guest-card. A
    "stretched link" (.os-card-link, absolutely positioned over the whole
    card) makes the entire tile clickable while real nested links/buttons on

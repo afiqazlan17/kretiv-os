@@ -15,6 +15,9 @@ use Illuminate\View\View;
 class FinanceReportController extends Controller
 {
     /** @var array<string, array{0: string, 1: string}> label + sidebar icon */
+    /** Whole-company books (bank positions, balance sheet): BOD/Finance only. */
+    public const COMPANY_REPORTS = ['trial-balance', 'balance-sheet', 'cash-book', 'bank-reconciliation'];
+
     public const REPORTS = [
         'general-ledger' => ['General Ledger Report', '📒'],
         'trial-balance' => ['Trial Balance', '⚖️'],
@@ -31,6 +34,7 @@ class FinanceReportController extends Controller
         $user = $request->user();
         abort_unless($user->canManageFinance(), 403);
         abort_unless(array_key_exists($report, self::REPORTS), 404);
+        abort_if(in_array($report, self::COMPANY_REPORTS, true) && ! $user->seesCompanyFinance(), 403);
 
         $reports = new FinanceReports(FinanceController::entriesFor($user));
         $year = (int) $request->query('year', now()->year);

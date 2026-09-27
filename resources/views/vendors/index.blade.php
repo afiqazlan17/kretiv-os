@@ -1,21 +1,32 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-white leading-tight">Vendors</h2>
+        <h2 class="font-bold text-2xl text-white leading-tight">Vendors</h2>
     </x-slot>
 
-    <div class="py-8">
-        <div class="max-w-6xl mx-auto sm:px-6 lg:px-8 space-y-6">
+    <div class="p-5 md:p-7">
+        <div class="space-y-4">
 
             @if (session('success'))
-                <div class="rounded-md bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3">
+                <div class="rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3">
                     {{ session('success') }}
                 </div>
             @endif
 
-            <div class="bg-white shadow-sm sm:rounded-lg p-6" x-data="{ open: false }">
-                <button type="button" @click="open = !open" class="text-sm font-semibold text-indigo-600 hover:underline">
-                    <span x-show="!open">+ New Vendor</span>
-                    <span x-show="open" x-cloak>− Close Form</span>
+            <div class="k-card p-4">
+                <form method="GET" action="{{ route('vendors.index') }}" class="relative">
+                    <x-icon name="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input type="text" name="q" value="{{ $search }}" placeholder="Search by ID, name, or company..." class="w-full pl-10 text-sm">
+                </form>
+            </div>
+
+            <div class="k-card p-5" x-data="{ open: {{ $errors->any() ? 'true' : 'false' }} }">
+                <button type="button" @click="open = !open" class="inline-flex items-center gap-2 text-sm font-semibold text-[#C2185B] hover:text-[#AD1457]">
+                    <span class="w-7 h-7 rounded-lg bg-[#FFF1EC] flex items-center justify-center">
+                        <x-icon name="plus" class="w-4 h-4" x-show="!open" />
+                        <x-icon name="x" class="w-4 h-4" x-show="open" x-cloak />
+                    </span>
+                    <span x-show="!open">New vendor</span>
+                    <span x-show="open" x-cloak>Close form</span>
                 </button>
                 <form method="POST" action="{{ route('vendors.store') }}" x-show="open" x-cloak class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
                     @csrf
@@ -29,7 +40,7 @@
                     </div>
                     <div>
                         <x-input-label value="Category *" />
-                        <select name="category" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                        <select name="category" class="mt-1 block w-full text-sm">
                             @foreach (config('kretivco.vendor_categories') as $key => $label)
                                 <option value="{{ $key }}" {{ old('category') === $key ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
@@ -58,53 +69,57 @@
                     </div>
                     <div class="sm:col-span-2">
                         <x-input-label for="notes" value="Notes" />
-                        <textarea name="notes" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">{{ old('notes') }}</textarea>
+                        <textarea name="notes" rows="2" class="mt-1 block w-full text-sm">{{ old('notes') }}</textarea>
                     </div>
                     <div class="sm:col-span-2">
                         <x-input-error :messages="$errors->all()" class="mt-1" />
-                        <x-primary-button type="submit">Save Vendor</x-primary-button>
+                        <x-primary-button type="submit">Save vendor</x-primary-button>
                     </div>
                 </form>
             </div>
 
-            <div class="bg-white shadow-sm sm:rounded-lg p-4">
-                <form method="GET" action="{{ route('vendors.index') }}">
-                    <input type="text" name="q" value="{{ $search }}" placeholder="Search by ID, name, or company..." class="w-full rounded-md border-gray-300 shadow-sm text-sm">
-                </form>
-            </div>
-
-            <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden" x-data="{ editingId: null }">
+            <div class="k-card overflow-hidden" x-data="{ editingId: null }">
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-100 text-sm">
-                        <thead class="bg-gray-50">
-                            <tr class="text-left text-xs text-gray-500 uppercase">
-                                <th class="px-4 py-3 whitespace-nowrap">ID</th>
-                                <th class="px-4 py-3 whitespace-nowrap">Name</th>
-                                <th class="px-4 py-3 whitespace-nowrap">Category</th>
-                                <th class="px-4 py-3 whitespace-nowrap">Phone</th>
-                                <th class="px-4 py-3 whitespace-nowrap">Email</th>
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-[11px] font-semibold text-gray-400 uppercase tracking-wide border-b border-[#F5ECE8]">
+                                <th class="px-4 py-3">Vendor</th>
+                                <th class="px-4 py-3 whitespace-nowrap hidden sm:table-cell">Category</th>
+                                <th class="px-4 py-3 whitespace-nowrap hidden md:table-cell">Contact</th>
                                 <th class="px-4 py-3"></th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-100">
+                        <tbody class="divide-y divide-[#F5ECE8]">
                             @forelse ($vendors as $vendor)
-                                <tr>
-                                    <td class="px-4 py-3 font-mono text-xs text-gray-500 whitespace-nowrap">{{ $vendor->vendor_id }}</td>
-                                    <td class="px-4 py-3 text-gray-800 whitespace-nowrap">{{ $vendor->name }}{{ $vendor->company ? " ({$vendor->company})" : '' }}</td>
-                                    <td class="px-4 py-3 whitespace-nowrap">
-                                        <span class="inline-flex rounded-full px-2 py-1 text-xs bg-gray-100 text-gray-600">{{ config('kretivco.vendor_categories')[$vendor->category] ?? $vendor->category }}</span>
+                                @php $category = config('kretivco.vendor_categories')[$vendor->category] ?? $vendor->category; @endphp
+                                <tr class="hover:bg-[#FFF7F3] transition-colors">
+                                    <td class="px-4 py-3.5 max-w-0 w-full">
+                                        <div class="flex items-center gap-3 min-w-0">
+                                            <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-[#FFF4E5] text-[#E85D04] shrink-0"><x-icon name="truck" class="w-4 h-4" /></span>
+                                            <div class="min-w-0">
+                                                <div class="font-semibold text-gray-800 truncate">{{ $vendor->name }}</div>
+                                                <div class="text-xs text-gray-400 truncate"><span class="font-mono">{{ $vendor->vendor_id }}</span>{{ $vendor->company ? ' · '.$vendor->company : '' }}<span class="sm:hidden"> · {{ $category }}</span></div>
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td class="px-4 py-3 text-gray-600 whitespace-nowrap">{{ $vendor->phone ?? '—' }}</td>
-                                    <td class="px-4 py-3 text-gray-600 whitespace-nowrap">{{ $vendor->email ?? '—' }}</td>
-                                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                                    <td class="px-4 py-3.5 whitespace-nowrap hidden sm:table-cell">
+                                        <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold bg-[#FFF4E5] text-[#B45309]">{{ $category }}</span>
+                                    </td>
+                                    <td class="px-4 py-3.5 whitespace-nowrap hidden md:table-cell">
+                                        <div class="text-gray-700">{{ $vendor->phone ?: 'No phone' }}</div>
+                                        @if ($vendor->email)
+                                            <div class="text-xs text-gray-400">{{ $vendor->email }}</div>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3.5 text-right whitespace-nowrap">
                                         @can('update', $vendor)
-                                            <button type="button" @click="editingId = editingId === {{ $vendor->id }} ? null : {{ $vendor->id }}" class="text-indigo-600 hover:underline text-xs">Edit</button>
+                                            <button type="button" @click="editingId = editingId === {{ $vendor->id }} ? null : {{ $vendor->id }}" class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#EFE3DE] text-gray-700 bg-white hover:bg-[#FFF7F3]"><x-icon name="pencil" class="w-3.5 h-3.5" /> Edit</button>
                                         @endcan
                                     </td>
                                 </tr>
                                 @can('update', $vendor)
                                 <tr x-show="editingId === {{ $vendor->id }}" x-cloak>
-                                    <td colspan="6" class="px-4 py-4 bg-gray-50">
+                                    <td colspan="4" class="px-4 py-4 bg-[#FFF9F6]">
                                         <form method="POST" action="{{ route('vendors.update', $vendor) }}" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
                                             @csrf
                                             @method('PUT')
@@ -121,7 +136,7 @@
                                 </tr>
                                 @endcan
                             @empty
-                                <tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">No vendors.</td></tr>
+                                <tr><td colspan="4" class="px-4 py-10 text-center text-gray-400">No vendors found.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

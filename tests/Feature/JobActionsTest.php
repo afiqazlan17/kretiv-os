@@ -25,6 +25,34 @@ class JobActionsTest extends TestCase
         ], $overrides));
     }
 
+    public function test_job_page_shows_deadline_payment_balance_and_a_staff_dropdown(): void
+    {
+        $bod = User::factory()->create(['role' => User::ROLE_BOD, 'name' => 'Afiq Azlan']);
+        User::factory()->create(['name' => 'Hakim Rahman', 'active' => true]);
+        User::factory()->create(['name' => 'Gone Staff', 'active' => false]);
+        $job = $this->job(['status' => Job::STATUS_IN_PROGRESS, 'deadline' => '2026-10-11', 'estimation_value' => 1000]);
+        foreach ([['invoice', 1000], ['receipt', 800]] as [$type, $amount]) {
+            LedgerEntry::create(['job_id' => $job->job_id, 'type' => $type, 'doc_number' => strtoupper($type).'-1', 'description' => 'x', 'debit_account' => 'a', 'credit_account' => 'b', 'amount' => $amount]);
+        }
+
+        $this->actingAs($bod)->get(route('jobs.show', $job))->assertOk()
+            ->assertSee('Deadline:')->assertSee('11 Oct 2026')
+            ->assertSee('RM 1,000.00')->assertSee('RM 800.00')->assertSee('RM 200.00')
+            ->assertSee('<option value="Hakim Rahman"', false)->assertDontSee('<option value="Gone Staff"', false)
+            ->assertSee('value="1000.00"', false);
+    }
+
+    public function test_editing_job_details_is_logged_with_what_changed(): void
+    {
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $job = $this->job(['deadline' => '2026-10-05']);
+
+        $this->actingAs($bod)->put(route('jobs.update', $job), ['job_type' => 'Test job', 'deadline' => '2026-10-11'])->assertRedirect();
+
+        $this->assertSame('2026-10-11', $job->refresh()->deadline->toDateString());
+        $this->actingAs($bod)->get(route('jobs.show', $job))->assertSee('changed Deadline from 05 Oct 2026 to 11 Oct 2026');
+    }
+
     public function test_take_in_job_sets_pic_and_advances_status(): void
     {
         $bod = User::factory()->create(['role' => User::ROLE_BOD]);

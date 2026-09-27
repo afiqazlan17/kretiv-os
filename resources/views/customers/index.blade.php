@@ -1,21 +1,50 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-white leading-tight">Customers</h2>
+        <h2 class="font-bold text-2xl text-white leading-tight">Customers</h2>
     </x-slot>
 
-    <div class="py-8">
-        <div class="max-w-6xl mx-auto sm:px-6 lg:px-8 space-y-6">
+    <div class="p-5 md:p-7">
+        <div class="space-y-4">
 
             @if (session('success'))
-                <div class="rounded-md bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3">
+                <div class="rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3">
                     {{ session('success') }}
                 </div>
             @endif
 
-            <div class="bg-white shadow-sm sm:rounded-lg p-6" x-data="{ open: false }">
-                <button type="button" @click="open = !open" class="text-sm font-semibold text-indigo-600 hover:underline">
-                    <span x-show="!open">+ New Customer</span>
-                    <span x-show="open" x-cloak>− Close Form</span>
+            <div class="flex flex-col sm:flex-row gap-4">
+            <div class="k-card p-5 flex items-center gap-4 sm:w-64 shrink-0">
+                <span class="w-11 h-11 rounded-2xl flex items-center justify-center text-white shrink-0" style="background:linear-gradient(135deg,#E91E63,#FF7A9C);box-shadow:0 8px 18px -8px #E91E63"><x-icon name="users" class="w-5 h-5" /></span>
+                <div>
+                    <div class="text-2xl font-extrabold text-gray-900 leading-none">{{ $customers->count() }}</div>
+                    <div class="text-sm font-semibold text-gray-600 mt-1">Total customers</div>
+                </div>
+            </div>
+
+            <div class="k-card p-4 flex-1 flex items-center">
+                <form method="GET" action="{{ route('customers.index') }}" class="flex flex-col sm:flex-row gap-3 w-full">
+                    <div class="relative flex-1">
+                        <x-icon name="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input type="text" name="q" value="{{ $search }}" placeholder="Search customers..." class="w-full pl-10 text-sm">
+                    </div>
+                    <select name="source" onchange="this.form.submit()" class="text-sm">
+                        <option value="">All Sources</option>
+                        @foreach (config('kretivco.sources') as $key => $label)
+                            <option value="{{ $key }}" {{ $source === $key ? 'selected' : '' }}>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </form>
+            </div>
+            </div>
+
+            <div class="k-card p-5" x-data="{ open: {{ $errors->any() ? 'true' : 'false' }} }">
+                <button type="button" @click="open = !open" class="inline-flex items-center gap-2 text-sm font-semibold text-[#C2185B] hover:text-[#AD1457]">
+                    <span class="w-7 h-7 rounded-lg bg-[#FFF1EC] flex items-center justify-center">
+                        <x-icon name="plus" class="w-4 h-4" x-show="!open" />
+                        <x-icon name="x" class="w-4 h-4" x-show="open" x-cloak />
+                    </span>
+                    <span x-show="!open">New customer</span>
+                    <span x-show="open" x-cloak>Close form</span>
                 </button>
                 <form method="POST" action="{{ route('customers.store') }}" x-show="open" x-cloak
                       x-data="{ customerType: '{{ old('customer_type', 'individual') }}' }"
@@ -25,7 +54,7 @@
                         <x-input-label value="Customer Type *" />
                         <div class="mt-1 flex gap-2">
                             @foreach (config('kretivco.customer_types') as $key => $label)
-                                <label class="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm cursor-pointer">
+                                <label class="flex items-center gap-2 rounded-xl border border-[#EFE3DE] px-3 py-2 text-sm cursor-pointer">
                                     <input type="radio" name="customer_type" value="{{ $key }}" x-model="customerType" {{ old('customer_type', 'individual') === $key ? 'checked' : '' }}>
                                     {{ $label }}
                                 </label>
@@ -78,97 +107,82 @@
                     </div>
                     <div class="sm:col-span-2">
                         <x-input-error :messages="$errors->all()" class="mt-1" />
-                        <x-primary-button type="submit">Save Customer</x-primary-button>
+                        <x-primary-button type="submit">Save customer</x-primary-button>
                     </div>
                 </form>
             </div>
 
-            <div class="bg-white shadow-sm sm:rounded-lg p-5 border-l-4 border-pink-500 max-w-xs">
-                <div class="text-[11px] font-semibold text-gray-400 uppercase">Total Customers</div>
-                <div class="text-2xl font-bold text-gray-900 mt-1">{{ $customers->count() }}</div>
-            </div>
-
-            <div class="bg-white shadow-sm sm:rounded-lg p-4">
-                <form method="GET" action="{{ route('customers.index') }}" class="flex flex-col sm:flex-row gap-3">
-                    <input type="text" name="q" value="{{ $search }}" placeholder="Search customers..." class="flex-1 rounded-md border-gray-300 shadow-sm text-sm">
-                    <select name="source" onchange="this.form.submit()" class="rounded-md border-gray-300 shadow-sm text-sm">
-                        <option value="">All Sources</option>
-                        @foreach (config('kretivco.sources') as $key => $label)
-                            <option value="{{ $key }}" {{ $source === $key ? 'selected' : '' }}>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </form>
-            </div>
-
-            <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden" x-data="{ editingId: null, openId: {{ (int) request('open', 0) ?: 'null' }} }">
+            <div class="k-card overflow-hidden" x-data="{ editingId: null, openId: {{ (int) request('open', 0) ?: 'null' }} }">
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-100 text-sm">
-                        <thead class="bg-gray-50">
-                            <tr class="text-left text-xs text-gray-500 uppercase">
-                                <th class="px-4 py-3"></th>
-                                <th class="px-4 py-3 whitespace-nowrap">ID</th>
-                                <th class="px-4 py-3 whitespace-nowrap">PIC Name</th>
-                                <th class="px-4 py-3 whitespace-nowrap">Company</th>
-                                <th class="px-4 py-3 whitespace-nowrap">Jobs</th>
-                                <th class="px-4 py-3 whitespace-nowrap">Value</th>
-                                <th class="px-4 py-3 whitespace-nowrap">Source</th>
-                                <th class="px-4 py-3"></th>
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-[11px] font-semibold text-gray-400 uppercase tracking-wide border-b border-[#F5ECE8]">
+                                <th class="px-4 py-3">Customer</th>
+                                <th class="px-4 py-3 whitespace-nowrap hidden sm:table-cell">Jobs</th>
+                                <th class="px-4 py-3 whitespace-nowrap text-right">Value</th>
+                                <th class="px-4 py-3 whitespace-nowrap hidden md:table-cell">Source</th>
+                                <th class="px-2 py-3"></th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-100">
+                        <tbody class="divide-y divide-[#F5ECE8]">
                             @forelse ($customers as $customer)
                                 @php
                                     $st = $customer->stats;
                                     $waPhone = preg_replace('/\D/', '', (string) $customer->phone);
                                     $waPhone = str_starts_with($waPhone, '0') ? '6'.$waPhone : $waPhone;
                                 @endphp
-                                <tr class="cursor-pointer hover:bg-gray-50" @click="openId = openId === {{ $customer->id }} ? null : {{ $customer->id }}">
-                                    <td class="px-4 py-3">
-                                        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-pink-50 text-pink-600 text-xs font-bold">{{ strtoupper(substr($customer->name, 0, 1)) }}</span>
+                                <tr class="cursor-pointer hover:bg-[#FFF7F3] transition-colors" @click="openId = openId === {{ $customer->id }} ? null : {{ $customer->id }}">
+                                    <td class="px-4 py-3.5 max-w-0 w-full">
+                                        <div class="flex items-center gap-3 min-w-0">
+                                            <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-[#FFF0F5] text-[#C2185B] text-xs font-bold shrink-0">{{ strtoupper(substr($customer->name, 0, 1)) }}</span>
+                                            <div class="min-w-0">
+                                                <div class="font-semibold text-gray-800 truncate">{{ $customer->name }}</div>
+                                                <div class="text-xs text-gray-400 truncate"><span class="font-mono">{{ $customer->customer_id }}</span>{{ $customer->company ? ' · '.$customer->company : '' }}</div>
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td class="px-4 py-3 font-mono text-xs text-gray-500 whitespace-nowrap">{{ $customer->customer_id }}</td>
-                                    <td class="px-4 py-3 font-semibold text-gray-800 whitespace-nowrap">{{ $customer->name }}</td>
-                                    <td class="px-4 py-3 text-gray-600 whitespace-nowrap">{{ $customer->company ?? '—' }}</td>
-                                    <td class="px-4 py-3 font-semibold whitespace-nowrap">{{ $st['jobs'] }}</td>
-                                    <td class="px-4 py-3 whitespace-nowrap">RM {{ number_format($st['value'], 2) }}</td>
-                                    <td class="px-4 py-3 whitespace-nowrap">
-                                        <span class="inline-flex rounded-full px-2 py-1 text-xs bg-green-50 text-green-600">{{ config('kretivco.sources')[$customer->source] ?? $customer->source }}</span>
+                                    <td class="px-4 py-3.5 font-semibold text-gray-700 whitespace-nowrap hidden sm:table-cell">{{ $st['jobs'] }}</td>
+                                    <td class="px-4 py-3.5 font-bold text-gray-900 whitespace-nowrap text-right">RM {{ number_format($st['value'], 2) }}</td>
+                                    <td class="px-4 py-3.5 whitespace-nowrap hidden md:table-cell">
+                                        <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold bg-green-50 text-green-700">{{ config('kretivco.sources')[$customer->source] ?? $customer->source }}</span>
                                     </td>
-                                    <td class="px-4 py-3 text-gray-400" x-text="openId === {{ $customer->id }} ? '⌄' : '›'"></td>
+                                    <td class="px-2 py-3.5 text-gray-300">
+                                        <x-icon name="chevron-right" class="w-4 h-4 transition-transform" x-bind:class="openId === {{ $customer->id }} && 'rotate-90 text-[#C2185B]'" />
+                                    </td>
                                 </tr>
                                 <tr x-show="openId === {{ $customer->id }}" x-cloak>
-                                    <td colspan="8" class="px-6 py-5 bg-gray-50">
+                                    <td colspan="5" class="px-5 md:px-6 py-5 bg-[#FFF9F6]">
                                         <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
                                             <div>
                                                 <div class="text-base font-bold text-gray-900">{{ $customer->name }} <span class="ml-1 font-mono text-xs text-gray-400">{{ $customer->customer_id }}</span></div>
                                                 <div class="text-xs text-gray-500 mt-0.5">{{ config('kretivco.customer_types')[$customer->customer_type] ?? $customer->customer_type }} · {{ config('kretivco.sources')[$customer->source] ?? $customer->source }}</div>
                                             </div>
                                             <div class="flex items-center gap-2">
-                                                <a href="{{ route('jobs.create', ['customer_id' => $customer->id]) }}" class="text-xs font-semibold px-3 py-1.5 rounded-md bg-pink-600 text-white hover:bg-pink-700">+ New Job</a>
+                                                <a href="{{ route('jobs.create', ['customer_id' => $customer->id]) }}" class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110"><x-icon name="plus" class="w-3.5 h-3.5" /> New job</a>
                                                 @can('update', $customer)
-                                                    <button type="button" @click.stop="editingId = editingId === {{ $customer->id }} ? null : {{ $customer->id }}" class="text-xs font-semibold px-3 py-1.5 rounded-md border border-gray-200 text-gray-700 hover:bg-white">Edit</button>
+                                                    <button type="button" @click.stop="editingId = editingId === {{ $customer->id }} ? null : {{ $customer->id }}" class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#EFE3DE] text-gray-700 bg-white hover:bg-[#FFF7F3]"><x-icon name="pencil" class="w-3.5 h-3.5" /> Edit</button>
                                                 @endcan
-                                                <button type="button" @click="openId = null" class="text-gray-400 hover:text-gray-700 text-lg leading-none">×</button>
+                                                <button type="button" @click="openId = null" class="text-gray-400 hover:text-gray-700" aria-label="Close"><x-icon name="x" class="w-4 h-4" /></button>
                                             </div>
                                         </div>
 
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-sm mb-5">
-                                            <div><div class="text-[11px] font-semibold text-gray-400 uppercase">Company</div>{{ $customer->company ?? '—' }}</div>
-                                            <div><div class="text-[11px] font-semibold text-gray-400 uppercase">SSM No.</div>{{ $customer->ssm_number ?? '—' }}</div>
+                                            <div><div class="text-[11px] font-semibold text-gray-400 uppercase">Company</div>{{ $customer->company ?? 'Not set' }}</div>
+                                            <div><div class="text-[11px] font-semibold text-gray-400 uppercase">SSM No.</div>{{ $customer->ssm_number ?? 'Not set' }}</div>
                                             <div><div class="text-[11px] font-semibold text-gray-400 uppercase">Phone</div>
-                                                {{ $customer->phone ?? '—' }}
-                                                @if ($waPhone) · <a href="https://wa.me/{{ $waPhone }}" target="_blank" rel="noopener" class="text-green-600 hover:underline">WhatsApp ↗</a> @endif
+                                                {{ $customer->phone ?? 'Not set' }}
+                                                @if ($waPhone) · <a href="https://wa.me/{{ $waPhone }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-green-600 hover:underline"><x-icon name="message-circle" class="w-3.5 h-3.5" /> WhatsApp</a> @endif
                                             </div>
-                                            <div><div class="text-[11px] font-semibold text-gray-400 uppercase">Email</div>{{ $customer->email ?? '—' }}</div>
+                                            <div><div class="text-[11px] font-semibold text-gray-400 uppercase">Email</div>{{ $customer->email ?? 'Not set' }}</div>
                                             <div class="md:col-span-2"><div class="text-[11px] font-semibold text-gray-400 uppercase">Address</div>
-                                                {{ collect([$customer->address_line_1, $customer->address_line_2, trim($customer->postcode.' '.$customer->city), $customer->state])->filter()->implode(', ') ?: '—' }}
+                                                {{ collect([$customer->address_line_1, $customer->address_line_2, trim($customer->postcode.' '.$customer->city), $customer->state])->filter()->implode(', ') ?: 'Not set' }}
                                             </div>
                                         </div>
 
                                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-                                            <div class="rounded-lg bg-white border border-gray-100 p-3"><div class="text-[11px] font-semibold text-gray-400 uppercase">Total Value</div><div class="text-lg font-bold">RM {{ number_format($st['value'], 2) }}</div><div class="text-xs text-gray-400">{{ $st['jobs'] }} jobs</div></div>
-                                            <div class="rounded-lg bg-white border border-gray-100 p-3"><div class="text-[11px] font-semibold text-gray-400 uppercase">Revenue</div><div class="text-lg font-bold text-green-600">RM {{ number_format($st['revenue'], 2) }}</div><div class="text-xs text-gray-400">{{ $st['completed'] }} completed</div></div>
-                                            <div class="rounded-lg bg-white border border-gray-100 p-3"><div class="text-[11px] font-semibold text-gray-400 uppercase">Pipeline</div><div class="text-lg font-bold text-indigo-600">RM {{ number_format($st['pipeline'], 2) }}</div><div class="text-xs text-gray-400">{{ $st['active'] }} active</div></div>
+                                            <div class="rounded-xl bg-white border border-[#F5E7E1] p-3"><div class="text-[11px] font-semibold text-gray-400 uppercase">Total Value</div><div class="text-lg font-bold">RM {{ number_format($st['value'], 2) }}</div><div class="text-xs text-gray-400">{{ $st['jobs'] }} {{ \Illuminate\Support\Str::plural('job', $st['jobs']) }}</div></div>
+                                            <div class="rounded-xl bg-white border border-[#F5E7E1] p-3"><div class="text-[11px] font-semibold text-gray-400 uppercase">Revenue</div><div class="text-lg font-bold text-green-600">RM {{ number_format($st['revenue'], 2) }}</div><div class="text-xs text-gray-400">{{ $st['completed'] }} completed</div></div>
+                                            <div class="rounded-xl bg-white border border-[#F5E7E1] p-3"><div class="text-[11px] font-semibold text-gray-400 uppercase">Pipeline</div><div class="text-lg font-bold text-indigo-600">RM {{ number_format($st['pipeline'], 2) }}</div><div class="text-xs text-gray-400">{{ $st['active'] }} active</div></div>
                                         </div>
 
                                         @if ($st['by_department']->isNotEmpty())
@@ -177,9 +191,9 @@
                                                 <div class="flex flex-wrap gap-2">
                                                     @foreach ($st['by_department'] as $deptKey => $row)
                                                         @php $dept = config('kretivco.departments.'.$deptKey); @endphp
-                                                        <div class="rounded-lg bg-white border border-gray-100 px-3 py-2 text-xs">
+                                                        <div class="rounded-xl bg-white border border-[#F5E7E1] px-3 py-2 text-xs">
                                                             <span class="font-bold" style="color: {{ $dept['color'] ?? '#6B7280' }}">{{ \App\Http\Controllers\JobController::DEPT_CODES[$deptKey] ?? strtoupper($deptKey) }}</span>
-                                                            <span class="text-gray-500 ml-1">{{ $row['jobs'] }} jobs</span>
+                                                            <span class="text-gray-500 ml-1">{{ $row['jobs'] }} {{ \Illuminate\Support\Str::plural('job', $row['jobs']) }}</span>
                                                             <span class="font-semibold ml-1">RM {{ number_format($row['value'], 2) }}</span>
                                                         </div>
                                                     @endforeach
@@ -192,7 +206,7 @@
                                             <div class="space-y-1.5">
                                                 @forelse ($customer->job_history as $job)
                                                     @php $js = config('kretivco.job_statuses.'.$job->status); $jd = config('kretivco.departments.'.$job->department); @endphp
-                                                    <a href="{{ route('jobs.show', $job) }}" class="flex items-center gap-3 rounded-lg bg-white border border-gray-100 px-3 py-2 text-sm hover:bg-gray-50">
+                                                    <a href="{{ route('jobs.show', $job) }}" class="flex items-center gap-3 rounded-xl bg-white border border-[#F5E7E1] px-3 py-2 text-sm hover:bg-[#FFF7F3]">
                                                         <span class="font-mono text-xs font-semibold">{{ $job->job_id }}</span>
                                                         <span class="text-[11px] font-bold rounded px-1.5 py-0.5" style="color: {{ $jd['color'] ?? '#6B7280' }}; background: {{ $jd['color'] ?? '#6B7280' }}15">{{ \App\Http\Controllers\JobController::DEPT_CODES[$job->department] ?? strtoupper($job->department) }}</span>
                                                         <span class="text-gray-700 flex-1">{{ $job->job_type }}</span>
@@ -205,12 +219,12 @@
                                             </div>
                                         </div>
 
-                                        <div class="mt-4 text-xs text-gray-400">Customer since {{ $customer->created_at?->format('j F Y') ?? '—' }}</div>
+                                        <div class="mt-4 text-xs text-gray-400">Customer since {{ $customer->created_at?->format('j F Y') ?? 'unknown' }}</div>
                                     </td>
                                 </tr>
                                 @can('update', $customer)
                                 <tr x-show="editingId === {{ $customer->id }}" x-cloak>
-                                    <td colspan="8" class="px-6 py-4 bg-white border-t border-gray-100">
+                                    <td colspan="5" class="px-5 md:px-6 py-4 bg-white border-t border-[#F5ECE8]">
                                         <form method="POST" action="{{ route('customers.update', $customer) }}" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
                                             @csrf
                                             @method('PUT')
@@ -219,7 +233,7 @@
                                             <x-text-input name="ssm_number" type="text" class="block w-full" :value="$customer->ssm_number" placeholder="SSM No." />
                                             <x-text-input name="phone" type="text" class="block w-full" :value="$customer->phone" placeholder="Phone" />
                                             <x-text-input name="email" type="email" class="block w-full" :value="$customer->email" placeholder="Email" />
-                                            <select name="source" class="block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                                            <select name="source" class="block w-full text-sm">
                                                 @foreach (config('kretivco.sources') as $key => $label)
                                                     <option value="{{ $key }}" {{ $customer->source === $key ? 'selected' : '' }}>{{ $label }}</option>
                                                 @endforeach
@@ -241,7 +255,7 @@
                                 </tr>
                                 @endcan
                             @empty
-                                <tr><td colspan="8" class="px-4 py-8 text-center text-gray-400">No customers.</td></tr>
+                                <tr><td colspan="5" class="px-4 py-10 text-center text-gray-400">No customers found.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

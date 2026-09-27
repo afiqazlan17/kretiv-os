@@ -24,7 +24,7 @@
 
 {{-- Kretiv OS module switcher --}}
 <div class="flex flex-wrap gap-1.5 px-4 pb-4 text-[11px]">
-    <a href="{{ route('os.home') }}" class="px-2.5 py-1 rounded-full bg-[#FFF1EC] text-[#C2185B] font-medium hover:bg-[#FFE3DA]">← Kretiv OS</a>
+    <a href="{{ route('os.home') }}" class="px-2.5 py-1 rounded-full bg-[#FFF1EC] text-[#C2185B] font-medium hover:bg-[#FFE3DA]">← KretivOS</a>
     @if ($user->canAccess('finance'))
         <a href="{{ route('finance.index') }}" class="px-2.5 py-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-800">Finance</a>
     @endif
@@ -39,7 +39,9 @@
             ['key' => 'mine', 'label' => 'My Jobs', 'icon' => 'user-check'],
         ];
         $activeJobView = request()->routeIs('jobs.index') ? (request()->query('view', 'queue')) : null;
-        $financeSubmenu = ['finance.index' => ['Overview', '']] + collect(\App\Http\Controllers\FinanceReportController::REPORTS)->mapWithKeys(fn ($r, $k) => [$k => $r])->all();
+        $financeSubmenu = ['finance.index' => ['Overview', '']] + collect(\App\Http\Controllers\FinanceReportController::REPORTS)
+            ->reject(fn ($r, $k) => in_array($k, \App\Http\Controllers\FinanceReportController::COMPANY_REPORTS, true) && ! $user->seesCompanyFinance())
+            ->mapWithKeys(fn ($r, $k) => [$k => $r])->all();
         $activeFinanceReport = request()->routeIs('finance.reports') ? request()->route('report') : (request()->routeIs('finance.index') ? 'finance.index' : null);
     @endphp
     @foreach ($navItems as $item)

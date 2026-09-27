@@ -45,6 +45,7 @@ class FinanceController extends Controller
             ->sortByDesc('date')->values()->take(200);
 
         return view('finance.index', [
+            'companyView' => $user->seesCompanyFinance(),
             'ledger' => $ledger,
             'bankBalances' => $bankBalances,
             'pl' => ['receivable' => $reports->upTo($to)->profitAndLoss()['receivable']] + $period->profitAndLoss(),
@@ -75,9 +76,9 @@ class FinanceController extends Controller
     public static function entriesFor(User $user)
     {
         return LedgerEntry::query()
-            ->when(! $user->seesAllDepartments(), fn ($q) => $q->where(function ($q) use ($user) {
-                $q->whereIn('department', $user->visibleDepartments())->orWhereNull('department');
-            }))
+            // Company-wide entries (no department: director loans, bank
+            // transfers, overheads) are for BOD/Finance, not a Dept Head.
+            ->when(! $user->seesAllDepartments(), fn ($q) => $q->whereIn('department', $user->visibleDepartments()))
             ->orderByDesc('date')
             ->get();
     }
@@ -104,6 +105,7 @@ class FinanceController extends Controller
     public function storeOpeningBalance(Request $request, LedgerService $ledger): RedirectResponse
     {
         $this->authorizeFinance($request);
+        abort_unless($request->user()->seesCompanyFinance(), 403);
 
         $validated = $request->validate([
             'bank' => ['required', 'in:'.implode(',', array_keys(config('kretivco.banks')))],
@@ -118,6 +120,7 @@ class FinanceController extends Controller
     public function storeDirectorLoan(Request $request, LedgerService $ledger): RedirectResponse
     {
         $this->authorizeFinance($request);
+        abort_unless($request->user()->seesCompanyFinance(), 403);
 
         $validated = $request->validate([
             'direction' => ['required', 'in:in,repayment'],
@@ -146,6 +149,7 @@ class FinanceController extends Controller
     public function storeBankTransfer(Request $request, LedgerService $ledger): RedirectResponse
     {
         $this->authorizeFinance($request);
+        abort_unless($request->user()->seesCompanyFinance(), 403);
 
         $validated = $request->validate([
             'from_bank' => ['required', 'in:'.implode(',', array_keys(config('kretivco.banks')))],

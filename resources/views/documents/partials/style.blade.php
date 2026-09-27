@@ -36,6 +36,8 @@
 
     table.tot { width: 145pt; margin: 14pt 0 0 323pt; border-collapse: collapse; }
     table.tot.wide { width: 195pt; margin-left: 273pt; }
+    table.tot.receipt { width: 240pt; margin-left: 228pt; }
+    table.tot.receipt td { white-space: nowrap; }
     table.tot td { padding: 2pt 5pt; line-height: 11.5pt; border: none; }
     table.tot td.v { text-align: right; }
     table.tot tr.grand td { font-weight: bold; border-top: 0.5pt solid #000000; padding-top: 5pt; }
@@ -45,7 +47,11 @@
     .pay-block { page-break-inside: avoid; }
     .pay-title { margin-top: 13pt; font-weight: bold; line-height: 13pt; }
     .pay-line { margin-top: 2pt; font-weight: bold; }
-    .pay-qr { margin-top: 6pt; width: 65pt; height: 65pt; }
+    table.pay-t { width: 468pt; border-collapse: collapse; margin-top: 13pt; }
+    table.pay-t td { padding: 0; border: none; vertical-align: top; }
+    table.pay-t .pay-title { margin-top: 0; }
+    td.pay-qr-cell { width: 80pt; text-align: center; }
+    .pay-qr { width: 65pt; height: 65pt; }
     .pay-qr-caption { font-size: 7.5pt; color: #888888; white-space: nowrap; margin-top: 2pt; }
     .stamp-img { position: absolute; left: 0; top: 13pt; width: 185pt; height: auto; }
 </style>

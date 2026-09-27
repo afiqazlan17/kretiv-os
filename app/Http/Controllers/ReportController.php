@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\Job;
+use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Support\SimpleXlsx;
 use Carbon\Carbon;
@@ -87,7 +89,9 @@ class ReportController extends Controller
         $deptKeys = collect(config('kretivco.departments'))->keys()
             ->filter(fn ($k) => $user->isBod() || in_array($k, $user->visibleDepartments(), true));
 
-        $monthly = collect(range(1, 12))->map(function ($month) use ($notCancelled, $deptKeys) {
+        // Months still ahead in the current year are always empty, so stop at this month.
+        $lastMonth = Carbon::parse($to)->year === now()->year ? now()->month : 12;
+        $monthly = collect(range(1, $lastMonth))->map(function ($month) use ($notCancelled, $deptKeys) {
             $inMonth = $notCancelled->filter(fn (Job $j) => $j->created_at->month === $month);
 
             return [
@@ -108,7 +112,7 @@ class ReportController extends Controller
 
         $topCustomers = $notCancelled->groupBy('customer_id')
             ->map(fn ($group) => [
-                'name' => $group->first()->customer?->name ?? '—',
+                'name' => $group->first()->customer?->name ?? 'No customer',
                 'count' => $group->count(),
                 'est' => $group->sum('estimation_value'),
                 'final' => $group->sum('final_value'),
@@ -116,14 +120,34 @@ class ReportController extends Controller
             ->sortByDesc('est')
             ->take(5);
 
-        $picBreakdown = $notCancelled->groupBy(fn (Job $j) => $j->pic ?: '— queue —')
-            ->map(fn ($group) => [
-                'count' => $group->count(),
-                'est' => $group->sum('estimation_value'),
-                'completed' => $group->where('status', Job::STATUS_COMPLETED)->count(),
-                'final' => $group->where('status', Job::STATUS_COMPLETED)->sum('final_value'),
-            ])
+        // When each completed job was closed (its "completed" activity entry),
+        // to judge on-time delivery against the deadline.
+        $completedOn = ActivityLog::whereIn('job_id', $completed->pluck('id'))->where('action', 'completed')
+            ->get()->groupBy('job_id')->map(fn ($logs) => $logs->max('created_at'));
+        $picBreakdown = $notCancelled->groupBy(fn (Job $j) => $j->pic ?: 'Unassigned (queue)')
+            ->map(function ($group) use ($completedOn) {
+                $done = $group->where('status', Job::STATUS_COMPLETED);
+                $judged = $done->filter(fn (Job $j) => $j->deadline && $completedOn->has($j->id));
+                $onTime = $judged->filter(fn (Job $j) => $completedOn[$j->id]->startOfDay()->lte($j->deadline))->count();
+
+                return [
+                    'count' => $group->count(),
+                    'est' => $group->sum('estimation_value'),
+                    'completed' => $done->count(),
+                    'final' => $done->sum('final_value'),
+                    'on_time_pct' => $judged->isNotEmpty() ? (int) round($onTime / $judged->count() * 100) : null,
+                    'late' => $group->filter(fn (Job $j) => in_array($j->status, [Job::STATUS_POTENTIAL, Job::STATUS_IN_PROGRESS], true)
+                        && $j->deadline && $j->deadline->lt(now()->startOfDay()))->count(),
+                ];
+            })
             ->sortByDesc('count');
+
+        // Real money, from the ledger: what's been invoiced and collected for
+        // these jobs, and what customers still owe.
+        $ledger = LedgerEntry::whereIn('job_id', $notCancelled->pluck('job_id'))->whereIn('type', ['invoice', 'receipt'])
+            ->where('reversed', false)->get()->groupBy('job_id');
+        $collected = (float) $ledger->flatten()->where('type', 'receipt')->sum('amount');
+        $outstanding = (float) $ledger->sum(fn ($entries) => max(0, $entries->where('type', 'invoice')->sum('amount') - $entries->where('type', 'receipt')->sum('amount')));
 
         $funnel = [
             'potential' => $jobs->where('status', Job::STATUS_POTENTIAL)->count(),
@@ -151,6 +175,8 @@ class ReportController extends Controller
             'totalEst' => $totalEst,
             'totalFinal' => $totalFinal,
             'variance' => $variance,
+            'collected' => $collected,
+            'outstanding' => $outstanding,
             'deptKeys' => $deptKeys,
             'monthly' => $monthly,
             'deptBreakdown' => $deptBreakdown,

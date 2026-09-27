@@ -118,7 +118,7 @@ class VendorCostTest extends TestCase
         $response = $this->actingAs($bod)->get(route('jobs.index'));
 
         $response->assertOk();
-        $response->assertSee('🏭 Unpaid');
+        $response->assertSee('Unpaid vendor');
     }
 
     public function test_department_scoped_user_cannot_add_a_vendor_cost_outside_their_department(): void

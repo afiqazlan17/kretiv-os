@@ -7,6 +7,9 @@
     <div class="contact-line" style="top:{{ ($t['sub'] ?? 24.8) + 35.4 }}pt;">Phone : {{ config('kretivco.brand.phone') }} / {{ config('kretivco.brand.phone2') }} | {{ config('kretivco.brand.email') }}</div>
     <div class="abs doc-title r" style="right:0; top:{{ $t['title'] ?? 1.2 }}pt;">{{ $type === 'proforma' ? 'PROFORMA INVOICE' : strtoupper($type) }}</div>
     <div class="abs r" style="right:-1.9pt; top:{{ $t['meta'] ?? 25.4 }}pt;"><b>{{ $noLabel }}:</b> {{ $docNumber }}</div>
-    <div class="abs r" style="right:-0.5pt; top:{{ ($t['meta'] ?? 25.4) + 15 }}pt;"><b>Date:</b> {{ now()->format('d/m/y') }}</div>
-    <div class="abs r" style="right:-0.4pt; top:{{ ($t['meta'] ?? 25.4) + 30 }}pt;"><b>By:</b> {{ $generatedBy }}</div>
+    <div class="abs r" style="right:-0.5pt; top:{{ ($t['meta'] ?? 25.4) + 15 }}pt;"><b>Date:</b> {{ now()->format('d M Y') }}</div>
+    @if (! empty($headerExtra))
+        <div class="abs r" style="right:-0.5pt; top:{{ ($t['meta'] ?? 25.4) + 30 }}pt;"><b>{{ $headerExtra[0] }}:</b> {{ $headerExtra[1] }}</div>
+    @endif
+    <div class="abs r" style="right:-0.4pt; top:{{ ($t['meta'] ?? 25.4) + (empty($headerExtra) ? 30 : 45) }}pt;"><b>By:</b> {{ $generatedBy }}</div>
 </div>

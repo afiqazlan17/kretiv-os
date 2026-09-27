@@ -4,6 +4,8 @@ namespace App\Support;
 
 use App\Models\Customer;
 use App\Models\Job;
+use App\Models\LedgerEntry;
+use Illuminate\Support\Carbon;
 
 // Single source of truth for what a Quotation/Proforma/Invoice/Receipt
 // contains: the defaults shown in the preview modal, the per-type note
@@ -15,6 +17,10 @@ class DocumentData
     public const TYPES = ['quotation', 'proforma', 'invoice', 'receipt'];
 
     public const PAYMENT_METHODS = ['Bank Transfer', 'Cash', 'Online Banking'];
+
+    public const QUOTATION_VALID_DAYS = 14;
+
+    public const INVOICE_DUE_DAYS = 7;
 
     private const PREFIXES = ['quotation' => 'QT', 'proforma' => 'PI', 'invoice' => 'INV', 'receipt' => 'RC'];
 
@@ -44,8 +50,22 @@ class DocumentData
     public static function number(string $type, Job $job): string
     {
         $sequence = last(explode('-', $job->job_id)) ?: '001';
+        $number = self::prefix($type).'-'.now()->year.'-'.str_pad($sequence, 3, '0', STR_PAD_LEFT);
 
-        return self::prefix($type).'-'.now()->year.'-'.str_pad($sequence, 3, '0', STR_PAD_LEFT);
+        // Each payment gets its own receipt: RC-2026-002-1 (deposit), -2 (balance)...
+        // Counts every receipt ever posted for the job (voided ones too), so a
+        // number is never reused.
+        if ($type === 'receipt' && $job->exists) {
+            $number .= '-'.(LedgerEntry::where('job_id', $job->job_id)->where('type', 'receipt')->count() + 1);
+        }
+
+        return $number;
+    }
+
+    /** Total already received for the job across all its (non-voided) receipts. */
+    public static function paidSoFar(Job $job): float
+    {
+        return round((float) LedgerEntry::where('job_id', $job->job_id)->where('type', 'receipt')->where('reversed', false)->sum('amount'), 2);
     }
 
     /**
@@ -59,28 +79,51 @@ class DocumentData
         // notes no longer repeat "please make payment to..." / "email us at...".
         return match ($type) {
             'quotation' => [
-                "This quotation follows the specifications listed above. Any change to the design, size, material or quantity after confirmation may affect the final price, and we'll send an updated quotation when that happens. Production only starts once you've confirmed the order in writing.",
-                'Full payment needed for invoice below RM2000 and 80% deposit must be paid before making the first draft for invoice price RM2000 and above.',
-                'Progress will be done in 14 days after final draft has been confirmed by customer.',
-                'Deposit is not refundable after the booking confirmed and first draft has been made.',
+                "Prices are based on the specifications above. Any change to the design, size, material or quantity after confirmation may change the price, and we'll send a revised quotation. Work starts once you confirm the order in writing.",
+                'For orders below RM2,000, full payment is required before work begins. For orders of RM2,000 and above, an 80% deposit is required before the first draft.',
+                'Production is completed within 14 working days after you approve the final draft.',
+                'Deposits are non-refundable once the booking is confirmed and the first draft has been prepared.',
             ],
             'receipt' => [
-                'This receipt confirms payment received for the above job/invoice.',
-                'Please retain this receipt for your reference.',
-                'For any discrepancy, please contact us within 7 days of receipt date.',
+                'This receipt confirms we have received your payment for the invoice above.',
+                'Please keep this receipt for your records.',
+                'If anything looks incorrect, please contact us within 7 days of the receipt date.',
             ],
             default => [
-                'Payment due within 7 days from the invoice date.',
-                'Late payment may be subject to a surcharge as agreed in the service agreement.',
+                'Please make payment by the due date shown above.',
+                'Late payments may incur a surcharge as stated in the service agreement.',
             ],
         };
+    }
+
+    /**
+     * Note lines saved for this job's document type (see jobs.document_notes),
+     * or null when the job uses the standard wording for that type.
+     *
+     * @return array<int, string>|null
+     */
+    public static function customNotes(Job $job, string $type): ?array
+    {
+        $lines = $job->document_notes[$type] ?? null;
+
+        return is_array($lines) && $lines !== [] ? array_values($lines) : null;
+    }
+
+    /**
+     * Splits a textarea's notes into trimmed, non-empty lines.
+     *
+     * @return array<int, string>
+     */
+    public static function noteLines(?string $text): array
+    {
+        return array_values(array_filter(array_map('trim', preg_split('/\R/', (string) $text)), fn ($l) => $l !== ''));
     }
 
     /**
      * Customer block as printed: line 1 on its own, then the rest
      * (line 2 + postcode/city + state) joined on a single line.
      *
-     * @return array{name: ?string, company: ?string, address_line_1: ?string, address_line_2: string}
+     * @return array{name: ?string, company: ?string, address_line_1: ?string, address_line_2: string, phone: ?string}
      */
     public static function customerBlock(?Customer $customer): array
     {
@@ -93,6 +136,7 @@ class DocumentData
                 trim(($customer?->postcode ?? '').' '.($customer?->city ?? '')),
                 $customer?->state,
             ])->filter()->implode(', '),
+            'phone' => $customer?->phone,
         ];
     }
 
@@ -101,7 +145,7 @@ class DocumentData
      *
      * @return array<string, mixed>
      */
-    public static function defaults(Job $job, string $type, string $userName, ?float $invoiceTotal = null): array
+    public static function defaults(Job $job, string $type, string $userName, ?float $invoiceTotal = null, float $paidBefore = 0.0): array
     {
         $block = self::customerBlock($job->customer);
 
@@ -110,14 +154,16 @@ class DocumentData
             'company' => $block['company'],
             'address_line_1' => $block['address_line_1'],
             'address_line_2' => $block['address_line_2'],
+            'phone' => $block['phone'],
             'title' => $job->job_type,
             'by_staff' => $userName,
             'items' => self::itemsFromJob($job),
             'delivery' => (float) ($job->delivery_amount ?? 0),
             'discount' => (float) ($job->discount_amount ?? 0),
-            'notes' => self::defaultNotes($type, self::bank($job)),
+            'notes' => self::customNotes($job, $type) ?? self::defaultNotes($type, self::bank($job)),
             'payment_method' => self::PAYMENT_METHODS[0],
-            'amount_paid' => $invoiceTotal,
+            'amount_paid' => $invoiceTotal === null ? null : max(0.0, round($invoiceTotal - $paidBefore, 2)),
+            'due_date' => now()->addDays(self::INVOICE_DUE_DAYS)->toDateString(),
         ];
     }
 
@@ -168,9 +214,9 @@ class DocumentData
      * @param  array<string, mixed>  $input  validated modal payload (may be empty = defaults)
      * @return array<string, mixed>
      */
-    public static function build(Job $job, string $type, array $input, string $docNumber, string $userName, ?float $invoiceTotal = null): array
+    public static function build(Job $job, string $type, array $input, string $docNumber, string $userName, ?float $invoiceTotal = null, ?string $invoiceNumber = null, float $paidBefore = 0.0): array
     {
-        $defaults = self::defaults($job, $type, $userName, $invoiceTotal);
+        $defaults = self::defaults($job, $type, $userName, $invoiceTotal, $paidBefore);
         $bank = self::bank($job);
         $pick = fn (string $key) => array_key_exists($key, $input) && $input[$key] !== null ? $input[$key] : $defaults[$key];
 
@@ -180,12 +226,21 @@ class DocumentData
         $discount = (float) $pick('discount');
         $total = round($subtotal + $delivery - $discount, 2);
 
-        $notes = isset($input['notes']) && trim((string) $input['notes']) !== ''
-            ? array_values(array_filter(array_map('trim', preg_split('/\R/', (string) $input['notes'])), fn ($l) => $l !== ''))
-            : $defaults['notes'];
+        $notes = match (true) {
+            ! empty($input['use_default_notes']) => self::defaultNotes($type, $bank),
+            isset($input['notes']) && trim((string) $input['notes']) !== '' => self::noteLines($input['notes']),
+            default => $defaults['notes'],
+        };
 
         $invoiceTotal ??= $total;
-        $amountPaid = $type === 'receipt' ? (float) ($input['amount_paid'] ?? $invoiceTotal) : null;
+
+        // Extra header line under Date: how long a quotation holds, or when an invoice is due.
+        $headerExtra = match ($type) {
+            'quotation' => ['Valid until', now()->addDays(self::QUOTATION_VALID_DAYS)->format('d M Y')],
+            'invoice', 'proforma' => ['Due', Carbon::parse($pick('due_date'))->format('d M Y')],
+            default => null,
+        };
+        $amountPaid = $type === 'receipt' ? (float) ($input['amount_paid'] ?? max(0.0, $invoiceTotal - $paidBefore)) : null;
 
         return [
             'type' => $type,
@@ -198,7 +253,11 @@ class DocumentData
                 'company' => $pick('company'),
                 'address_line_1' => $pick('address_line_1'),
                 'address_line_2' => $pick('address_line_2'),
+                'phone' => $pick('phone'),
             ],
+            'date' => now()->format('d M Y'),
+            'header_extra' => $headerExtra,
+            'invoice_number' => $invoiceNumber,
             'title' => (string) $pick('title'),
             'bank' => $bank,
             'bank_key' => $job->bank,
@@ -212,7 +271,8 @@ class DocumentData
             'payment_method' => (string) ($input['payment_method'] ?? $defaults['payment_method']),
             'invoice_total' => $invoiceTotal,
             'amount_paid' => $amountPaid,
-            'balance_due' => $amountPaid === null ? null : max(0.0, round($invoiceTotal - $amountPaid, 2)),
+            'paid_before' => $paidBefore,
+            'balance_due' => $amountPaid === null ? null : max(0.0, round($invoiceTotal - $paidBefore - $amountPaid, 2)),
         ];
     }
 

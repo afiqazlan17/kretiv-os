@@ -7,14 +7,23 @@
 
 @isset($bank)
     @if ($bank)
-        <div class="pay-block">
-            <div class="pay-title">Payment Detail:</div>
-            <div class="pay-line">{{ $bank['label'] }} | {{ $bank['name'] }} | {{ $bank['acct'] }}</div>
-            @if (($bankKey ?? null) === 'affin')
-                <img src="{{ public_path('images/affin-duitnow-qr.png') }}" class="pay-qr">
-                <div class="pay-qr-caption">Scan to pay via DuitNow</div>
-            @endif
-        </div>
+        {{-- Bank line on the left, DuitNow QR beside it on the right: stacking the
+             QR underneath pushed the signature block onto a page of its own. --}}
+        @php $qr = ['affin' => 'images/affin-duitnow-qr.png', 'mbb' => 'images/maybank-duitnow-qr.png'][$bankKey ?? ''] ?? null; @endphp
+        <table class="pay-block pay-t">
+            <tr>
+                <td>
+                    <div class="pay-title">Payment Detail:</div>
+                    <div class="pay-line">{{ $bank['label'] }} | {{ $bank['name'] }} | {{ $bank['acct'] }}</div>
+                </td>
+                @if ($qr && file_exists(public_path($qr)))
+                    <td class="pay-qr-cell">
+                        <img src="{{ public_path($qr) }}" class="pay-qr">
+                        <div class="pay-qr-caption">Scan to pay via DuitNow</div>
+                    </td>
+                @endif
+            </tr>
+        </table>
     @endif
 @endisset
 
@@ -27,6 +36,8 @@
             @endif
             <div class="sign-line"></div>
         </td>
-        <td><b>Accepted by:</b><div class="sign-line"></div></td>
+        @unless ($isReceipt ?? false)
+            <td><b>Accepted by:</b><div class="sign-line"></div></td>
+        @endunless
     </tr>
 </table>

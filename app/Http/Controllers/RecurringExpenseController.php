@@ -45,6 +45,7 @@ class RecurringExpenseController extends Controller
             'bank' => $recurring->bank,
             'date' => $data['date'] ?? now(),
             'notes' => $recurring->name.' ('.now()->format('M Y').')',
+            'doc_number' => 'REC-'.$recurring->id.'-'.now()->format('Ym'),
         ], $request->user()->name);
 
         $recurring->update(['last_recorded_on' => $data['date'] ?? now()]);

@@ -63,7 +63,8 @@
             ];
             if ($user->seesCompanyFinance()) {
                 $dueRecurring = \App\Models\RecurringExpense::all()->filter->isDue()->count();
-                $pendingClaims = \App\Models\Claim::where('status', 'pending')->count();
+                // BOD acts on pending (approve) and approved (pay); Finance only pays.
+                $pendingClaims = \App\Models\Claim::whereIn('status', $user->isBod() ? ['pending', 'approved'] : ['approved'])->count();
                 $financeNav[] = ['label' => 'Recurring', 'url' => route('finance.recurring'), 'icon' => 'repeat', 'active' => request()->routeIs('finance.recurring'), 'badge' => $dueRecurring];
                 $financeNav[] = ['label' => 'Claims', 'url' => route('finance.claims'), 'icon' => 'receipt', 'active' => request()->routeIs('finance.claims'), 'badge' => $pendingClaims];
             }

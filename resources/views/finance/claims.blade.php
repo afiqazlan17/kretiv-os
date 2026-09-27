@@ -53,12 +53,17 @@
                             </div>
                         </div>
 
-                        @if ($claim->status === 'pending')
+                        @if ($claim->status === 'pending' && ! auth()->user()->isBod())
+                            <div class="text-xs text-amber-700 mt-3">Waiting for BOD approval.</div>
+                        @elseif ($claim->status === 'pending')
                             <div class="flex items-center gap-2 mt-3">
                                 <form method="POST" action="{{ route('finance.claims.approve', $claim) }}">@csrf
                                     <button type="submit" class="text-xs font-semibold px-3 py-1.5 rounded-lg text-white bg-[#047857] hover:brightness-110">Approve</button>
                                 </form>
                                 <button type="button" @click="act = act === 'reject' ? null : 'reject'" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50">Reject</button>
+                                <form method="POST" action="{{ route('finance.claims.destroy', $claim) }}" class="ml-auto" onsubmit="return confirm('Remove this claim? Use this only for a claim recorded by mistake.')">@csrf @method('DELETE')
+                                    <button type="submit" class="text-xs text-gray-400 hover:text-red-500">Remove</button>
+                                </form>
                             </div>
                             <form method="POST" action="{{ route('finance.claims.reject', $claim) }}" x-show="act === 'reject'" x-cloak class="flex flex-wrap items-end gap-2 mt-2">
                                 @csrf

@@ -261,7 +261,7 @@
                         <thead>
                             <tr class="text-left text-xs text-gray-500 uppercase">
                                 <th class="px-4 py-3">Date</th><th class="px-4 py-3">Description</th><th class="px-4 py-3">Debit</th><th class="px-4 py-3">Credit</th>
-                                <th class="px-4 py-3">Department</th><th class="px-4 py-3">Bank</th><th class="px-4 py-3">Type</th><th class="px-4 py-3 text-right">Amount</th>
+                                <th class="px-4 py-3">Department</th><th class="px-4 py-3">Bank</th><th class="px-4 py-3">Type</th><th class="px-4 py-3 text-right">Amount</th><th class="px-2 py-3"></th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-[#F0EDE9]">
@@ -284,9 +284,18 @@
                                     <td class="px-4 py-3">{{ $entry->bank ? config("kretivco.banks.{$entry->bank}.label") : '' }}</td>
                                     <td class="px-4 py-3 whitespace-nowrap">{{ ucfirst(str_replace('_', ' ', $entry->type)) }}</td>
                                     <td class="px-4 py-3 text-right whitespace-nowrap font-semibold {{ $intoBank ? 'text-green-600' : ($outOfBank ? 'text-red-600' : '') }}">{{ $intoBank ? '+' : ($outOfBank ? '-' : '') }}RM {{ number_format($entry->amount, 2) }}</td>
+                                    <td class="px-2 py-3 text-right whitespace-nowrap">
+                                        @if (auth()->user()->isBod() && $entry->isVoidable())
+                                            <form method="POST" action="{{ route('finance.ledger.void', $entry) }}" onsubmit="return confirm('Void this entry (RM {{ number_format($entry->amount, 2) }})? It stays in the ledger as reversed.')">@csrf
+                                                <button type="submit" class="text-xs font-semibold text-red-500 hover:underline">Void</button>
+                                            </form>
+                                        @elseif ($entry->reversed)
+                                            <span class="text-[11px] text-gray-400">Voided</span>
+                                        @endif
+                                    </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="8" class="px-4 py-8 text-center text-gray-400">No ledger entries.</td></tr>
+                                <tr><td colspan="9" class="px-4 py-8 text-center text-gray-400">No ledger entries.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

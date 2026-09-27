@@ -147,6 +147,8 @@ $financeRoutes = function () {
         Route::post('/claims/{claim}/reject', [ClaimController::class, 'reject'])->name('finance.claims.reject');
         Route::post('/claims/{claim}/pay', [ClaimController::class, 'pay'])->name('finance.claims.pay');
         Route::get('/claims/{claim}/receipt', [ClaimController::class, 'receipt'])->name('finance.claims.receipt');
+        Route::delete('/claims/{claim}', [ClaimController::class, 'destroy'])->name('finance.claims.destroy');
+        Route::post('/ledger/{entry}/void', [FinanceController::class, 'voidEntry'])->name('finance.ledger.void');
     });
 };
 if ($host('finance')) {

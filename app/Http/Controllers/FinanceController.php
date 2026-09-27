@@ -65,7 +65,7 @@ class FinanceController extends Controller
             'companyView' => $user->seesCompanyFinance(),
             'todo' => $user->seesCompanyFinance() ? [
                 'recurring' => RecurringExpense::all()->filter->isDue()->count(),
-                'claims' => Claim::where('status', 'pending')->count(),
+                'claims' => $user->isBod() ? Claim::where('status', 'pending')->count() : 0,
                 'to_pay' => Claim::where('status', 'approved')->count(),
             ] : null,
             'ledger' => $ledger,
@@ -190,6 +190,31 @@ class FinanceController extends Controller
         abort_unless(Storage::disk('public')->exists($entry->receipt_path), 404);
 
         return Storage::disk('public')->response($entry->receipt_path, $entry->receipt_name);
+    }
+
+    /**
+     * BOD voids a manual expense (wrong amount, a test entry...). The entry is
+     * reversed rather than deleted, so the books keep the trail; a voided
+     * recurring month can be recorded again and a voided claim goes back to
+     * "approved, to pay".
+     */
+    public function voidEntry(Request $request, LedgerEntry $entry, LedgerService $ledger): RedirectResponse
+    {
+        abort_unless($request->user()->isBod(), 403);
+        abort_unless($entry->isVoidable(), 422, 'This entry cannot be voided here.');
+
+        $ledger->reverseEntries(fn ($e) => $e->id === $entry->id, $request->user()->name);
+
+        if (preg_match('/^REC-(\d+)-(\d{6})$/', (string) $entry->doc_number, $m)) {
+            $recurring = RecurringExpense::find($m[1]);
+            if ($recurring?->last_recorded_on?->format('Ym') === $m[2]) {
+                $recurring->update(['last_recorded_on' => null]);
+            }
+        } elseif (preg_match('/^CLM-(\d+)$/', (string) $entry->doc_number, $m)) {
+            Claim::where('id', $m[1])->where('ledger_entry_id', $entry->id)->update(['status' => 'approved', 'paid_bank' => null, 'ledger_entry_id' => null]);
+        }
+
+        return back()->with('success', 'Entry voided.');
     }
 
     private function authorizeFinance(Request $request): void

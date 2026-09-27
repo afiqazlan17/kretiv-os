@@ -93,4 +93,36 @@ class FinancePhaseTwoTest extends TestCase
         $this->actingAs($head)->get(route('finance.claims'))->assertForbidden();
         $this->actingAs($head)->get(route('finance.collections'))->assertOk();
     }
+
+    public function test_bod_can_void_a_manual_expense_and_a_voided_recurring_month_can_be_recorded_again(): void
+    {
+        $bod = $this->bod();
+        $this->actingAs($bod)->post(route('finance.recurring.store'), ['name' => 'Rent', 'category' => 'rent', 'amount' => 1500, 'bank' => 'mbb', 'day_of_month' => 1]);
+        $rent = RecurringExpense::first();
+        $this->actingAs($bod)->post(route('finance.recurring.record', $rent), ['amount' => 1500]);
+        $entry = LedgerEntry::where('type', 'operating_expense')->first();
+
+        $finance = User::factory()->create(['role' => User::ROLE_FINANCE]);
+        $this->actingAs($finance)->post(route('finance.ledger.void', $entry))->assertForbidden();
+        $this->actingAs($bod)->post(route('finance.ledger.void', $entry))->assertRedirect();
+
+        $this->assertTrue($entry->refresh()->reversed);
+        $this->assertFalse($rent->refresh()->recordedThisMonth());
+    }
+
+    public function test_only_bod_approves_claims_finance_pays_and_voiding_the_payment_reopens_it(): void
+    {
+        $bod = $this->bod();
+        $finance = User::factory()->create(['role' => User::ROLE_FINANCE]);
+        $claim = Claim::create(['user_id' => $bod->id, 'claimant_name' => 'Amirul', 'date' => now(), 'category' => 'fuel', 'description' => 'Fuel', 'amount' => 50]);
+
+        $this->actingAs($finance)->post(route('finance.claims.approve', $claim))->assertForbidden();
+        $this->actingAs($bod)->post(route('finance.claims.approve', $claim))->assertRedirect();
+        $this->actingAs($finance)->post(route('finance.claims.pay', $claim), ['bank' => 'mbb'])->assertRedirect();
+        $this->assertSame('paid', $claim->refresh()->status);
+
+        $this->actingAs($bod)->post(route('finance.ledger.void', $claim->ledger_entry_id))->assertRedirect();
+        $this->assertSame('approved', $claim->refresh()->status);
+        $this->assertNull($claim->ledger_entry_id);
+    }
 }

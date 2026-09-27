@@ -303,7 +303,7 @@ class LedgerService
             'description' => trim($data['notes'] ?? '') ?: $categoryLabel,
             'department' => $department,
             'job_id' => $data['job_id'] ?? null,
-            'doc_number' => null,
+            'doc_number' => $data['doc_number'] ?? null,
             'debit_account' => $debitAccount,
             'credit_account' => self::bankAccount($bank),
             'amount' => $amount,

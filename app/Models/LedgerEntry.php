@@ -34,4 +34,16 @@ class LedgerEntry extends Model
     {
         return $this->belongsTo(LedgerEntry::class, 'reverses_id');
     }
+
+    /**
+     * A manually recorded expense (typed in, recurring or a paid claim) that
+     * BOD can void. Vendor payments are left out: they're voided from the
+     * job's Vendor Cost, which also flips the cost back to unpaid.
+     */
+    public function isVoidable(): bool
+    {
+        return ! $this->reversed
+            && in_array($this->type, ['operating_expense', 'job_expense'], true)
+            && ! str_starts_with((string) $this->description, 'Vendor:');
+    }
 }

@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
 
-// Staff claims, Finance side: approve or reject, then mark paid (which posts
-// the expense to the ledger with the receipt). Staff will submit their own
+// Staff claims, Finance side: BOD approves or rejects, then BOD or Finance
+// marks it paid (which posts the expense to the ledger with the receipt). Staff will submit their own
 // from HR; until then BOD/Finance can record one on a staff member's behalf.
 class ClaimController extends Controller
 {
@@ -57,7 +57,7 @@ class ClaimController extends Controller
 
     public function approve(Request $request, Claim $claim): RedirectResponse
     {
-        $this->authorizeCompany($request);
+        abort_unless($request->user()->isBod(), 403);
         abort_unless($claim->status === 'pending', 422);
 
         $claim->update(['status' => 'approved', 'decided_by' => $request->user()->name, 'decided_at' => now()]);
@@ -67,7 +67,7 @@ class ClaimController extends Controller
 
     public function reject(Request $request, Claim $claim): RedirectResponse
     {
-        $this->authorizeCompany($request);
+        abort_unless($request->user()->isBod(), 403);
         abort_unless($claim->status === 'pending', 422);
 
         $data = $request->validate(['reject_reason' => ['required', 'string', 'max:255']]);
@@ -95,11 +95,26 @@ class ClaimController extends Controller
             'notes' => "Claim: {$claim->description} ({$claim->claimant_name})",
             'receipt_path' => $claim->receipt_path,
             'receipt_name' => $claim->receipt_name,
+            'doc_number' => 'CLM-'.$claim->id,
         ], $request->user()->name);
 
         $claim->update(['status' => 'paid', 'paid_bank' => $data['bank'], 'ledger_entry_id' => $entry?->id]);
 
         return back()->with('success', "Claim by {$claim->claimant_name} paid and recorded.");
+    }
+
+    /** A claim recorded by mistake can be removed while it's still pending or was rejected. */
+    public function destroy(Request $request, Claim $claim): RedirectResponse
+    {
+        abort_unless($request->user()->isBod(), 403);
+        abort_unless(in_array($claim->status, ['pending', 'rejected'], true), 422, 'Only pending or rejected claims can be removed.');
+
+        if ($claim->receipt_path) {
+            Storage::disk('public')->delete($claim->receipt_path);
+        }
+        $claim->delete();
+
+        return back()->with('success', 'Claim removed.');
     }
 
     public function receipt(Request $request, Claim $claim): Response

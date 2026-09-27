@@ -30,8 +30,11 @@
 
                 <div class="mt-5 pt-4 border-t border-white/10">
                     <p class="text-[11px] uppercase tracking-wide text-white/30 mb-2">Attendance</p>
-                    @if (session('success') && str_starts_with(session('success'), 'Clocked'))
+                    @if (session('success') && str_starts_with(session('success'), 'Clock'))
                         <p class="text-xs text-emerald-300 mb-2">{{ session('success') }}</p>
+                    @endif
+                    @if (! $attendance && $onLeave)
+                        <p class="text-xs text-white/60 mb-2">You're on {{ strtolower($onLeave->typeLabel()) }} today{{ $onLeave->half_day ? ' ('.($onLeave->half_day === 'am' ? 'morning' : 'afternoon').')' : '' }}. Enjoy.</p>
                     @endif
                     @if (! $attendance)
                         <form method="POST" action="{{ route('os.clock-in') }}" x-data="{ mode: 'wfo' }">
@@ -48,7 +51,8 @@
                             <span>In at <span class="text-white font-semibold">{{ $attendance->clock_in->format('g:i a') }}</span> · {{ $attendance->work_mode === 'wfh' ? 'WFH' : 'Office' }}</span>
                             <span>Day ends {{ $attendance->expectedEnd()->format('g:i a') }}</span>
                         </div>
-                        <form method="POST" action="{{ route('os.clock-out') }}">
+                        @php $endsAt = $attendance->expectedEnd(); @endphp
+                        <form method="POST" action="{{ route('os.clock-out') }}" @if ($attendance->day_type === 'normal') onsubmit="return new Date() >= new Date('{{ $endsAt->toIso8601String() }}') || confirm('Your day ends at {{ $endsAt->format('g:i a') }}. Clock out now?')" @endif>
                             @csrf
                             <button type="submit" class="w-full text-xs font-semibold py-2 rounded-md bg-white/10 text-white hover:bg-white/15">Clock Out</button>
                         </form>
@@ -57,7 +61,14 @@
                         @if ($attendance->ot_minutes > 0)
                             <p class="text-xs text-white/40 mt-1">Overtime {{ $attendance->otHours() }} h sent for approval.</p>
                         @endif
-                        <p class="text-xs text-white/40 mt-1">Done for today.</p>
+                        @if (\App\Services\AttendanceService::canUndo($attendance))
+                            <form method="POST" action="{{ route('os.clock-out.undo') }}" class="mt-2">
+                                @csrf
+                                <button class="text-xs font-semibold text-[#FCB03C] hover:text-white">Clocked out by mistake? Undo</button>
+                            </form>
+                        @else
+                            <p class="text-xs text-white/40 mt-1">Done for today.</p>
+                        @endif
                     @endif
                 </div>
 

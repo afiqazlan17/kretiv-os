@@ -51,6 +51,7 @@
                         <p class="text-xs text-gray-500">
                             Basic {{ $rm($slip->basic) }}
                             @if (collect($slip->allowances)->sum('amount') > 0) · allowances {{ $rm(collect($slip->allowances)->sum('amount')) }} @endif
+                            @if ($slip->unpaid_days > 0) · unpaid leave {{ rtrim(rtrim(number_format($slip->unpaid_days, 1), '0'), '.') }} d = -{{ $rm($slip->unpaid_deduction) }} @endif
                             @if ($slip->ot_hours > 0) · OT {{ rtrim(rtrim(number_format($slip->ot_hours, 2), '0'), '.') }} h = {{ $rm($slip->ot_pay) }} @endif
                             @if (! $slip->snapshot['bank_account']) · <span class="text-rose-600">no bank account</span> @endif
                         </p>

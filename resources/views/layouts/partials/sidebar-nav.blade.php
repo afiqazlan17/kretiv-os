@@ -63,6 +63,8 @@
                 ['section' => 'Me'],
                 ['label' => 'My Profile', 'url' => route('hr.home'), 'icon' => 'user-check', 'active' => request()->routeIs('hr.home')],
                 ['label' => 'My Attendance', 'url' => route('hr.attendance.mine'), 'icon' => 'clock', 'active' => request()->routeIs('hr.attendance.mine')],
+                ['label' => 'My Leave', 'url' => route('hr.leave'), 'icon' => 'calendar', 'active' => request()->routeIs('hr.leave')],
+                ['label' => 'My Claims', 'url' => route('hr.claims'), 'icon' => 'receipt', 'active' => request()->routeIs('hr.claims')],
                 ['label' => 'My Payslips', 'url' => route('hr.payslips'), 'icon' => 'receipt', 'active' => request()->routeIs('hr.payslips')],
                 ['label' => 'Public Holidays', 'url' => route('hr.holidays'), 'icon' => 'calendar', 'active' => request()->routeIs('hr.holidays')],
             ];
@@ -72,6 +74,14 @@
                 $hrNav[] = ['section' => 'Team'];
                 $hrNav[] = ['label' => 'Team Attendance', 'url' => route('hr.attendance.team'), 'icon' => 'users', 'active' => request()->routeIs('hr.attendance.team')];
                 $hrNav[] = ['label' => 'Overtime', 'url' => route('hr.overtime'), 'icon' => 'timer', 'active' => request()->routeIs('hr.overtime'), 'badge' => $pendingOt];
+                $pendingLeave = \App\Models\LeaveRequest::with('user')->where('status', 'pending')->get()
+                    ->filter(fn ($l) => \App\Services\AttendanceService::isApproverFor($user, $l->user))->count();
+                $hrNav[] = ['label' => 'Leave', 'url' => route('hr.leave.team'), 'icon' => 'calendar', 'active' => request()->routeIs('hr.leave.team'), 'badge' => $pendingLeave];
+                if ($user->isDeptHead() || $user->isBod()) {
+                    $claimsToCheck = \App\Models\Claim::with('user')->where('status', 'submitted')->get()
+                        ->filter(fn ($c) => $c->user && \App\Services\AttendanceService::isApproverFor($user, $c->user))->count();
+                    $hrNav[] = ['label' => 'Claims', 'url' => route('hr.claims.team'), 'icon' => 'receipt', 'active' => request()->routeIs('hr.claims.team'), 'badge' => $claimsToCheck];
+                }
             }
             if ($user->canManageHr()) {
                 $hrNav[] = ['section' => 'Manage'];

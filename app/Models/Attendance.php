@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
-#[Fillable(['user_id', 'date', 'clock_in', 'clock_out', 'work_mode', 'late', 'day_type', 'ot_minutes', 'ot_rate', 'ot_status', 'ot_decided_by', 'ot_decided_at'])]
+#[Fillable(['user_id', 'date', 'clock_in', 'clock_out', 'work_mode', 'late', 'day_type', 'ot_minutes', 'ot_rate', 'ot_status', 'ot_decided_by', 'ot_decided_at', 'edited_by', 'edit_note'])]
 class Attendance extends Model
 {
     public const DAY_TYPES = ['normal' => 'Working day', 'rest' => 'Rest day', 'holiday' => 'Public holiday'];

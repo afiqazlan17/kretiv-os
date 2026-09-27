@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Job;
+use App\Models\LeaveRequest;
 use App\Models\User;
 use App\Services\AttendanceService;
 use Illuminate\Http\RedirectResponse;
@@ -41,6 +42,8 @@ class OsController extends Controller
             'dueJobs' => $due,
             'today' => $today,
             'attendance' => app(AttendanceService::class)->today($user),
+            'onLeave' => LeaveRequest::where('user_id', $user->id)->where('status', 'approved')
+                ->where('start_date', '<=', today()->toDateString())->where('end_date', '>=', today()->toDateString())->first(),
         ]);
     }
 

@@ -4,6 +4,7 @@
     $types = config('kretivco.allowance_types');
     $earnings = [['Basic salary', $slip->basic]];
     foreach ($slip->allowances ?? [] as $a) { $earnings[] = [($types[$a['type']] ?? ucfirst($a['type'])).' allowance', $a['amount']]; }
+    if ($slip->unpaid_deduction > 0) { $earnings[] = ['Less unpaid leave ('.rtrim(rtrim(number_format($slip->unpaid_days, 1), '0'), '.').' day'.($slip->unpaid_days == 1 ? '' : 's').')', -$slip->unpaid_deduction]; }
     if ($slip->ot_pay > 0) { $earnings[] = ['Overtime ('.rtrim(rtrim(number_format($slip->ot_hours, 2), '0'), '.').' h)', $slip->ot_pay]; }
     $deductions = array_values(array_filter([
         ['EPF', $slip->epf_employee], ['SOCSO', $slip->socso_employee], ['EIS', $slip->eis_employee], ['PCB (income tax)', $slip->pcb],

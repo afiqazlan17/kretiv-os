@@ -49,10 +49,14 @@ class PayrollService
         $allowances = collect($employee->allowances ?? [])->filter(fn ($a) => (float) ($a['amount'] ?? 0) > 0)->values()->all();
         $allowanceTotal = collect($allowances)->sum('amount');
         [$otHours, $otPay] = $employee->ot_eligible ? $this->overtime($run, $employee) : [0.0, 0.0];
+        // Unpaid leave comes off at the ordinary daily rate (monthly / 26).
+        $unpaidDays = LeaveService::unpaidDaysIn($employee->user, $run->month());
+        $unpaid = round(min($basic, $unpaidDays * $basic / config('kretivco.payroll.ot_divisor_days')), 2);
+        $wages = $basic - $unpaid + $allowanceTotal;
 
         // EPF excludes overtime; SOCSO and EIS include it.
-        $stat = self::statutory($basic + $allowanceTotal, $basic + $allowanceTotal + $otPay, $employee, $run->month());
-        $gross = round($basic + $allowanceTotal + $otPay, 2);
+        $stat = self::statutory($wages, $wages + $otPay, $employee, $run->month());
+        $gross = round($wages + $otPay, 2);
         $user = $employee->user;
 
         return [
@@ -62,7 +66,7 @@ class PayrollService
                 'bank_name' => $employee->bank_name, 'bank_account' => $employee->bank_account,
                 'epf_number' => $employee->epf_number, 'socso_number' => $employee->socso_number, 'tax_number' => $employee->tax_number,
             ],
-            'basic' => $basic, 'allowances' => $allowances, 'ot_hours' => $otHours, 'ot_pay' => $otPay, 'gross' => $gross,
+            'basic' => $basic, 'unpaid_days' => $unpaidDays, 'unpaid_deduction' => $unpaid, 'allowances' => $allowances, 'ot_hours' => $otHours, 'ot_pay' => $otPay, 'gross' => $gross,
             ...$stat, 'pcb' => $pcb,
             'net' => round($gross - $stat['epf_employee'] - $stat['socso_employee'] - $stat['eis_employee'] - $pcb, 2),
         ];

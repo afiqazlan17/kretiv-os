@@ -13,7 +13,7 @@
 
         {{-- Status tabs --}}
         <div class="flex flex-wrap gap-2">
-            @foreach (['pending' => 'Pending', 'approved' => 'Approved, to pay', 'paid' => 'Paid', 'rejected' => 'Rejected', 'all' => 'All'] as $key => $label)
+            @foreach (['submitted' => 'With Dept Head', 'pending' => 'Pending', 'approved' => 'Approved, to pay', 'paid' => 'Paid', 'rejected' => 'Rejected', 'all' => 'All'] as $key => $label)
                 <a href="{{ route('finance.claims', ['status' => $key]) }}"
                    class="inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-full {{ $status === $key ? 'bg-[#047857] text-white' : 'bg-white border border-[#E7EFEA] text-gray-600 hover:bg-[#F0FDF4]' }}">
                     {{ $label }}
@@ -48,12 +48,17 @@
                             </div>
                             <div class="text-right">
                                 <div class="font-bold text-gray-900 whitespace-nowrap">RM {{ number_format($claim->amount, 2) }}</div>
-                                @php $badge = ['pending' => 'bg-amber-50 text-amber-700', 'approved' => 'bg-blue-50 text-blue-700', 'paid' => 'bg-green-50 text-green-700', 'rejected' => 'bg-red-50 text-red-700'][$claim->status]; @endphp
+                                @php $badge = ['submitted' => 'bg-violet-50 text-violet-700', 'pending' => 'bg-amber-50 text-amber-700', 'approved' => 'bg-blue-50 text-blue-700', 'paid' => 'bg-green-50 text-green-700', 'rejected' => 'bg-red-50 text-red-700'][$claim->status]; @endphp
                                 <span class="inline-block mt-1 text-[11px] font-semibold rounded-full px-2.5 py-0.5 {{ $badge }}">{{ \App\Models\Claim::STATUSES[$claim->status] }}</span>
                             </div>
                         </div>
 
-                        @if ($claim->status === 'pending' && ! auth()->user()->isBod())
+                        @if ($claim->verified_by)
+                            <div class="text-xs text-gray-400 mt-1">Checked by {{ $claim->verified_by }}</div>
+                        @endif
+                        @if ($claim->status === 'submitted')
+                            <div class="text-xs text-violet-700 mt-3">Waiting for the Dept Head to check it in HR.</div>
+                        @elseif ($claim->status === 'pending' && ! auth()->user()->isBod())
                             <div class="text-xs text-amber-700 mt-3">Waiting for BOD approval.</div>
                         @elseif ($claim->status === 'pending')
                             <div class="flex items-center gap-2 mt-3">

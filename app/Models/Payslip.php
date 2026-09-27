@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable(['payroll_run_id', 'user_id', 'snapshot', 'basic', 'allowances', 'ot_hours', 'ot_pay', 'gross',
-    'epf_employee', 'epf_employer', 'socso_employee', 'socso_employer', 'eis_employee', 'eis_employer', 'pcb', 'net'])]
+    'epf_employee', 'epf_employer', 'socso_employee', 'socso_employer', 'eis_employee', 'eis_employer', 'pcb', 'net', 'unpaid_days', 'unpaid_deduction'])]
 class Payslip extends Model
 {
     /** Amounts HR may adjust on a draft run (statutory tables have edge cases; PCB is always manual). */
@@ -15,7 +15,7 @@ class Payslip extends Model
 
     protected function casts(): array
     {
-        $money = array_fill_keys(['basic', 'ot_hours', 'ot_pay', 'gross', 'net', ...self::ADJUSTABLE], 'float');
+        $money = array_fill_keys(['basic', 'ot_hours', 'ot_pay', 'gross', 'net', 'unpaid_days', 'unpaid_deduction', ...self::ADJUSTABLE], 'float');
 
         return ['snapshot' => 'array', 'allowances' => 'array'] + $money;
     }
@@ -43,7 +43,7 @@ class Payslip extends Model
     /** Re-derive gross and net after an adjustment. */
     public function recalcTotals(): void
     {
-        $this->gross = round($this->basic + collect($this->allowances ?? [])->sum('amount') + $this->ot_pay, 2);
+        $this->gross = round($this->basic - $this->unpaid_deduction + collect($this->allowances ?? [])->sum('amount') + $this->ot_pay, 2);
         $this->net = round($this->gross - $this->deductions(), 2);
     }
 }

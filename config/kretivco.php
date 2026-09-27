@@ -97,6 +97,21 @@ return [
         'eis' => ['ceiling' => 6000, 'employee' => 0.002, 'employer' => 0.002],
     ],
 
+    // Leave, Employment Act minimums. `by_service` is [years of service
+    // from => days]; annual leave is pro-rated in the year someone joins.
+    'leave' => [
+        'types' => [
+            'annual' => ['label' => 'Annual leave', 'by_service' => [0 => 8, 2 => 12, 5 => 16]],
+            'sick' => ['label' => 'Sick leave', 'by_service' => [0 => 14, 2 => 18, 5 => 22], 'attachment' => true],
+            'hospitalisation' => ['label' => 'Hospitalisation', 'days' => 60, 'attachment' => true],
+            'maternity' => ['label' => 'Maternity leave', 'days' => 98],
+            'paternity' => ['label' => 'Paternity leave', 'days' => 7],
+            'unpaid' => ['label' => 'Unpaid leave'],
+        ],
+        'carry_forward_max' => 5,          // unused annual leave into next year
+        'carry_forward_until' => '06-30',  // carried days must be used by this date
+    ],
+
     'allowance_types' => ['transport' => 'Transport', 'phone' => 'Phone', 'meal' => 'Meal', 'other' => 'Other'],
 
     // Flexible hours: clock in from `earliest` (earlier counts from then),

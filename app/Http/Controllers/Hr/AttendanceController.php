@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Hr;
 
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
+use App\Models\User;
 use App\Services\AttendanceService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -29,6 +30,32 @@ class AttendanceController extends Controller
         return back()->with('success', 'Clocked out. See you tomorrow.');
     }
 
+    public function undoClockOut(Request $request, AttendanceService $attendance): RedirectResponse
+    {
+        $attendance->undoClockOut($request->user());
+
+        return back()->with('success', 'Clock out undone. You are still clocked in.');
+    }
+
+    /** HR / Dept Head fixes a day: wrong tap, forgot to clock in or out. */
+    public function correct(Request $request, AttendanceService $attendance): RedirectResponse
+    {
+        $data = $request->validate([
+            'user_id' => ['required', 'exists:users,id'],
+            'date' => ['required', 'date', 'before_or_equal:today'],
+            'clock_in' => ['required', 'date_format:H:i'],
+            'clock_out' => ['nullable', 'date_format:H:i'],
+            'work_mode' => ['required', 'in:wfo,wfh'],
+            'edit_note' => ['required', 'string', 'max:255'],
+        ]);
+        $staff = User::findOrFail($data['user_id']);
+        abort_unless(AttendanceService::canManageAttendanceOf($request->user(), $staff), 403);
+
+        $attendance->correct($staff, $data['date'], $data['clock_in'], $data['clock_out'] ?? null, $data['work_mode'], $data['edit_note'], $request->user());
+
+        return back()->with('success', "Attendance for {$staff->name} on ".Carbon::parse($data['date'])->format('d M').' saved.');
+    }
+
     /** The staff member's own record: times, mode and overtime. Lateness is not shown here. */
     public function mine(Request $request): View
     {
@@ -48,7 +75,10 @@ class AttendanceController extends Controller
             ->whereHas('user', fn ($q) => $q->when(! $viewer->canManageHr() && ! $viewer->isBod(), fn ($q) => $q->where('department', $viewer->department)))
             ->orderByDesc('date')->orderBy('clock_in')->get();
 
-        return view('hr.attendance.team', ['rows' => $rows, 'month' => $month]);
+        $staff = User::where('active', true)->orderBy('name')->get()
+            ->filter(fn (User $u) => AttendanceService::canManageAttendanceOf($viewer, $u))->values();
+
+        return view('hr.attendance.team', ['rows' => $rows, 'month' => $month, 'staff' => $staff]);
     }
 
     public function overtime(Request $request): View

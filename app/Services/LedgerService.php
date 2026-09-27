@@ -61,6 +61,8 @@ class LedgerService
     public static function isDebitNormal(string $accountKey): bool
     {
         return $accountKey === 'ar'
+            || $accountKey === 'fixed_assets'
+            || $accountKey === 'equity_drawings'
             || str_starts_with($accountKey, 'bank_')
             || str_starts_with($accountKey, 'cogs_')
             || str_starts_with($accountKey, 'opex_');
@@ -311,6 +313,46 @@ class LedgerService
             'created_by' => $userName ?: 'System',
             'receipt_path' => $data['receipt_path'] ?? null,
             'receipt_name' => $data['receipt_name'] ?? null,
+            // Client entertainment is only half deductible unless marked otherwise.
+            'tax_treatment' => $data['tax_treatment'] ?? ($category === 'entertainment' ? 'partial' : null),
+        ]);
+    }
+
+    /** Buying a fixed asset: moves cash into Fixed Assets (balance sheet), not an expense. */
+    public function postAssetPurchase(array $data, string $userName): LedgerEntry
+    {
+        return $this->addEntry([
+            'date' => $data['purchase_date'],
+            'type' => 'asset_purchase',
+            'description' => 'Asset: '.$data['name'],
+            'department' => null,
+            'job_id' => null,
+            'doc_number' => null,
+            'debit_account' => 'fixed_assets',
+            'credit_account' => self::bankAccount($data['bank']),
+            'amount' => (float) $data['cost'],
+            'bank' => $data['bank'],
+            'created_by' => $userName ?: 'System',
+            'receipt_path' => $data['receipt_path'] ?? null,
+            'receipt_name' => $data['receipt_name'] ?? null,
+        ]);
+    }
+
+    /** Owner taking money out of the business: reduces equity, never an expense (not tax deductible). */
+    public function postDrawings(array $data, string $userName): LedgerEntry
+    {
+        return $this->addEntry([
+            'date' => $data['date'] ?? now(),
+            'type' => 'owner_drawings',
+            'description' => trim($data['notes'] ?? '') ?: 'Owner drawings',
+            'department' => null,
+            'job_id' => null,
+            'doc_number' => null,
+            'debit_account' => 'equity_drawings',
+            'credit_account' => self::bankAccount($data['bank']),
+            'amount' => (float) $data['amount'],
+            'bank' => $data['bank'],
+            'created_by' => $userName ?: 'System',
         ]);
     }
 

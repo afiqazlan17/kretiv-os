@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountantPackController;
+use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\BankImportController;
 use App\Http\Controllers\ClaimController;
@@ -19,6 +20,7 @@ use App\Http\Controllers\OsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecurringExpenseController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\TaxSummaryController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VendorController;
 use Illuminate\Support\Facades\Route;
@@ -151,6 +153,12 @@ $financeRoutes = function () {
         Route::get('/claims/{claim}/receipt', [ClaimController::class, 'receipt'])->name('finance.claims.receipt');
         Route::delete('/claims/{claim}', [ClaimController::class, 'destroy'])->name('finance.claims.destroy');
         Route::post('/ledger/{entry}/void', [FinanceController::class, 'voidEntry'])->name('finance.ledger.void');
+        Route::get('/assets', [AssetController::class, 'index'])->name('finance.assets');
+        Route::post('/assets', [AssetController::class, 'store'])->name('finance.assets.store');
+        Route::post('/assets/{asset}/dispose', [AssetController::class, 'dispose'])->name('finance.assets.dispose');
+        Route::delete('/assets/{asset}', [AssetController::class, 'destroy'])->name('finance.assets.destroy');
+        Route::get('/tax', [TaxSummaryController::class, 'index'])->name('finance.tax');
+        Route::post('/drawings', [FinanceController::class, 'storeDrawings'])->name('finance.drawings.store');
         Route::get('/accountant', [AccountantPackController::class, 'index'])->name('finance.accountant');
         Route::get('/accountant/download', [AccountantPackController::class, 'download'])->name('finance.accountant.download');
         Route::get('/bank-import', [BankImportController::class, 'index'])->name('finance.bank-import');

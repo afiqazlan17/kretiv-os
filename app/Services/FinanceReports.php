@@ -82,7 +82,8 @@ class FinanceReports
     {
         $banks = collect(config('kretivco.banks'))->mapWithKeys(fn ($b, $key) => [$key => LedgerService::balanceFor($this->entries, "bank_{$key}")]);
         $receivable = LedgerService::balanceFor($this->entries, 'ar');
-        $assets = $receivable + $banks->sum();
+        $fixed = LedgerService::balanceFor($this->entries, 'fixed_assets');
+        $assets = $receivable + $banks->sum() + $fixed;
 
         $loans = $this->accountKeys()->filter(fn ($k) => str_starts_with($k, 'loan_'))
             ->mapWithKeys(fn ($k) => [$k => LedgerService::balanceFor($this->entries, $k)]);
@@ -90,9 +91,10 @@ class FinanceReports
 
         $opening = LedgerService::balanceFor($this->entries, 'equity_opening');
         $retained = $this->profitAndLoss()['net'];
-        $equity = $opening + $retained;
+        $drawings = LedgerService::balanceFor($this->entries, 'equity_drawings');
+        $equity = $opening + $retained - $drawings;
 
-        return compact('banks', 'receivable', 'assets', 'loans', 'liabilities', 'opening', 'retained', 'equity') + [
+        return compact('banks', 'receivable', 'fixed', 'drawings', 'assets', 'loans', 'liabilities', 'opening', 'retained', 'equity') + [
             'check' => $assets - ($liabilities + $equity),
             'balanced' => abs($assets - ($liabilities + $equity)) < 0.005,
         ];

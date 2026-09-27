@@ -118,6 +118,7 @@ class FinanceController extends Controller
             'date' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
             'receipt' => ReceiptUpload::RULES,
+            'tax_treatment' => ['nullable', 'in:partial,non_deductible'],
         ]);
 
         $ledger->postExpenseEntry($validated + ReceiptUpload::store($request, 'ledger-receipts'), $request->user()->name);
@@ -190,6 +191,22 @@ class FinanceController extends Controller
         abort_unless(Storage::disk('public')->exists($entry->receipt_path), 404);
 
         return Storage::disk('public')->response($entry->receipt_path, $entry->receipt_name);
+    }
+
+    /** Owner drawings: money the owner takes out. Reduces equity, not an expense. */
+    public function storeDrawings(Request $request, LedgerService $ledger): RedirectResponse
+    {
+        abort_unless($request->user()->seesCompanyFinance(), 403);
+
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'bank' => ['required', 'in:'.implode(',', array_keys(config('kretivco.banks')))],
+            'date' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string', 'max:255'],
+        ]);
+        $ledger->postDrawings($data, $request->user()->name);
+
+        return back()->with('success', 'Owner drawings recorded.');
     }
 
     /**

@@ -237,6 +237,21 @@ return [
 
     // Picking a department attributes the cost to that department (cost of
     // service); leaving it blank posts as a company-wide operating expense.
+    // Capital allowance for the asset register (Malaysia, indicative default
+    // rates: initial allowance % in the year of purchase, then annual
+    // allowance % of cost each year until fully claimed). A tax agent should
+    // confirm the category and rate for each asset.
+    'capital_allowance' => [
+        'small_value_limit' => 2000, // assets costing this much or less: 100% in the year of purchase
+        'categories' => [
+            'computer' => ['label' => 'Computer & IT equipment', 'ia' => 20, 'aa' => 20],
+            'machinery' => ['label' => 'Machinery & tools (printer, camera, equipment)', 'ia' => 20, 'aa' => 14],
+            'office' => ['label' => 'Office equipment', 'ia' => 20, 'aa' => 10],
+            'furniture' => ['label' => 'Furniture & fittings', 'ia' => 20, 'aa' => 10],
+            'vehicle' => ['label' => 'Motor vehicle', 'ia' => 20, 'aa' => 20],
+        ],
+    ],
+
     'expense_categories' => [
         'subcontractor' => 'Subcontractor / Consignment',
         'rent' => 'Rent',
@@ -245,6 +260,7 @@ return [
         'commission' => 'Commission',
         'software' => 'Software & Subscriptions',
         'staff_claim' => 'Staff Claims',
+        'entertainment' => 'Entertainment (client)',
         'other' => 'Other',
     ],
 

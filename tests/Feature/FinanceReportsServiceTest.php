@@ -53,7 +53,7 @@ class FinanceReportsServiceTest extends TestCase
     {
         $this->assertSame(['code' => 'CA-BANK-MBB', 'name' => 'Bank Maybank', 'type' => 'Current Asset'], ChartOfAccounts::describe('bank_mbb'));
         $this->assertSame('IN-PRINT', ChartOfAccounts::describe('revenue_print')['code']);
-        $this->assertSame('Revenue — KretivPrint', ChartOfAccounts::describe('revenue_print')['name']);
+        $this->assertSame('Revenue: KretivPrint', ChartOfAccounts::describe('revenue_print')['name']);
         $this->assertSame('Cost of Services', ChartOfAccounts::describe('cogs_print_commission')['type']);
         $this->assertSame('Liability', ChartOfAccounts::describe('loan_afiq_azlan')['type']);
     }

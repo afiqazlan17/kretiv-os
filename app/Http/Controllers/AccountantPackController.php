@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Asset;
 use App\Models\JobDocument;
 use App\Models\LedgerEntry;
 use App\Services\FinanceReports;
@@ -81,6 +82,28 @@ class AccountantPackController extends Controller
                 ...$tb['rows']->map(fn ($r) => [$r['code'], $r['name'], $r['debit'], $r['credit']])->all(),
                 ['', 'Total', $tb['debit'], $tb['credit']],
             ],
+            'Assets' => [
+                ['Asset', 'Type', 'Bought', 'Cost (RM)', 'Capital allowance '.$to->year.' (RM)', 'Remaining (RM)', 'Disposed'],
+                ...Asset::orderBy('purchase_date')->get()->map(fn (Asset $a) => [
+                    $a->name, config("kretivco.capital_allowance.categories.{$a->category}.label", $a->category), $a->purchase_date->format('Y-m-d'),
+                    (float) $a->cost, $a->capitalAllowance($to->year)['allowance'], $a->capitalAllowance($to->year)['twdv'], $a->disposed_on?->format('Y-m-d') ?? '',
+                ])->all(),
+            ],
+            'Tax Summary '.$to->year => (function () use ($to) {
+                $t = TaxSummaryController::summary($to->year);
+
+                return [
+                    ['Indicative only; for the tax agent to confirm'],
+                    ['Net profit (books)', $t['pl']['net']],
+                    ['Add back: not deductible', $t['nonDeductible']],
+                    ['Add back: half of partly deductible', round($t['partial'] / 2, 2)],
+                    ['Less: capital allowance', $t['capitalAllowance']],
+                    ['Estimated adjusted business income', $t['adjustedIncome']],
+                    [],
+                    ['Assets bought (not expensed)', $t['assetsBought']],
+                    ['Owner drawings (not deductible)', $t['drawings']],
+                ];
+            })(),
             'Receivables' => [
                 ['Customer', 'Job', 'Invoice date', 'Days', 'Outstanding (RM)'],
                 ...collect($asAt->aging($to)['rows'])->map(fn ($r) => [$r['customer'], $r['job_id'], $r['date']->format('Y-m-d'), $r['days'], $r['outstanding']])->all(),

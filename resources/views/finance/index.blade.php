@@ -12,6 +12,8 @@
                         <button type="button" @click="$dispatch('finance-tab', 'opening')" class="w-full text-left px-3 py-2 rounded-lg hover:bg-[#F0FDF4]">Adjust Bank Balance</button>
                         <button type="button" @click="$dispatch('finance-tab', 'loan')" class="w-full text-left px-3 py-2 rounded-lg hover:bg-[#F0FDF4]">Director Loan</button>
                         <button type="button" @click="$dispatch('finance-tab', 'transfer')" class="w-full text-left px-3 py-2 rounded-lg hover:bg-[#F0FDF4]">Transfer Between Banks</button>
+                        <button type="button" @click="$dispatch('finance-tab', 'drawings')" class="w-full text-left px-3 py-2 rounded-lg hover:bg-[#F0FDF4]">Owner Drawings</button>
+                        <a href="{{ route('finance.assets') }}" class="block px-3 py-2 rounded-lg hover:bg-[#F0FDF4]">Add an Asset</a>
                     </div>
                 </div>
                 @endif
@@ -183,6 +185,11 @@
                     <input type="date" name="date" value="{{ old('date', now()->toDateString()) }}" class="rounded-md border-gray-300 shadow-sm text-sm">
                     <input type="text" name="job_id" placeholder="Job ID (optional)" class="rounded-md border-gray-300 shadow-sm text-sm">
                     <input type="text" name="notes" placeholder="Notes" class="rounded-md border-gray-300 shadow-sm text-sm">
+                    <select name="tax_treatment" class="rounded-md border-gray-300 shadow-sm text-sm" title="How this counts for income tax">
+                        <option value="">Tax: fully deductible</option>
+                        <option value="partial">Tax: 50% deductible (e.g. entertainment)</option>
+                        <option value="non_deductible">Tax: not deductible (personal, fines)</option>
+                    </select>
                     <div class="sm:col-span-3">
                         <label class="text-xs text-gray-500">Receipt (take a photo or attach a file)</label>
                         <input type="file" name="receipt" accept="image/*,.pdf" class="block w-full text-sm text-gray-500 file:mr-2 file:rounded-lg file:border-0 file:bg-[#DCFCE7] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-[#047857]">
@@ -221,6 +228,18 @@
                         <input type="file" name="receipt" accept="image/*,.pdf" class="block w-full text-sm text-gray-600 rounded-md border-gray-300 shadow-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200">
                     </div>
                     <div class="sm:col-span-3"><x-primary-button type="submit">Post Loan Entry</x-primary-button></div>
+                </form>
+
+                <form method="POST" action="{{ route('finance.drawings.store') }}" x-show="tab === 'drawings'" x-cloak class="flex flex-wrap items-end gap-3">
+                    @csrf
+                    <select name="bank" class="rounded-md border-gray-300 shadow-sm text-sm">
+                        @foreach (config('kretivco.banks') as $key => $bank)<option value="{{ $key }}">{{ $bank['label'] }}</option>@endforeach
+                    </select>
+                    <x-money-input name="amount" required />
+                    <input type="date" name="date" value="{{ now()->toDateString() }}" class="rounded-md border-gray-300 shadow-sm text-sm">
+                    <input type="text" name="notes" placeholder="Notes (optional)" class="rounded-md border-gray-300 shadow-sm text-sm">
+                    <x-primary-button type="submit">Record drawings</x-primary-button>
+                    <p class="w-full text-xs text-gray-400">Money the owner takes out for personal use. It reduces the owner's equity and is not a business expense.</p>
                 </form>
 
                 <form method="POST" action="{{ route('finance.bank-transfer.store') }}" x-show="tab === 'transfer'" x-cloak class="flex flex-wrap items-end gap-3">

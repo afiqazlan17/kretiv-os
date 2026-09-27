@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
-    'date', 'type', 'description', 'department', 'job_id', 'doc_number', 'debit_account',
+    'date', 'type', 'tax_treatment', 'description', 'department', 'job_id', 'doc_number', 'debit_account',
     'credit_account', 'amount', 'bank', 'created_by', 'reversed', 'reverses_id', 'receipt_path', 'receipt_name',
 ])]
 class LedgerEntry extends Model

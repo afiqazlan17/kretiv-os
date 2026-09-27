@@ -67,6 +67,8 @@
                 $pendingClaims = \App\Models\Claim::whereIn('status', $user->isBod() ? ['pending', 'approved'] : ['approved'])->count();
                 $financeNav[] = ['label' => 'Recurring', 'url' => route('finance.recurring'), 'icon' => 'repeat', 'active' => request()->routeIs('finance.recurring'), 'badge' => $dueRecurring];
                 $financeNav[] = ['label' => 'Claims', 'url' => route('finance.claims'), 'icon' => 'receipt', 'active' => request()->routeIs('finance.claims'), 'badge' => $pendingClaims];
+                $financeNav[] = ['label' => 'Assets', 'url' => route('finance.assets'), 'icon' => 'package', 'active' => request()->routeIs('finance.assets')];
+                $financeNav[] = ['label' => 'Tax Summary', 'url' => route('finance.tax'), 'icon' => 'scale', 'active' => request()->routeIs('finance.tax')];
                 $financeNav[] = ['label' => 'Bank Import', 'url' => route('finance.bank-import'), 'icon' => 'landmark', 'active' => request()->routeIs('finance.bank-import')];
                 $financeNav[] = ['label' => 'Accountant Pack', 'url' => route('finance.accountant'), 'icon' => 'download', 'active' => request()->routeIs('finance.accountant')];
             }

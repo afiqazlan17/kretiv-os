@@ -13,6 +13,7 @@
             <div class="max-w-xl space-y-5 text-sm">
                 <div><div class="text-xs font-bold text-gray-400 uppercase mb-1">Assets</div>
                     {!! $row('Accounts Receivable (AR)', $bs['receivable']) !!}
+                    @if ($bs['fixed'] > 0){!! $row('Fixed Assets (at cost)', $bs['fixed']) !!}@endif
                     @foreach ($bs['banks'] as $key => $v){!! $row(config("kretivco.banks.$key.label"), $v) !!}@endforeach
                     {!! $row('Total Assets', $bs['assets'], true) !!}</div>
                 <div><div class="text-xs font-bold text-gray-400 uppercase mb-1">Liabilities</div>
@@ -20,7 +21,7 @@
                         <p class="text-xs text-gray-400 italic py-1">No liability accounts recorded in the system yet (for example AP or director loans). They appear here once recorded.</p>@endforelse
                     {!! $row('Total Liabilities', $bs['liabilities'], true) !!}</div>
                 <div><div class="text-xs font-bold text-gray-400 uppercase mb-1">Equity</div>
-                    {!! $row('Opening Balance', $bs['opening']) !!}{!! $row('Retained Earnings', $bs['retained']) !!}{!! $row('Total Equity', $bs['equity'], true) !!}</div>
+                    {!! $row('Opening Balance', $bs['opening']) !!}{!! $row('Retained Earnings', $bs['retained']) !!}@if ($bs['drawings'] > 0){!! $row('Less: Owner Drawings', -$bs['drawings']) !!}@endif{!! $row('Total Equity', $bs['equity'], true) !!}</div>
                 <div>{!! $row('Assets = Liabilities + Equity?', $bs['liabilities'] + $bs['equity'], true) !!}
                     <p class="mt-2 font-semibold {{ $bs['balanced'] ? 'text-green-600' : 'text-red-600' }}">{{ $bs['balanced'] ? 'Balance sheet is balanced.' : 'Balance sheet is out by RM '.number_format(abs($bs['check']), 2) }}</p></div>
             </div>

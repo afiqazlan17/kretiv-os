@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['user_id', 'staff_no', 'ic_number', 'date_of_birth', 'gender', 'phone', 'personal_email', 'address',
     'bank_name', 'bank_account', 'epf_number', 'socso_number', 'tax_number',
     'emergency_name', 'emergency_relation', 'emergency_phone',
-    'employment_type', 'start_date', 'end_date', 'basic_salary', 'allowances', 'ot_eligible'])]
+    'employment_type', 'start_date', 'end_date', 'basic_salary', 'allowances', 'ot_eligible', 'reports_to_user_id'])]
 class Employee extends Model
 {
     public const EMPLOYMENT_TYPES = ['permanent' => 'Permanent', 'contract' => 'Contract', 'intern' => 'Internship', 'part_time' => 'Part-time'];

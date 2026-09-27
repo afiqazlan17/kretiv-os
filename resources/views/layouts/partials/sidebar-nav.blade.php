@@ -12,7 +12,6 @@
         ['key' => 'vendors', 'label' => 'Vendors', 'route' => 'vendors.index', 'icon' => 'factory'],
         ['key' => 'items', 'label' => 'Items', 'route' => 'items.index', 'pattern' => 'items.*', 'icon' => 'package'],
         ['key' => 'reports', 'label' => 'Reports', 'route' => 'reports.index', 'icon' => 'chart-line', 'roles' => ['bod', 'dept_head']],
-        ['key' => 'departments', 'label' => 'Departments', 'route' => 'departments.index', 'icon' => 'building-2'],
     ];
 @endphp
 
@@ -66,6 +65,9 @@
                 ['label' => 'My Leave', 'url' => route('hr.leave'), 'icon' => 'calendar', 'active' => request()->routeIs('hr.leave')],
                 ['label' => 'My Claims', 'url' => route('hr.claims'), 'icon' => 'receipt', 'active' => request()->routeIs('hr.claims')],
                 ['label' => 'My Payslips', 'url' => route('hr.payslips'), 'icon' => 'receipt', 'active' => request()->routeIs('hr.payslips')],
+                ['section' => 'Company'],
+                ['label' => 'Org Chart', 'url' => route('hr.org-chart'), 'icon' => 'network', 'active' => request()->routeIs('hr.org-chart')],
+                ['label' => 'Departments', 'url' => route('hr.departments'), 'icon' => 'building-2', 'active' => request()->routeIs('hr.departments')],
                 ['label' => 'Public Holidays', 'url' => route('hr.holidays'), 'icon' => 'calendar', 'active' => request()->routeIs('hr.holidays')],
             ];
             if (\App\Services\AttendanceService::canViewTeam($user)) {

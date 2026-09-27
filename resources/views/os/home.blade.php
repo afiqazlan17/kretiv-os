@@ -100,7 +100,7 @@
                         <a href="{{ route('dashboard') }}" target="_blank" rel="noopener" class="os-card-link" aria-label="Open Jobs"></a>
                     @endif
                     <div class="-mx-5 mb-3 aspect-square w-[calc(100%+2.5rem)] overflow-hidden">
-                        <img src="{{ asset('images/os-cards/jobs.jpg') }}" alt="" class="w-full h-full object-cover">
+                        <img src="{{ asset('images/os-cards/jobs.jpg').'?v=2' }}" alt="" class="w-full h-full object-cover">
                     </div>
                     <h2 class="font-semibold text-white">Jobs</h2>
                     <p class="text-xs text-white/50 mt-1">{{ $user->canAccess('jobs') ? 'Projects & Clients' : 'No access, ask BOD' }}</p>
@@ -111,7 +111,7 @@
                         <a href="{{ route('hr.home') }}" target="_blank" rel="noopener" class="os-card-link" aria-label="Open HR"></a>
                     @endif
                     <div class="-mx-5 mb-3 aspect-square w-[calc(100%+2.5rem)] overflow-hidden">
-                        <img src="{{ asset('images/os-cards/hr.jpg') }}" alt="" class="w-full h-full object-cover">
+                        <img src="{{ asset('images/os-cards/hr.jpg').'?v=2' }}" alt="" class="w-full h-full object-cover">
                     </div>
                     <h2 class="font-semibold text-white">HR</h2>
                     <p class="text-xs text-white/50 mt-1">{{ $user->canAccess('hr') ? 'People & Culture' : 'No access, ask BOD' }}</p>
@@ -122,7 +122,7 @@
                         <a href="{{ route('finance.index') }}" target="_blank" rel="noopener" class="os-card-link" aria-label="Open Finance"></a>
                     @endif
                     <div class="-mx-5 mb-3 aspect-square w-[calc(100%+2.5rem)] overflow-hidden">
-                        <img src="{{ asset('images/os-cards/finance.jpg') }}" alt="" class="w-full h-full object-cover">
+                        <img src="{{ asset('images/os-cards/finance.jpg').'?v=2' }}" alt="" class="w-full h-full object-cover">
                     </div>
                     <h2 class="font-semibold text-white">Finance</h2>
                     <p class="text-xs text-white/50 mt-1">{{ $user->canAccess('finance') ? 'Numbers & Reports' : 'No access, ask BOD' }}</p>

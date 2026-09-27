@@ -37,7 +37,7 @@
                                     </div>
                                 </div>
                             </td>
-                            <td class="px-4 py-3.5 whitespace-nowrap text-gray-600 hidden md:table-cell">{{ $person->department ? config("kretivco.departments.{$person->department}.label") : 'Company-wide' }}</td>
+                            <td class="px-4 py-3.5 whitespace-nowrap text-gray-600 hidden md:table-cell">{{ $person->department ? \App\Support\Departments::label($person->department) : 'Company-wide' }}</td>
                             <td class="px-4 py-3.5 whitespace-nowrap text-gray-600 hidden sm:table-cell">{{ $e?->start_date?->format('d M Y') ?? 'Not set' }}</td>
                             <td class="px-4 py-3.5 text-right whitespace-nowrap">
                                 @if (! $e)

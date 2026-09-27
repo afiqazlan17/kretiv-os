@@ -66,7 +66,7 @@
                 <div style="font-size:11pt;font-weight:bold;margin:2pt 0 4pt">{{ $s['name'] }}</div>
                 <table>
                     @if ($s['title'])<tr><td class="muted" style="width:70pt">Position</td><td>{{ $s['title'] }}</td></tr>@endif
-                    @if ($s['department'])<tr><td class="muted">Department</td><td>{{ config("kretivco.departments.{$s['department']}.label", $s['department']) }}</td></tr>@endif
+                    @if ($s['department'])<tr><td class="muted">Department</td><td>{{ \App\Support\Departments::label($s['department']) }}</td></tr>@endif
                     @if ($s['staff_no'])<tr><td class="muted">Staff no.</td><td>{{ $s['staff_no'] }}</td></tr>@endif
                     <tr><td class="muted">IC no.</td><td>{{ $s['ic_number'] ?: '-' }}</td></tr>
                 </table>

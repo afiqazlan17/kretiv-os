@@ -13,7 +13,7 @@
             <span class="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#C084FC] text-white flex items-center justify-center text-xl font-bold">{{ strtoupper(substr($user->name, 0, 1)) }}</span>
             <div class="flex-1 min-w-[200px]">
                 <div class="text-lg font-bold text-gray-900">{{ $user->name }}</div>
-                <div class="text-sm text-gray-500">{{ $user->title ?: config("kretivco.roles.{$user->role}.label") }}{{ $user->department ? ' · '.config("kretivco.departments.{$user->department}.label") : '' }}</div>
+                <div class="text-sm text-gray-500">{{ $user->title ?: config("kretivco.roles.{$user->role}.label") }}{{ $user->department ? ' · '.\App\Support\Departments::label($user->department) : '' }}</div>
                 <div class="text-xs text-gray-400">{{ $user->email }}{{ $employee->start_date ? ' · joined '.$employee->start_date->format('d M Y') : '' }}</div>
             </div>
         </div>
@@ -33,7 +33,7 @@
             <p class="text-xs text-gray-400 mb-4">Kept by HR.</p>
             <dl class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
                 <div><dt class="text-xs text-gray-400">Type</dt><dd class="text-gray-800">{{ \App\Models\Employee::EMPLOYMENT_TYPES[$employee->employment_type] ?? 'Not set' }}</dd></div>
-                <div><dt class="text-xs text-gray-400">Department</dt><dd class="text-gray-800">{{ config("kretivco.departments.{$user->department}.label", 'Not set') }}</dd></div>
+                <div><dt class="text-xs text-gray-400">Department</dt><dd class="text-gray-800">{{ \App\Support\Departments::label($user->department) ?? 'Not set' }}</dd></div>
                 <div><dt class="text-xs text-gray-400">Joined</dt><dd class="text-gray-800">{{ $employee->start_date?->format('d M Y') ?? 'Not set' }}</dd></div>
             </dl>
         </div>

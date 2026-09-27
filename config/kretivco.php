@@ -11,7 +11,15 @@ return [
         'event' => ['label' => 'KretivEvent', 'color' => '#E91E63'],
     ],
 
-    // Static "who does what" profile shown on the Departments page — copied
+    // Company units that aren't Jobs business units: staff can belong to
+    // them (HR, org chart) but they never appear in job or revenue lists.
+    'support_units' => [
+        'admin' => ['label' => 'Finance & Admin', 'color' => '#0F766E'],
+    ],
+
+    // Starting point for the HR Departments page (copied into the
+    // departments table on migrate; HR edits it there from then on).
+    // Was: static "who does what" profile shown on the Departments page — copied
     // from the live app. Keys match `departments` above.
     'department_profiles' => [
         'print' => [

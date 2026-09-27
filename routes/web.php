@@ -8,11 +8,11 @@ use App\Http\Controllers\ClaimController;
 use App\Http\Controllers\CollectionsController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\FinanceReportController;
 use App\Http\Controllers\Hr\AttendanceController;
+use App\Http\Controllers\Hr\CompanyController;
 use App\Http\Controllers\Hr\HolidayController;
 use App\Http\Controllers\Hr\LeaveController;
 use App\Http\Controllers\Hr\MyClaimController;
@@ -134,7 +134,8 @@ $onHost('jobs', function () {
         Route::post('/leads/{lead}/mark-lost', [LeadController::class, 'markLost'])->name('leads.mark-lost');
         Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
-        Route::get('/departments', [DepartmentController::class, 'index'])->name('departments.index');
+        // Departments moved to HR; keep old links working.
+        Route::get('/departments', fn () => redirect()->route('hr.departments'))->name('departments.index');
     });
 
 });
@@ -218,6 +219,9 @@ $hrRoutes = function () {
         Route::post('/payroll/{run}/reopen', [PayrollController::class, 'reopen'])->name('hr.payroll.reopen');
         Route::delete('/payroll/{run}', [PayrollController::class, 'destroy'])->name('hr.payroll.destroy');
         Route::put('/payroll/slip/{payslip}', [PayrollController::class, 'updateSlip'])->name('hr.payroll.slip');
+        Route::get('/org-chart', [CompanyController::class, 'orgChart'])->name('hr.org-chart');
+        Route::get('/departments', [CompanyController::class, 'departments'])->name('hr.departments');
+        Route::put('/departments/{department}', [CompanyController::class, 'updateDepartment'])->name('hr.departments.update');
         Route::get('/holidays', [HolidayController::class, 'index'])->name('hr.holidays');
         Route::post('/holidays', [HolidayController::class, 'store'])->name('hr.holidays.store');
         Route::delete('/holidays/{holiday}', [HolidayController::class, 'destroy'])->name('hr.holidays.destroy');

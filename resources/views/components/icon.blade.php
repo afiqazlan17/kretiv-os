@@ -42,6 +42,7 @@
         'arrow-up-down' => '<path d="m21 16-4 4-4-4" /> <path d="M17 20V4" /> <path d="m3 8 4-4 4 4" /> <path d="M7 4v16" />',
         'chevron-down' => '<path d="m6 9 6 6 6-6" />',
         'chevron-right' => '<path d="m9 18 6-6-6-6" />',
+        'network' => '<rect x="16" y="16" width="6" height="6" rx="1" /> <rect x="2" y="16" width="6" height="6" rx="1" /> <rect x="9" y="2" width="6" height="6" rx="1" /> <path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3" /> <path d="M12 12V8" />',
         'chevron-left' => '<path d="m15 18-6-6 6-6" />',
         'clock' => '<circle cx="12" cy="12" r="10" /> <path d="M12 6v6l4 2" />',
         'timer' => '<path d="M10 2h4" /> <path d="M12 14l3-3" /> <circle cx="12" cy="14" r="8" />',

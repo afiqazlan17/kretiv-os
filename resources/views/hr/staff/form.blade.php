@@ -47,12 +47,19 @@
                     <div><label class="text-xs text-gray-500">Department</label>
                         <select name="department" class="{{ $field }}">
                             <option value="">None / company-wide</option>
-                            @foreach (config('kretivco.departments') as $key => $d)
+                            @foreach (\App\Support\Departments::all() as $key => $d)
                                 <option value="{{ $key }}" @selected($v('department', $user->department) === $key)>{{ $d['label'] }}</option>
                             @endforeach
                         </select></div>
                     <div><label class="text-xs text-gray-500">Position / title</label>
                         <input type="text" name="title" value="{{ $v('title', $user->title) }}" placeholder="Graphic Designer" class="{{ $field }}"></div>
+                    <div><label class="text-xs text-gray-500">Reports to (Board members, for the org chart)</label>
+                        <select name="reports_to_user_id" class="{{ $field }}">
+                            <option value="">Nobody (top of the chart)</option>
+                            @foreach (\App\Models\User::where('role', \App\Models\User::ROLE_BOD)->where('active', true)->where('id', '!=', $user->id ?? 0)->orderBy('name')->get() as $boss)
+                                <option value="{{ $boss->id }}" @selected((string) $v('reports_to_user_id', $employee->reports_to_user_id) === (string) $boss->id)>{{ $boss->name }}</option>
+                            @endforeach
+                        </select></div>
                     <div><label class="text-xs text-gray-500">Staff no.</label>
                         <input type="text" name="staff_no" value="{{ $v('staff_no', $employee->staff_no) }}" class="{{ $field }}"></div>
                 </div>

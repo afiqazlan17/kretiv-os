@@ -7,6 +7,7 @@ use App\Http\Controllers\UserController;
 use App\Models\Employee;
 use App\Models\User;
 use App\Support\CompanyEmail;
+use App\Support\Departments;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -90,7 +91,8 @@ class StaffController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user?->id)],
             'role' => ['required', Rule::in(array_keys(config('kretivco.roles')))],
-            'department' => ['nullable', Rule::in(array_keys(config('kretivco.departments')))],
+            'department' => ['nullable', Rule::in(array_keys(Departments::all()))],
+            'reports_to_user_id' => ['nullable', 'exists:users,id', Rule::notIn(array_filter([$user?->id]))],
             'title' => ['nullable', 'string', 'max:255'],
             'staff_no' => ['nullable', 'string', 'max:50'],
             'ic_number' => ['nullable', 'string', 'max:20'],

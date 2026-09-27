@@ -73,6 +73,7 @@
                 ['label' => 'My Claims', 'url' => route('hr.claims'), 'icon' => 'receipt', 'active' => request()->routeIs('hr.claims')],
                 ['label' => 'My Payslips', 'url' => route('hr.payslips'), 'icon' => 'receipt', 'active' => request()->routeIs('hr.payslips')],
                 ['section' => 'Company'],
+                ['label' => 'Memos & Announcements', 'url' => route('hr.announcements'), 'icon' => 'megaphone', 'active' => request()->routeIs('hr.announcements*'), 'badge' => \App\Http\Controllers\Hr\AnnouncementController::unreadFor($user, 99)->count()],
                 ['label' => 'Organisation Chart', 'url' => route('hr.org-chart'), 'icon' => 'network', 'active' => request()->routeIs('hr.org-chart')],
                 ['label' => 'Departments', 'url' => route('hr.departments'), 'icon' => 'building-2', 'active' => request()->routeIs('hr.departments')],
                 ['label' => 'Public Holidays', 'url' => route('hr.holidays'), 'icon' => 'calendar', 'active' => request()->routeIs('hr.holidays')],
@@ -96,6 +97,7 @@
                 $hrNav[] = ['section' => 'Manage'];
                 $hrNav[] = ['label' => 'Staff', 'url' => route('hr.staff.index'), 'icon' => 'users', 'active' => request()->routeIs('hr.staff.index', 'hr.staff.show')];
                 $hrNav[] = ['label' => 'Payroll', 'url' => route('hr.payroll'), 'icon' => 'banknote', 'active' => request()->routeIs('hr.payroll*')];
+                $hrNav[] = ['label' => 'EA Forms', 'url' => route('hr.ea'), 'icon' => 'file-text', 'active' => request()->routeIs('hr.ea*')];
                 $hrNav[] = ['label' => 'New Joiner', 'url' => route('hr.staff.create'), 'icon' => 'user-plus', 'active' => request()->routeIs('hr.staff.create')];
                 $hrNav[] = ['label' => 'Profile Requests', 'url' => route('hr.requests'), 'icon' => 'inbox', 'active' => request()->routeIs('hr.requests'), 'badge' => \App\Models\ProfileChangeRequest::where('status', 'pending')->where('user_id', '!=', $user->id)->count()];
             }

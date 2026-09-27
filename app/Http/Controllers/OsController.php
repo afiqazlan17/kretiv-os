@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Hr\AnnouncementController;
 use App\Models\Job;
 use App\Models\LeaveRequest;
 use App\Models\User;
@@ -42,6 +43,7 @@ class OsController extends Controller
             'dueJobs' => $due,
             'today' => $today,
             'attendance' => app(AttendanceService::class)->today($user),
+            'notices' => $user->canAccess('hr') ? AnnouncementController::unreadFor($user) : collect(),
             'onLeave' => LeaveRequest::where('user_id', $user->id)->where('status', 'approved')
                 ->where('start_date', '<=', today()->toDateString())->where('end_date', '>=', today()->toDateString())->first(),
         ]);

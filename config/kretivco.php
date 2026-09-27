@@ -287,6 +287,8 @@ return [
         'email' => 'sales@kretiv.co',
         'phone' => '+6011-21149204',
         'phone2' => '+6019-3663805',
+        // LHDN employer number (No. Majikan E), printed on Borang EA.
+        'lhdn_employer_no' => env('LHDN_EMPLOYER_NO', ''),
     ],
 
     'bank_details' => [

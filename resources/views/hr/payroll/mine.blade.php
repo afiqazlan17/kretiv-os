@@ -4,6 +4,18 @@
     </x-slot>
 
     <div class="p-5 md:p-7 space-y-4 max-w-3xl">
+        @if ($eaYears->isNotEmpty())
+            <div class="k-card p-5 flex flex-wrap items-center gap-3">
+                <span class="w-9 h-9 rounded-xl bg-violet-50 text-violet-700 flex items-center justify-center"><x-icon name="file-text" class="w-4 h-4" /></span>
+                <div class="flex-1 min-w-[12rem]">
+                    <p class="font-semibold text-gray-900">EA form (Borang EA)</p>
+                    <p class="text-xs text-gray-500">Your yearly pay statement for your income tax return.</p>
+                </div>
+                @foreach ($eaYears as $y)
+                    <a href="{{ route('hr.ea.pdf', [auth()->user(), $y]) }}" target="_blank" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#A855F7]/40 text-[#6D28D9] hover:bg-[#A855F7]/10">{{ $y }}</a>
+                @endforeach
+            </div>
+        @endif
         <p class="text-xs text-gray-400">Only you can see your payslips. They appear here once HR releases each month's payroll.</p>
         <div class="k-card overflow-hidden">
             @forelse ($slips as $slip)

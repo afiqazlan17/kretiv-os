@@ -130,10 +130,8 @@
             </div>
         </div>
 
-        {{-- Notifications — one merged feed. Job alerts are real (deadline /
-             queue data already computed in OsController); Memo and
-             Announcement are placeholders until an HR/announcements module
-             actually exists. --}}
+        {{-- Notifications: one merged feed of job alerts and unread HR memos
+             and announcements. --}}
         <div class="os-card rounded-2xl p-5">
             <h2 class="font-semibold text-white mb-3">Notifications</h2>
 
@@ -158,14 +156,20 @@
                     <p class="text-sm text-white/30 px-3 py-2">Nothing needs your attention right now.</p>
                 @endif
 
-                <div class="flex items-center gap-3 text-sm px-3 py-2.5 rounded-lg bg-white/[0.03] text-white/30">
-                    <x-icon name="notebook-pen" class="w-4 h-4 shrink-0" /><span>No memos from HR yet</span>
-                    <span class="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded bg-white/10">Coming soon</span>
-                </div>
-                <div class="flex items-center gap-3 text-sm px-3 py-2.5 rounded-lg bg-white/[0.03] text-white/30">
-                    <x-icon name="megaphone" class="w-4 h-4 shrink-0" /><span>No announcements yet</span>
-                    <span class="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded bg-white/10">Coming soon</span>
-                </div>
+                @forelse ($notices as $n)
+                    <a href="{{ route('hr.announcements.show', $n) }}" target="_blank" rel="noopener" class="flex items-center gap-3 text-sm px-3 py-2.5 rounded-lg bg-violet-500/10 hover:bg-violet-500/15">
+                        <x-icon :name="$n->type === 'memo' ? 'notebook-pen' : 'megaphone'" class="w-4 h-4 text-violet-300 shrink-0" />
+                        <span class="text-violet-200 min-w-0 truncate"><strong class="text-white">{{ $n->type === 'memo' ? 'Memo' : 'Announcement' }}</strong> {{ $n->title }}</span>
+                        <span class="ml-auto text-xs underline text-white/50 shrink-0">{{ $n->requires_ack ? 'Read and acknowledge' : 'Read' }}</span>
+                    </a>
+                @empty
+                    @if ($user->canAccess('hr'))
+                        <a href="{{ route('hr.announcements') }}" target="_blank" rel="noopener" class="flex items-center gap-3 text-sm px-3 py-2.5 rounded-lg bg-white/[0.03] text-white/40 hover:bg-white/[0.06]">
+                            <x-icon name="megaphone" class="w-4 h-4 shrink-0" /><span>No new memos or announcements</span>
+                            <span class="ml-auto text-xs underline text-white/40">See all</span>
+                        </a>
+                    @endif
+                @endforelse
             </div>
         </div>
     </div>

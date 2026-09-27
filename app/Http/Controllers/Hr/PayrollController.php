@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Hr;
 
 use App\Http\Controllers\Controller;
+use App\Models\EaRelease;
 use App\Models\PayrollRun;
 use App\Models\Payslip;
+use App\Services\EaForm;
 use App\Services\PayrollService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
@@ -115,6 +117,8 @@ class PayrollController extends Controller
         return view('hr.payroll.mine', [
             'slips' => Payslip::with('run')->where('user_id', $request->user()->id)
                 ->whereHas('run', fn ($q) => $q->where('status', 'finalized'))->get()->sortByDesc(fn ($p) => $p->run->period)->values(),
+            'eaYears' => EaRelease::orderByDesc('year')->pluck('year')
+                ->filter(fn ($y) => EaForm::slips($request->user(), $y)->isNotEmpty())->values(),
         ]);
     }
 

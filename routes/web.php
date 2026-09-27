@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\AccountantPackController;
 use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\BankImportController;
 use App\Http\Controllers\ClaimController;
 use App\Http\Controllers\CollectionsController;
 use App\Http\Controllers\CustomerController;
@@ -149,6 +151,11 @@ $financeRoutes = function () {
         Route::get('/claims/{claim}/receipt', [ClaimController::class, 'receipt'])->name('finance.claims.receipt');
         Route::delete('/claims/{claim}', [ClaimController::class, 'destroy'])->name('finance.claims.destroy');
         Route::post('/ledger/{entry}/void', [FinanceController::class, 'voidEntry'])->name('finance.ledger.void');
+        Route::get('/accountant', [AccountantPackController::class, 'index'])->name('finance.accountant');
+        Route::get('/accountant/download', [AccountantPackController::class, 'download'])->name('finance.accountant.download');
+        Route::get('/bank-import', [BankImportController::class, 'index'])->name('finance.bank-import');
+        Route::post('/bank-import', [BankImportController::class, 'upload'])->name('finance.bank-import.upload');
+        Route::delete('/bank-import', [BankImportController::class, 'clear'])->name('finance.bank-import.clear');
     });
 };
 if ($host('finance')) {

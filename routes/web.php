@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\ClaimController;
+use App\Http\Controllers\CollectionsController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DepartmentController;
@@ -13,6 +15,7 @@ use App\Http\Controllers\JobVendorCostController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\OsController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RecurringExpenseController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VendorController;
@@ -132,6 +135,18 @@ $financeRoutes = function () {
         Route::post('/director-loan', [FinanceController::class, 'storeDirectorLoan'])->name('finance.director-loan.store');
         Route::post('/bank-transfer', [FinanceController::class, 'storeBankTransfer'])->name('finance.bank-transfer.store');
         Route::get('/ledger/{entry}/receipt', [FinanceController::class, 'showReceipt'])->name('finance.ledger.receipt');
+        Route::get('/collections', [CollectionsController::class, 'index'])->name('finance.collections');
+        Route::get('/recurring', [RecurringExpenseController::class, 'index'])->name('finance.recurring');
+        Route::post('/recurring', [RecurringExpenseController::class, 'store'])->name('finance.recurring.store');
+        Route::post('/recurring/{recurring}/record', [RecurringExpenseController::class, 'record'])->name('finance.recurring.record');
+        Route::post('/recurring/{recurring}/toggle', [RecurringExpenseController::class, 'toggle'])->name('finance.recurring.toggle');
+        Route::delete('/recurring/{recurring}', [RecurringExpenseController::class, 'destroy'])->name('finance.recurring.destroy');
+        Route::get('/claims', [ClaimController::class, 'index'])->name('finance.claims');
+        Route::post('/claims', [ClaimController::class, 'store'])->name('finance.claims.store');
+        Route::post('/claims/{claim}/approve', [ClaimController::class, 'approve'])->name('finance.claims.approve');
+        Route::post('/claims/{claim}/reject', [ClaimController::class, 'reject'])->name('finance.claims.reject');
+        Route::post('/claims/{claim}/pay', [ClaimController::class, 'pay'])->name('finance.claims.pay');
+        Route::get('/claims/{claim}/receipt', [ClaimController::class, 'receipt'])->name('finance.claims.receipt');
     });
 };
 if ($host('finance')) {

@@ -244,6 +244,7 @@ return [
         'salary' => 'Salary',
         'commission' => 'Commission',
         'software' => 'Software & Subscriptions',
+        'staff_claim' => 'Staff Claims',
         'other' => 'Other',
     ],
 

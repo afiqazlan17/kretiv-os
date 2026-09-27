@@ -34,6 +34,21 @@
                 </div>
             @endif
 
+            {{-- Things waiting on BOD/Finance, each linking to where it's handled. --}}
+            @if ($todo && ($todo['recurring'] || $todo['claims'] || $todo['to_pay']))
+                <div class="flex flex-wrap gap-2">
+                    @if ($todo['recurring'])
+                        <a href="{{ route('finance.recurring') }}" class="inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100"><x-icon name="repeat" class="w-4 h-4" /> {{ $todo['recurring'] }} recurring {{ \Illuminate\Support\Str::plural('expense', $todo['recurring']) }} due</a>
+                    @endif
+                    @if ($todo['claims'])
+                        <a href="{{ route('finance.claims') }}" class="inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100"><x-icon name="receipt" class="w-4 h-4" /> {{ $todo['claims'] }} {{ \Illuminate\Support\Str::plural('claim', $todo['claims']) }} to review</a>
+                    @endif
+                    @if ($todo['to_pay'])
+                        <a href="{{ route('finance.claims', ['status' => 'approved']) }}" class="inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 hover:bg-blue-100"><x-icon name="banknote" class="w-4 h-4" /> {{ $todo['to_pay'] }} approved {{ \Illuminate\Support\Str::plural('claim', $todo['to_pay']) }} to pay</a>
+                    @endif
+                </div>
+            @endif
+
             {{-- Snapshot: the four numbers BOD checks first. --}}
             @php
                 $tiles = array_values(array_filter([
@@ -146,7 +161,7 @@
                     @endif
                 </div>
 
-                <form method="POST" action="{{ route('finance.expense.store') }}" x-show="tab === 'expense'" x-cloak class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <form method="POST" action="{{ route('finance.expense.store') }}" enctype="multipart/form-data" x-show="tab === 'expense'" x-cloak class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     @csrf
                     <select name="category" required class="rounded-md border-gray-300 shadow-sm text-sm">
                         @foreach (config('kretivco.expense_categories') as $key => $label)
@@ -168,6 +183,10 @@
                     <input type="date" name="date" value="{{ old('date', now()->toDateString()) }}" class="rounded-md border-gray-300 shadow-sm text-sm">
                     <input type="text" name="job_id" placeholder="Job ID (optional)" class="rounded-md border-gray-300 shadow-sm text-sm">
                     <input type="text" name="notes" placeholder="Notes" class="rounded-md border-gray-300 shadow-sm text-sm">
+                    <div class="sm:col-span-3">
+                        <label class="text-xs text-gray-500">Receipt (take a photo or attach a file)</label>
+                        <input type="file" name="receipt" accept="image/*,.pdf" class="block w-full text-sm text-gray-500 file:mr-2 file:rounded-lg file:border-0 file:bg-[#DCFCE7] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-[#047857]">
+                    </div>
                     <div class="sm:col-span-3"><x-primary-button type="submit">Post Expense</x-primary-button></div>
                 </form>
 

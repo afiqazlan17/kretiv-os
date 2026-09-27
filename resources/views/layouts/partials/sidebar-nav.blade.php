@@ -57,19 +57,32 @@
         @php
             // Line icons per report (the emoji in FinanceReportController::REPORTS are not used).
             $financeIcons = ['general-ledger' => 'book-open', 'trial-balance' => 'scale', 'balance-sheet' => 'receipt', 'cash-book' => 'banknote', 'aging' => 'hourglass', 'bank-reconciliation' => 'landmark', 'sales' => 'chart-line', 'installments' => 'calendar'];
-            $financeNav = [['label' => 'Dashboard', 'url' => route('finance.index'), 'icon' => 'layout-dashboard', 'active' => request()->routeIs('finance.index')]];
+            $financeNav = [
+                ['label' => 'Dashboard', 'url' => route('finance.index'), 'icon' => 'layout-dashboard', 'active' => request()->routeIs('finance.index')],
+                ['label' => 'Collections', 'url' => route('finance.collections'), 'icon' => 'hourglass', 'active' => request()->routeIs('finance.collections')],
+            ];
+            if ($user->seesCompanyFinance()) {
+                $dueRecurring = \App\Models\RecurringExpense::all()->filter->isDue()->count();
+                $pendingClaims = \App\Models\Claim::where('status', 'pending')->count();
+                $financeNav[] = ['label' => 'Recurring', 'url' => route('finance.recurring'), 'icon' => 'repeat', 'active' => request()->routeIs('finance.recurring'), 'badge' => $dueRecurring];
+                $financeNav[] = ['label' => 'Claims', 'url' => route('finance.claims'), 'icon' => 'receipt', 'active' => request()->routeIs('finance.claims'), 'badge' => $pendingClaims];
+            }
+            $reportsStart = count($financeNav);
             foreach ($financeSubmenu as $key => [$label]) {
                 if ($key === 'finance.index') { continue; }
                 $financeNav[] = ['label' => $label, 'url' => route('finance.reports', $key), 'icon' => $financeIcons[$key] ?? 'file-text', 'active' => $activeFinanceReport === $key];
             }
         @endphp
         @foreach ($financeNav as $i => $item)
-            @if ($i === 1)
+            @if ($i === $reportsStart)
                 <div class="px-3 pt-4 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Reports</div>
             @endif
             <a href="{{ $item['url'] }}" class="flex items-center gap-3 h-10 px-3 mb-0.5 rounded-xl text-[13px] whitespace-nowrap transition-colors {{ $item['active'] ? $activeCls : 'text-gray-600 font-medium hover:bg-[#F0FDF4] hover:text-gray-900' }}">
                 <x-icon :name="$item['icon']" class="w-[18px] h-[18px] shrink-0 {{ $item['active'] ? '' : 'text-gray-400' }}" />
                 <span class="truncate">{{ $item['label'] }}</span>
+                @if (! empty($item['badge']))
+                    <span class="ml-auto text-[11px] font-bold rounded-full px-2 py-0.5 bg-amber-100 text-amber-800">{{ $item['badge'] }}</span>
+                @endif
             </a>
         @endforeach
     @else

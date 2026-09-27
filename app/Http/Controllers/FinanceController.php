@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Claim;
 use App\Models\LedgerEntry;
+use App\Models\RecurringExpense;
 use App\Models\User;
 use App\Services\FinanceReports;
 use App\Services\LedgerService;
+use App\Support\ReceiptUpload;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -60,6 +63,11 @@ class FinanceController extends Controller
                 'owed' => (float) $reports->upTo(now())->profitAndLoss()['receivable'],
             ],
             'companyView' => $user->seesCompanyFinance(),
+            'todo' => $user->seesCompanyFinance() ? [
+                'recurring' => RecurringExpense::all()->filter->isDue()->count(),
+                'claims' => Claim::where('status', 'pending')->count(),
+                'to_pay' => Claim::where('status', 'approved')->count(),
+            ] : null,
             'ledger' => $ledger,
             'bankBalances' => $bankBalances,
             'pl' => ['receivable' => $reports->upTo($to)->profitAndLoss()['receivable']] + $period->profitAndLoss(),
@@ -109,9 +117,10 @@ class FinanceController extends Controller
             'bank' => ['required', 'in:'.implode(',', array_keys(config('kretivco.banks')))],
             'date' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
+            'receipt' => ReceiptUpload::RULES,
         ]);
 
-        $ledger->postExpenseEntry($validated, $request->user()->name);
+        $ledger->postExpenseEntry($validated + ReceiptUpload::store($request, 'ledger-receipts'), $request->user()->name);
 
         return back()->with('success', 'Expense posted.');
     }
@@ -149,13 +158,7 @@ class FinanceController extends Controller
             'receipt' => ['nullable', 'file', 'max:20480'],
         ]);
 
-        if ($request->hasFile('receipt')) {
-            $file = $request->file('receipt');
-            $validated['receipt_path'] = $file->storeAs('ledger-receipts', time().'_'.$file->getClientOriginalName(), 'public');
-            $validated['receipt_name'] = $file->getClientOriginalName();
-        }
-
-        $ledger->postDirectorLoan($validated, $request->user()->name);
+        $ledger->postDirectorLoan($validated + ReceiptUpload::store($request, 'ledger-receipts'), $request->user()->name);
 
         return back()->with('success', 'Director loan entry posted.');
     }

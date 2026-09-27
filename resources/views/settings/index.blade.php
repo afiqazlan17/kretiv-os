@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between flex-wrap gap-3" x-data>
-            <h2 class="font-bold text-2xl text-white leading-tight">Settings</h2>
+            <h2 class="font-bold text-2xl text-white leading-tight">Users &amp; Access</h2>
             <button type="button" @click="$store.settingsUi.showAdd = !$store.settingsUi.showAdd" class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white text-[#C2185B] hover:bg-[#FFF1EC] text-sm font-semibold rounded-xl shadow-sm">
                 <x-icon name="plus" class="w-4 h-4" /> Add User
             </button>
@@ -236,6 +236,18 @@
                                         <div>
                                             <x-input-label value="Title" />
                                             <x-text-input name="title" type="text" class="mt-1 block w-full" :value="$user->title" />
+                                        </div>
+                                        <div class="sm:col-span-2" x-show="role !== 'bod'" x-cloak>
+                                            <x-input-label value="Modules" />
+                                            <input type="hidden" name="modules_present" value="1">
+                                            <div class="mt-1 flex flex-wrap gap-2">
+                                                @foreach (\App\Models\User::MODULES as $module)
+                                                    <label class="flex items-center gap-2 rounded-xl border border-[#EFE3DE] px-3 py-2 text-sm cursor-pointer">
+                                                        <input type="checkbox" name="modules[]" value="{{ $module }}" @checked($user->canAccess($module))>
+                                                        {{ ['jobs' => 'Jobs', 'finance' => 'Finance', 'hr' => 'HR'][$module] ?? ucfirst($module) }}
+                                                    </label>
+                                                @endforeach
+                                            </div>
                                         </div>
                                         <div class="sm:col-span-2 flex items-center gap-3">
                                             <x-primary-button type="submit">Save</x-primary-button>

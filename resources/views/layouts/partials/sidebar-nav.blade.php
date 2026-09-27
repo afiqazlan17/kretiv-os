@@ -9,7 +9,6 @@
         ['key' => 'finance', 'label' => 'Finance', 'route' => 'finance.index', 'pattern' => 'finance.*', 'icon' => 'wallet', 'roles' => ['bod', 'dept_head', 'finance']],
         ['key' => 'reports', 'label' => 'Reports', 'route' => 'reports.index', 'icon' => 'chart-line', 'roles' => ['bod', 'dept_head']],
         ['key' => 'departments', 'label' => 'Departments', 'route' => 'departments.index', 'icon' => 'building-2'],
-        ['key' => 'settings', 'label' => 'Settings', 'route' => 'settings.index', 'icon' => 'settings', 'roles' => ['bod']],
     ];
 @endphp
 
@@ -95,9 +94,10 @@
                 </div>
             </div>
         </div>
+        <a href="{{ route('password.change') }}" class="mt-2.5 flex items-center justify-center gap-1.5 w-full py-1.5 text-[11px] font-medium text-gray-500 hover:text-[#C2185B]"><x-icon name="key-round" class="w-3.5 h-3.5" /> Change password</a>
         <form method="POST" action="{{ route('logout') }}">
             @csrf
-            <button type="submit" class="mt-2.5 w-full py-1.5 text-[11px] font-medium text-gray-500 bg-white border border-[#F0DDD5] rounded-lg hover:text-[#C2185B] hover:border-[#F4B6C8]">
+            <button type="submit" class="mt-1 w-full py-1.5 text-[11px] font-medium text-gray-500 bg-white border border-[#F0DDD5] rounded-lg hover:text-[#C2185B] hover:border-[#F4B6C8]">
                 Log Out
             </button>
         </form>

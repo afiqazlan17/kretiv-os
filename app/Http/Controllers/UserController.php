@@ -9,7 +9,6 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class UserController extends Controller
@@ -66,16 +65,17 @@ class UserController extends Controller
 
         $validated = $this->validated($request);
 
-        $password = Str::password(16);
+        $password = self::temporaryPassword();
 
         $user = User::create([
             ...$validated,
             'password' => Hash::make($password),
+            'must_change_password' => true,
             'email_verified_at' => now(),
             'active' => true,
         ]);
 
-        return back()->with('success', "{$user->name} ditambah sebagai {$validated['role']}. Password sementara: {$password} (salin sekarang — tidak dipaparkan lagi).");
+        return back()->with('success', "{$user->name} ditambah sebagai {$validated['role']}. Password sementara: {$password} (salin sekarang, tidak dipaparkan lagi). Dia akan diminta tukar password semasa log masuk pertama.");
     }
 
     public function update(Request $request, User $user): RedirectResponse
@@ -83,6 +83,12 @@ class UserController extends Controller
         $this->authorize('update', $user);
 
         $validated = $this->validated($request, $user);
+
+        // Module access (Jobs / Finance / HR) lives on the same form now that this
+        // is the one Users & Access page; BOD always has every module.
+        if ($request->boolean('modules_present') && $validated['role'] !== User::ROLE_BOD) {
+            $validated['modules'] = array_values(array_intersect(User::MODULES, (array) $request->input('modules', [])));
+        }
 
         $user->update($validated);
 
@@ -93,11 +99,23 @@ class UserController extends Controller
     {
         abort_unless($request->user()->isBod(), 403);
 
-        $password = Str::password(16);
+        $password = self::temporaryPassword();
 
-        $user->update(['password' => Hash::make($password)]);
+        $user->update(['password' => Hash::make($password), 'must_change_password' => true]);
 
-        return back()->with('success', "Password {$user->name} direset. Password sementara: {$password} (salin sekarang — tidak dipaparkan lagi).");
+        return back()->with('success', "Password {$user->name} direset. Password sementara: {$password} (salin sekarang, tidak dipaparkan lagi). Dia akan diminta tukar password semasa log masuk.");
+    }
+
+    /**
+     * Short and easy to read out or WhatsApp: 8 lowercase letters/digits with
+     * look-alikes (0/o, 1/l/i) left out. Only good for one sign-in, since the
+     * user must replace it straight away (see ForcePasswordChange).
+     */
+    public static function temporaryPassword(): string
+    {
+        $alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
+
+        return collect(range(1, 8))->map(fn () => $alphabet[random_int(0, strlen($alphabet) - 1)])->implode('');
     }
 
     public function toggleActive(User $user): RedirectResponse

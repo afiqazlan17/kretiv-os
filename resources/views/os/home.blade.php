@@ -40,14 +40,22 @@
                     </button>
                 </div>
 
-                {{-- Quick link out to the public marketing site. --}}
+                {{-- Quick links out: the public site and the company webmail (cPanel). --}}
                 <a href="https://kretiv.co" target="_blank" rel="noopener" class="mt-4 flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 px-4 py-3.5 hover:border-white/25 transition-colors">
-                    <img src="{{ asset('images/kretivco-logo.png') }}" alt="" class="w-10 h-10 shrink-0">
+                    <span class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-white" style="background:linear-gradient(135deg,#E91E63,#F46A3A)"><x-icon name="globe" class="w-5 h-5" /></span>
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-semibold text-white">Visit our website</p>
-                        <p class="text-xs text-white/40">kretiv.co</p>
+                        <p class="text-xs text-white/40 truncate">kretiv.co</p>
                     </div>
-                    <span class="text-white/40 text-lg">→</span>
+                    <x-icon name="arrow-right" class="w-4 h-4 text-white/40 shrink-0" />
+                </a>
+                <a href="https://sc171.mschosting.cloud:2096/" target="_blank" rel="noopener" class="mt-2 flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 px-4 py-3.5 hover:border-white/25 transition-colors">
+                    <span class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-white" style="background:linear-gradient(135deg,#3A86FF,#6FB7FF)"><x-icon name="mail" class="w-5 h-5" /></span>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-white">Open Your Email</p>
+                        <p class="text-xs text-white/40 truncate">Kretivco webmail</p>
+                    </div>
+                    <x-icon name="arrow-right" class="w-4 h-4 text-white/40 shrink-0" />
                 </a>
             </div>
 
@@ -63,7 +71,7 @@
                         <img src="{{ asset('images/os-cards/jobs.jpg') }}" alt="" class="w-full h-full object-cover">
                     </div>
                     <h2 class="font-semibold text-white">Jobs</h2>
-                    <p class="text-xs text-white/50 mt-1">{{ $user->canAccess('jobs') ? 'Projects & Clients' : 'No access — ask BOD' }}</p>
+                    <p class="text-xs text-white/50 mt-1">{{ $user->canAccess('jobs') ? 'Projects & Clients' : 'No access, ask BOD' }}</p>
                 </div>
 
                 <div class="os-card rounded-2xl p-5 pt-0 flex flex-col items-center text-center overflow-hidden opacity-50">
@@ -83,7 +91,7 @@
                         <img src="{{ asset('images/os-cards/finance.jpg') }}" alt="" class="w-full h-full object-cover">
                     </div>
                     <h2 class="font-semibold text-white">Finance</h2>
-                    <p class="text-xs text-white/50 mt-1">{{ $user->canAccess('finance') ? 'Numbers & Reports' : 'No access — ask BOD' }}</p>
+                    <p class="text-xs text-white/50 mt-1">{{ $user->canAccess('finance') ? 'Numbers & Reports' : 'No access, ask BOD' }}</p>
                 </div>
             </div>
         </div>
@@ -98,8 +106,8 @@
             <div class="space-y-2">
                 @forelse ($dueJobs as $job)
                     <a href="{{ route('jobs.show', $job) }}" target="_blank" rel="noopener" class="flex items-center gap-3 text-sm px-3 py-2.5 rounded-lg bg-red-500/10 hover:bg-red-500/15">
-                        <span>⚠️</span>
-                        <span class="text-red-300"><strong class="text-white">{{ $job->job_id }}</strong> {{ $job->job_type }} — {{ $job->deadline->startOfDay()->eq($today) ? 'deadline today' : 'overdue since '.$job->deadline->format('j M') }}</span>
+                        <x-icon name="triangle-alert" class="w-4 h-4 text-red-300 shrink-0" />
+                        <span class="text-red-300"><strong class="text-white">{{ $job->job_id }}</strong> {{ $job->job_type }}: {{ $job->deadline->startOfDay()->eq($today) ? 'deadline today' : 'overdue since '.$job->deadline->format('j M') }}</span>
                         <span class="ml-auto text-xs underline text-white/50">Open</span>
                     </a>
                 @empty
@@ -107,7 +115,7 @@
 
                 @if ($queueCount > 0)
                     <a href="{{ route('jobs.index', ['view' => 'queue']) }}" target="_blank" rel="noopener" class="flex items-center gap-3 text-sm px-3 py-2.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/15">
-                        <span>📥</span><span class="text-amber-300">{{ $queueCount }} {{ \Illuminate\Support\Str::plural('job', $queueCount) }} in the queue waiting to be taken in</span>
+                        <x-icon name="inbox" class="w-4 h-4 text-amber-300 shrink-0" /><span class="text-amber-300">{{ $queueCount }} {{ \Illuminate\Support\Str::plural('job', $queueCount) }} in the queue waiting to be taken in</span>
                         <span class="ml-auto text-xs underline text-white/50">View queue</span>
                     </a>
                 @endif
@@ -117,11 +125,11 @@
                 @endif
 
                 <div class="flex items-center gap-3 text-sm px-3 py-2.5 rounded-lg bg-white/[0.03] text-white/30">
-                    <span>📝</span><span>No memos from HR yet</span>
+                    <x-icon name="notebook-pen" class="w-4 h-4 shrink-0" /><span>No memos from HR yet</span>
                     <span class="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded bg-white/10">Coming soon</span>
                 </div>
                 <div class="flex items-center gap-3 text-sm px-3 py-2.5 rounded-lg bg-white/[0.03] text-white/30">
-                    <span>📣</span><span>No announcements yet</span>
+                    <x-icon name="megaphone" class="w-4 h-4 shrink-0" /><span>No announcements yet</span>
                     <span class="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded bg-white/10">Coming soon</span>
                 </div>
             </div>

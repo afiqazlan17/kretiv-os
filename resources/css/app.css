@@ -242,9 +242,19 @@ a.k-card:hover, .k-card--hover:hover {
     border-color: #FCB03C !important;
     box-shadow: 0 0 0 3px rgba(252, 176, 60, 0.25) !important;
 }
+/* background-color, not the `background` shorthand: the shorthand also wiped
+   the forms plugin's tick image, so a ticked "Remember me" looked unticked. */
 .guest-card input[type="checkbox"] {
-    background: rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.3);
+    color: #E91E63;
+}
+.guest-card input[type="checkbox"]:checked {
+    background-color: #E91E63;
+    border-color: #E91E63;
+}
+.guest-card input[type="checkbox"]:focus {
+    box-shadow: 0 0 0 3px rgba(233, 30, 99, 0.35);
 }
 .guest-card .text-gray-600,
 .guest-card .text-gray-900 {

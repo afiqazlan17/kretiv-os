@@ -72,7 +72,8 @@ class KretivOsTest extends TestCase
         $staff = User::factory()->create(['role' => User::ROLE_STAFF]);
 
         $this->actingAs($staff)->get(route('os.access'))->assertForbidden();
-        $this->actingAs($bod)->get(route('os.access'))->assertOk()->assertSee($staff->email);
+        $this->actingAs($bod)->get(route('os.access'))->assertRedirect(route('settings.index'));
+        $this->actingAs($bod)->get(route('settings.index'))->assertOk()->assertSee($staff->email);
 
         $this->actingAs($bod)->put(route('os.access.update', $staff), ['role' => 'finance', 'modules' => ['finance'], 'active' => '1'])->assertSessionHasNoErrors();
         $staff->refresh();
@@ -94,7 +95,7 @@ class KretivOsTest extends TestCase
         $staff = User::factory()->create(['role' => User::ROLE_STAFF]);
 
         $this->actingAs($bod)->get(route('os.home'))->assertSee('Users &amp; Access', false);
-        $this->actingAs($staff)->get(route('os.home'))->assertDontSee('Users &amp; Access', false)->assertSee('No access — ask BOD');
+        $this->actingAs($staff)->get(route('os.home'))->assertDontSee('Users &amp; Access', false)->assertSee('No access, ask BOD');
     }
 
     public function test_finance_role_can_use_the_finance_module_across_all_departments(): void

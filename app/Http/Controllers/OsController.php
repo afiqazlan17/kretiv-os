@@ -43,14 +43,13 @@ class OsController extends Controller
     }
 
     /** BOD-only: who can open which module, and their role / active state. */
-    public function access(Request $request): View
+    public function access(Request $request): RedirectResponse
     {
         abort_unless($request->user()->isBod(), 403);
 
-        $order = array_flip(array_keys(config('kretivco.roles')));
-        $users = User::orderBy('name')->get()->sortBy(fn (User $u) => $order[$u->role] ?? 99)->values();
-
-        return view('os.access', ['users' => $users]);
+        // One place for users: the Users & Access page (settings.index), which
+        // now also holds module access. Kept as a redirect for old links.
+        return redirect()->route('settings.index');
     }
 
     public function updateAccess(Request $request, User $user): RedirectResponse

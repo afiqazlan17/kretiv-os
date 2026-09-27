@@ -44,7 +44,21 @@ class FinanceController extends Controller
             ->when($bank, fn ($e) => $e->filter(fn (LedgerEntry $x) => $x->bank === $bank || in_array("bank_{$bank}", [$x->debit_account, $x->credit_account], true)))
             ->sortByDesc('date')->values()->take(200);
 
+        // Dashboard snapshot. Money in/out this month counts live entries that
+        // touch a bank account, leaving out voided ones, their reversals, opening
+        // balances and transfers between our own banks.
+        $monthLive = $entries->filter(fn (LedgerEntry $e) => ! $e->reversed
+            && ! in_array($e->type, ['reversal', 'opening_balance', 'bank_transfer'], true)
+            && $e->date && $e->date->gte(now()->startOfMonth()));
+        $touchesBank = fn (?string $account) => str_starts_with((string) $account, 'bank_');
+
         return view('finance.index', [
+            'snapshot' => [
+                'cash' => $user->seesCompanyFinance() ? (float) $bankBalances->sum() : null,
+                'in' => (float) $monthLive->filter(fn (LedgerEntry $e) => $touchesBank($e->debit_account))->sum('amount'),
+                'out' => (float) $monthLive->filter(fn (LedgerEntry $e) => $touchesBank($e->credit_account))->sum('amount'),
+                'owed' => (float) $reports->upTo(now())->profitAndLoss()['receivable'],
+            ],
             'companyView' => $user->seesCompanyFinance(),
             'ledger' => $ledger,
             'bankBalances' => $bankBalances,

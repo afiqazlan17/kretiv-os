@@ -2,40 +2,60 @@
     <x-slot name="header">
         <div class="flex items-center justify-between flex-wrap gap-3" x-data="{ more: false }">
             <div>
-                <h2 class="font-semibold text-xl text-white leading-tight">Finance</h2>
-                <p class="text-xs text-white/60 mt-0.5">Revenue, expense &amp; ledger</p>
+                <h2 class="font-bold text-2xl text-white leading-tight">Finance</h2>
             </div>
             <div class="flex items-center gap-2">
                 @if ($companyView)
                 <div class="relative" @click.outside="more = false">
-                    <button type="button" @click="more = !more" class="px-4 py-2 bg-white/15 hover:bg-white/25 text-white text-xs font-semibold rounded-md">More &#9662;</button>
-                    <div x-show="more" x-cloak class="absolute right-0 mt-2 w-52 bg-white rounded-md shadow-lg py-1 z-20 text-sm text-gray-700" @click="more = false">
-                        <button type="button" @click="$dispatch('finance-tab', 'opening')" class="w-full text-left px-4 py-2 hover:bg-gray-50">Adjust Bank Balance</button>
-                        <button type="button" @click="$dispatch('finance-tab', 'loan')" class="w-full text-left px-4 py-2 hover:bg-gray-50">+ Director Loan</button>
-                        <button type="button" @click="$dispatch('finance-tab', 'transfer')" class="w-full text-left px-4 py-2 hover:bg-gray-50">+ Transfer Bank</button>
+                    <button type="button" @click="more = !more" class="inline-flex items-center gap-1 px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white text-sm font-semibold rounded-xl">More <x-icon name="chevron-down" class="w-4 h-4" /></button>
+                    <div x-show="more" x-cloak class="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-[#E7EFEA] p-1.5 z-20 text-sm text-gray-700" @click="more = false">
+                        <button type="button" @click="$dispatch('finance-tab', 'opening')" class="w-full text-left px-3 py-2 rounded-lg hover:bg-[#F0FDF4]">Adjust Bank Balance</button>
+                        <button type="button" @click="$dispatch('finance-tab', 'loan')" class="w-full text-left px-3 py-2 rounded-lg hover:bg-[#F0FDF4]">Director Loan</button>
+                        <button type="button" @click="$dispatch('finance-tab', 'transfer')" class="w-full text-left px-3 py-2 rounded-lg hover:bg-[#F0FDF4]">Transfer Between Banks</button>
                     </div>
                 </div>
                 @endif
-                <button type="button" @click="$dispatch('finance-tab', 'expense')" class="px-4 py-2 bg-white text-pink-600 text-xs font-semibold rounded-md hover:bg-pink-50">+ Add Expense</button>
+                <button type="button" @click="$dispatch('finance-tab', 'expense')" class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white text-[#047857] text-sm font-semibold rounded-xl shadow-sm hover:bg-[#F0FDF4]"><x-icon name="plus" class="w-4 h-4" /> Add Expense</button>
             </div>
         </div>
     </x-slot>
 
-    <div class="py-8">
-        <div class="max-w-6xl mx-auto sm:px-6 lg:px-8 space-y-6">
+    <div class="p-5 md:p-7">
+        <div class="space-y-4">
 
             @if (session('success'))
-                <div class="rounded-md bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3">
+                <div class="rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3">
                     {{ session('success') }}
                 </div>
             @endif
             @if ($errors->any())
-                <div class="rounded-md bg-red-50 border border-red-200 text-red-800 text-sm px-4 py-3">
+                <div class="rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm px-4 py-3">
                     {{ $errors->first() }}
                 </div>
             @endif
 
-            <div class="bg-white shadow-sm sm:rounded-lg p-6">
+            {{-- Snapshot: the four numbers BOD checks first. --}}
+            @php
+                $tiles = array_values(array_filter([
+                    $snapshot['cash'] !== null ? ['icon' => 'landmark', 'label' => 'Cash in bank', 'value' => $snapshot['cash'], 'sub' => 'All accounts, right now', 'c1' => '#059669', 'c2' => '#34D399'] : null,
+                    ['icon' => 'trending-up', 'label' => 'Money in', 'value' => $snapshot['in'], 'sub' => now()->format('F Y'), 'c1' => '#3A86FF', 'c2' => '#6FB7FF'],
+                    ['icon' => 'receipt', 'label' => 'Money out', 'value' => $snapshot['out'], 'sub' => now()->format('F Y'), 'c1' => '#F97316', 'c2' => '#FDBA74'],
+                    ['icon' => 'hourglass', 'label' => 'Owed by customers', 'value' => $snapshot['owed'], 'sub' => 'Invoiced, not yet paid', 'c1' => '#E91E63', 'c2' => '#FF7A9C'],
+                ]));
+            @endphp
+            <div class="grid grid-cols-2 {{ count($tiles) === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3' }} gap-4">
+                @foreach ($tiles as $t)
+                    <div class="k-card relative overflow-hidden p-5">
+                        <div class="absolute -top-8 -right-8 w-28 h-28 rounded-full" style="background:{{ $t['c1'] }}12"></div>
+                        <div class="relative w-11 h-11 rounded-2xl flex items-center justify-center text-white" style="background:linear-gradient(135deg,{{ $t['c1'] }},{{ $t['c2'] }});box-shadow:0 8px 18px -8px {{ $t['c1'] }}"><x-icon :name="$t['icon']" class="w-5 h-5" /></div>
+                        <div class="relative mt-4 text-xl md:text-2xl font-extrabold text-gray-900 leading-none truncate">RM {{ number_format($t['value'], 2) }}</div>
+                        <div class="relative mt-1.5 text-sm font-semibold text-gray-700">{{ $t['label'] }}</div>
+                        <div class="relative text-xs text-gray-400 mt-0.5">{{ $t['sub'] }}</div>
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="k-card p-5 md:p-6">
                 <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
                     <div>
                         <h3 class="text-base font-bold text-gray-900">P&amp;L Statement (Profit &amp; Loss)</h3>
@@ -56,7 +76,8 @@
                 @endphp
                 <div class="grid grid-cols-2 lg:grid-cols-3 gap-3">
                     @foreach ($cards as [$label, $value, $color])
-                        <div class="rounded-lg border border-gray-100 border-l-4 p-4" style="border-left-color: {{ $color }}">
+                        <div class="rounded-2xl bg-[#FAFAF9] border border-[#EFEDEA] p-4">
+                            <div class="w-2 h-2 rounded-full mb-2" style="background: {{ $color }}"></div>
                             <div class="text-[11px] font-semibold text-gray-400 uppercase">{{ $label }}</div>
                             <div class="text-xl font-bold mt-1 {{ $value < 0 ? 'text-red-600' : 'text-gray-900' }}">RM {{ number_format($value, 2) }}</div>
                         </div>
@@ -65,9 +86,9 @@
             </div>
 
             @if ($companyView)
-            <div class="bg-white shadow-sm sm:rounded-lg p-6">
+            <div class="k-card p-5 md:p-6">
                 <h3 class="text-base font-bold text-gray-900">Bank Balance <span class="text-xs font-normal text-gray-400">(click to filter Ledger)</span></h3>
-                <p class="text-xs text-gray-400 mb-3">Current balance (all-time) — not limited to the P&amp;L period above</p>
+                <p class="text-xs text-gray-400 mb-3">Current balance (all-time), not limited to the P&amp;L period above</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     @foreach ($bankBalances as $key => $balance)
                         <a href="{{ request()->fullUrlWithQuery(['bank' => $bank === $key ? null : $key]) }}#ledger" class="rounded-lg border p-4 hover:bg-gray-50 {{ $bank === $key ? 'border-pink-400 bg-pink-50/40' : 'border-gray-100' }}">
@@ -79,14 +100,14 @@
             </div>
             @endif
 
-            <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden">
+            <div class="k-card overflow-hidden">
                 <div class="p-4 border-b border-gray-100">
                     <h3 class="text-base font-bold text-gray-900">Collections &amp; Payments by Bank</h3>
                     <p class="text-xs text-gray-400">Money that actually moved in/out of each bank during the P&amp;L period above</p>
                 </div>
-                <table class="min-w-full divide-y divide-gray-100 text-sm">
-                    <thead class="bg-gray-50"><tr class="text-left text-xs text-gray-500 uppercase"><th class="px-4 py-3">Bank</th><th class="px-4 py-3 text-right">Collected</th><th class="px-4 py-3 text-right">Paid Out</th><th class="px-4 py-3 text-right">Net</th></tr></thead>
-                    <tbody class="divide-y divide-gray-100">
+                <table class="min-w-full divide-y divide-[#F0EDE9] text-sm">
+                    <thead><tr class="text-left text-xs text-gray-500 uppercase"><th class="px-4 py-3">Bank</th><th class="px-4 py-3 text-right">Collected</th><th class="px-4 py-3 text-right">Paid Out</th><th class="px-4 py-3 text-right">Net</th></tr></thead>
+                    <tbody class="divide-y divide-[#F0EDE9]">
                         @foreach ($collections as $key => $row)
                             <tr><td class="px-4 py-3">{{ config("kretivco.banks.$key.label") }}</td><td class="px-4 py-3 text-right text-green-600">RM {{ number_format($row['collected'], 2) }}</td><td class="px-4 py-3 text-right text-red-600">RM {{ number_format($row['paid'], 2) }}</td><td class="px-4 py-3 text-right font-semibold">RM {{ number_format($row['net'], 2) }}</td></tr>
                         @endforeach
@@ -94,14 +115,14 @@
                 </table>
             </div>
 
-            <div class="bg-white shadow-sm sm:rounded-lg overflow-hidden">
+            <div class="k-card overflow-hidden">
                 <div class="p-4 border-b border-gray-100">
                     <h3 class="text-base font-bold text-gray-900">Department Breakdown</h3>
                     <p class="text-xs text-gray-400">For the P&amp;L period above</p>
                 </div>
-                <table class="min-w-full divide-y divide-gray-100 text-sm">
-                    <thead class="bg-gray-50"><tr class="text-left text-xs text-gray-500 uppercase"><th class="px-4 py-3">Department</th><th class="px-4 py-3 text-right">Revenue</th><th class="px-4 py-3 text-right">Cost</th><th class="px-4 py-3 text-right">Gross Profit</th></tr></thead>
-                    <tbody class="divide-y divide-gray-100">
+                <table class="min-w-full divide-y divide-[#F0EDE9] text-sm">
+                    <thead><tr class="text-left text-xs text-gray-500 uppercase"><th class="px-4 py-3">Department</th><th class="px-4 py-3 text-right">Revenue</th><th class="px-4 py-3 text-right">Cost</th><th class="px-4 py-3 text-right">Gross Profit</th></tr></thead>
+                    <tbody class="divide-y divide-[#F0EDE9]">
                         @foreach ($deptBreakdown as $key => $row)
                             <tr>
                                 <td class="px-4 py-3 font-medium" style="color: {{ config("kretivco.departments.$key.color") }}">{{ \App\Http\Controllers\JobController::DEPT_CODES[$key] ?? strtoupper($key) }} {{ config("kretivco.departments.$key.label") }}</td>
@@ -114,14 +135,14 @@
                 </table>
             </div>
 
-            <div id="post-entry" class="bg-white shadow-sm sm:rounded-lg p-6" x-data="{ tab: null }" @finance-tab.window="tab = $event.detail; $nextTick(() => $el.scrollIntoView({ behavior: 'smooth', block: 'center' }))">
+            <div id="post-entry" class="k-card p-5 md:p-6" x-data="{ tab: null }" @finance-tab.window="tab = $event.detail; $nextTick(() => $el.scrollIntoView({ behavior: 'smooth', block: 'center' }))">
                 <h3 class="text-sm font-semibold text-gray-500 uppercase mb-4">Post an Entry</h3>
                 <div class="flex flex-wrap gap-2 mb-4">
-                    <button type="button" @click="tab = tab === 'expense' ? null : 'expense'" class="text-xs font-semibold px-3 py-2 rounded-md" :class="tab === 'expense' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'">Expense</button>
+                    <button type="button" @click="tab = tab === 'expense' ? null : 'expense'" class="text-xs font-semibold px-3 py-2 rounded-md" :class="tab === 'expense' ? 'bg-[#047857] text-white' : 'bg-gray-100 text-gray-600'">Expense</button>
                     @if ($companyView)
-                    <button type="button" @click="tab = tab === 'opening' ? null : 'opening'" class="text-xs font-semibold px-3 py-2 rounded-md" :class="tab === 'opening' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'">Opening Balance</button>
-                    <button type="button" @click="tab = tab === 'loan' ? null : 'loan'" class="text-xs font-semibold px-3 py-2 rounded-md" :class="tab === 'loan' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'">Director Loan</button>
-                    <button type="button" @click="tab = tab === 'transfer' ? null : 'transfer'" class="text-xs font-semibold px-3 py-2 rounded-md" :class="tab === 'transfer' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600'">Bank Transfer</button>
+                    <button type="button" @click="tab = tab === 'opening' ? null : 'opening'" class="text-xs font-semibold px-3 py-2 rounded-md" :class="tab === 'opening' ? 'bg-[#047857] text-white' : 'bg-gray-100 text-gray-600'">Opening Balance</button>
+                    <button type="button" @click="tab = tab === 'loan' ? null : 'loan'" class="text-xs font-semibold px-3 py-2 rounded-md" :class="tab === 'loan' ? 'bg-[#047857] text-white' : 'bg-gray-100 text-gray-600'">Director Loan</button>
+                    <button type="button" @click="tab = tab === 'transfer' ? null : 'transfer'" class="text-xs font-semibold px-3 py-2 rounded-md" :class="tab === 'transfer' ? 'bg-[#047857] text-white' : 'bg-gray-100 text-gray-600'">Bank Transfer</button>
                     @endif
                 </div>
 
@@ -133,7 +154,7 @@
                         @endforeach
                     </select>
                     <select name="department" class="rounded-md border-gray-300 shadow-sm text-sm">
-                        <option value="">— Operating expense —</option>
+                        <option value="">Operating expense (no department)</option>
                         @foreach (config('kretivco.departments') as $key => $dept)
                             <option value="{{ $key }}">{{ $dept['label'] }}</option>
                         @endforeach
@@ -201,7 +222,7 @@
                 </form>
             </div>
 
-            <div id="ledger" class="bg-white shadow-sm sm:rounded-lg overflow-hidden">
+            <div id="ledger" class="k-card overflow-hidden">
                 <div class="p-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
                     <h3 class="text-base font-bold text-gray-900">Ledger</h3>
                     <form method="GET" class="flex gap-2">
@@ -217,14 +238,14 @@
                     </form>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-100 text-sm">
-                        <thead class="bg-gray-50">
+                    <table class="min-w-full divide-y divide-[#F0EDE9] text-sm">
+                        <thead>
                             <tr class="text-left text-xs text-gray-500 uppercase">
                                 <th class="px-4 py-3">Date</th><th class="px-4 py-3">Description</th><th class="px-4 py-3">Debit</th><th class="px-4 py-3">Credit</th>
                                 <th class="px-4 py-3">Department</th><th class="px-4 py-3">Bank</th><th class="px-4 py-3">Type</th><th class="px-4 py-3 text-right">Amount</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-100">
+                        <tbody class="divide-y divide-[#F0EDE9]">
                             @forelse ($ledger as $entry)
                                 @php
                                     $intoBank = str_starts_with($entry->debit_account, 'bank_') && ! str_starts_with($entry->credit_account, 'bank_');
@@ -235,13 +256,13 @@
                                     <td class="px-4 py-3">
                                         {{ $entry->description }}
                                         @if ($entry->receipt_path)
-                                            <a href="{{ route('finance.ledger.receipt', $entry) }}" target="_blank" class="ml-1 text-gray-400 hover:text-gray-600" title="{{ $entry->receipt_name }}">📎</a>
+                                            <a href="{{ route('finance.ledger.receipt', $entry) }}" target="_blank" class="ml-1 text-gray-400 hover:text-gray-600" title="{{ $entry->receipt_name }}"><x-icon name="paperclip" class="w-3.5 h-3.5 inline" /></a>
                                         @endif
                                     </td>
                                     <td class="px-4 py-3 text-gray-600">{{ \App\Support\ChartOfAccounts::describe($entry->debit_account)['name'] }}</td>
                                     <td class="px-4 py-3 text-gray-600">{{ \App\Support\ChartOfAccounts::describe($entry->credit_account)['name'] }}</td>
-                                    <td class="px-4 py-3">{{ $entry->department ? (\App\Http\Controllers\JobController::DEPT_CODES[$entry->department] ?? strtoupper($entry->department)) : '—' }}</td>
-                                    <td class="px-4 py-3">{{ $entry->bank ? config("kretivco.banks.{$entry->bank}.label") : '—' }}</td>
+                                    <td class="px-4 py-3">{{ $entry->department ? (\App\Http\Controllers\JobController::DEPT_CODES[$entry->department] ?? strtoupper($entry->department)) : '' }}</td>
+                                    <td class="px-4 py-3">{{ $entry->bank ? config("kretivco.banks.{$entry->bank}.label") : '' }}</td>
                                     <td class="px-4 py-3 whitespace-nowrap">{{ ucfirst(str_replace('_', ' ', $entry->type)) }}</td>
                                     <td class="px-4 py-3 text-right whitespace-nowrap font-semibold {{ $intoBank ? 'text-green-600' : ($outOfBank ? 'text-red-600' : '') }}">{{ $intoBank ? '+' : ($outOfBank ? '-' : '') }}RM {{ number_format($entry->amount, 2) }}</td>
                                 </tr>

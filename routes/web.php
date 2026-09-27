@@ -119,13 +119,23 @@ $onHost('jobs', function () {
         Route::get('/departments', [DepartmentController::class, 'index'])->name('departments.index');
     });
 
-    Route::middleware(['auth', 'module:finance'])->group(function () {
-        Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
-        Route::get('/finance/reports/{report}', [FinanceReportController::class, 'show'])->name('finance.reports');
-        Route::post('/finance/expense', [FinanceController::class, 'storeExpense'])->name('finance.expense.store');
-        Route::post('/finance/opening-balance', [FinanceController::class, 'storeOpeningBalance'])->name('finance.opening-balance.store');
-        Route::post('/finance/director-loan', [FinanceController::class, 'storeDirectorLoan'])->name('finance.director-loan.store');
-        Route::post('/finance/bank-transfer', [FinanceController::class, 'storeBankTransfer'])->name('finance.bank-transfer.store');
-        Route::get('/finance/ledger/{entry}/receipt', [FinanceController::class, 'showReceipt'])->name('finance.ledger.receipt');
-    });
 });
+
+// Finance: its own subdomain (finance.kretiv.co) when FINANCE_HOST is set,
+// otherwise under /finance on the single host (local dev, tests).
+$financeRoutes = function () {
+    Route::middleware(['auth', 'module:finance'])->group(function () {
+        Route::get('/', [FinanceController::class, 'index'])->name('finance.index');
+        Route::get('/reports/{report}', [FinanceReportController::class, 'show'])->name('finance.reports');
+        Route::post('/expense', [FinanceController::class, 'storeExpense'])->name('finance.expense.store');
+        Route::post('/opening-balance', [FinanceController::class, 'storeOpeningBalance'])->name('finance.opening-balance.store');
+        Route::post('/director-loan', [FinanceController::class, 'storeDirectorLoan'])->name('finance.director-loan.store');
+        Route::post('/bank-transfer', [FinanceController::class, 'storeBankTransfer'])->name('finance.bank-transfer.store');
+        Route::get('/ledger/{entry}/receipt', [FinanceController::class, 'showReceipt'])->name('finance.ledger.receipt');
+    });
+};
+if ($host('finance')) {
+    Route::domain($host('finance'))->group($financeRoutes);
+} else {
+    Route::prefix('finance')->group($financeRoutes);
+}

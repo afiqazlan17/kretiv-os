@@ -1,12 +1,15 @@
 @php
     $user = auth()->user();
+    // The same shell serves Jobs and Finance (finance.kretiv.co); Finance gets
+    // its own name, green accent and menu.
+    $inFinance = request()->routeIs('finance.*');
+    $activeCls = $inFinance ? 'bg-gradient-to-r from-[#DCFCE7] to-[#ECFDF5] text-[#047857] font-semibold' : 'bg-gradient-to-r from-[#FFE4EC] to-[#FFF1E6] text-[#C2185B] font-semibold';
     $navItems = [
         ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'layout-dashboard'],
         ['key' => 'jobs', 'label' => 'Job', 'route' => 'jobs.index', 'pattern' => 'jobs.*', 'icon' => 'clipboard-list'],
         ['key' => 'customers', 'label' => 'Customers', 'route' => 'customers.index', 'icon' => 'users'],
         ['key' => 'vendors', 'label' => 'Vendors', 'route' => 'vendors.index', 'icon' => 'factory'],
         ['key' => 'items', 'label' => 'Items', 'route' => 'items.index', 'pattern' => 'items.*', 'icon' => 'package'],
-        ['key' => 'finance', 'label' => 'Finance', 'route' => 'finance.index', 'pattern' => 'finance.*', 'icon' => 'wallet', 'roles' => ['bod', 'dept_head', 'finance']],
         ['key' => 'reports', 'label' => 'Reports', 'route' => 'reports.index', 'icon' => 'chart-line', 'roles' => ['bod', 'dept_head']],
         ['key' => 'departments', 'label' => 'Departments', 'route' => 'departments.index', 'icon' => 'building-2'],
     ];
@@ -15,8 +18,13 @@
 {{-- Logo --}}
 <div class="flex justify-between items-center px-5 pt-6 pb-4">
     <div class="flex items-center gap-2.5">
+        @if ($inFinance)
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#059669] to-[#34D399] flex items-center justify-center text-white shadow-[0_6px_16px_-6px_rgba(5,150,105,0.6)]"><x-icon name="wallet" class="w-5 h-5" /></div>
+            <div class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-[#047857] to-[#10B981] bg-clip-text text-transparent">Finance</div>
+        @else
         <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#E91E63] to-[#FCB03C] flex items-center justify-center text-white shadow-[0_6px_16px_-6px_rgba(233,30,99,0.6)]"><x-icon name="briefcase-business" class="w-5 h-5" /></div>
         <div class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-[#E91E63] to-[#F57C00] bg-clip-text text-transparent">Jobs</div>
+        @endif
     </div>
     <button @click="mobileOpen = false" class="md:hidden text-gray-400 text-2xl leading-none">×</button>
 </div>
@@ -24,7 +32,9 @@
 {{-- Kretiv OS module switcher --}}
 <div class="flex flex-wrap gap-1.5 px-4 pb-4 text-[11px]">
     <a href="{{ route('os.home') }}" class="px-2.5 py-1 rounded-full bg-[#FFF1EC] text-[#C2185B] font-medium hover:bg-[#FFE3DA]">← KretivOS</a>
-    @if ($user->canAccess('finance'))
+    @if ($inFinance && $user->canAccess('jobs'))
+        <a href="{{ route('dashboard') }}" class="px-2.5 py-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-800">Jobs</a>
+    @elseif (! $inFinance && $user->canAccess('finance') && $user->canManageFinance())
         <a href="{{ route('finance.index') }}" class="px-2.5 py-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-800">Finance</a>
     @endif
 </div>
@@ -43,6 +53,26 @@
             ->mapWithKeys(fn ($r, $k) => [$k => $r])->all();
         $activeFinanceReport = request()->routeIs('finance.reports') ? request()->route('report') : (request()->routeIs('finance.index') ? 'finance.index' : null);
     @endphp
+    @if ($inFinance)
+        @php
+            // Line icons per report (the emoji in FinanceReportController::REPORTS are not used).
+            $financeIcons = ['general-ledger' => 'book-open', 'trial-balance' => 'scale', 'balance-sheet' => 'receipt', 'cash-book' => 'banknote', 'aging' => 'hourglass', 'bank-reconciliation' => 'landmark', 'sales' => 'chart-line', 'installments' => 'calendar'];
+            $financeNav = [['label' => 'Dashboard', 'url' => route('finance.index'), 'icon' => 'layout-dashboard', 'active' => request()->routeIs('finance.index')]];
+            foreach ($financeSubmenu as $key => [$label]) {
+                if ($key === 'finance.index') { continue; }
+                $financeNav[] = ['label' => $label, 'url' => route('finance.reports', $key), 'icon' => $financeIcons[$key] ?? 'file-text', 'active' => $activeFinanceReport === $key];
+            }
+        @endphp
+        @foreach ($financeNav as $i => $item)
+            @if ($i === 1)
+                <div class="px-3 pt-4 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Reports</div>
+            @endif
+            <a href="{{ $item['url'] }}" class="flex items-center gap-3 h-10 px-3 mb-0.5 rounded-xl text-[13px] whitespace-nowrap transition-colors {{ $item['active'] ? $activeCls : 'text-gray-600 font-medium hover:bg-[#F0FDF4] hover:text-gray-900' }}">
+                <x-icon :name="$item['icon']" class="w-[18px] h-[18px] shrink-0 {{ $item['active'] ? '' : 'text-gray-400' }}" />
+                <span class="truncate">{{ $item['label'] }}</span>
+            </a>
+        @endforeach
+    @else
     @foreach ($navItems as $item)
         @continue(isset($item['roles']) && ! in_array($user->role, $item['roles'], true))
         @php $active = request()->routeIs($item['pattern'] ?? $item['route']); @endphp
@@ -62,22 +92,8 @@
                 @endforeach
             </div>
         @endif
-        @if ($item['key'] === 'finance' && $active)
-            <div class="py-0.5 pb-1.5">
-                @php
-                    // Line icons per report; the emoji in FinanceReportController::REPORTS are ignored here.
-                    $financeIcons = ['finance.index' => 'layout-dashboard', 'general-ledger' => 'book-open', 'trial-balance' => 'scale', 'balance-sheet' => 'receipt', 'cash-book' => 'banknote', 'aging' => 'hourglass', 'bank-reconciliation' => 'landmark', 'sales' => 'chart-line', 'installments' => 'calendar'];
-                @endphp
-                @foreach ($financeSubmenu as $key => [$label, $icon])
-                    <a href="{{ $key === 'finance.index' ? route('finance.index') : route('finance.reports', $key) }}"
-                       class="flex items-start gap-2 min-h-[34px] py-[7px] pl-11 pr-2.5 text-xs leading-tight rounded-lg {{ $activeFinanceReport === $key ? 'text-[#C2185B] font-semibold' : 'text-gray-500 font-normal hover:text-gray-800' }}">
-                        <x-icon :name="$financeIcons[$key] ?? 'file-text'" class="w-3.5 h-3.5 shrink-0 mt-px" />
-                        <span>{{ $label }}</span>
-                    </a>
-                @endforeach
-            </div>
-        @endif
     @endforeach
+    @endif
 </nav>
 
 {{-- User profile --}}

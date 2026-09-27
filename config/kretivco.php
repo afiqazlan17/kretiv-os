@@ -70,6 +70,7 @@ return [
         'staff' => ['jobs', 'hr'],
         'intern' => ['jobs', 'hr'],
         'finance' => ['finance', 'hr'],
+        'hr' => ['hr'],
     ],
 
     'roles' => [
@@ -78,7 +79,16 @@ return [
         'staff' => ['label' => 'Staff', 'color' => '#6B7280', 'desc' => 'Own department(s): jobs, no reports/finance/settings'],
         'intern' => ['label' => 'Intern', 'color' => '#10B981', 'desc' => 'Own department(s): same access as Staff'],
         'finance' => ['label' => 'Finance', 'color' => '#8B5CF6', 'desc' => 'Finance module only: ledger and vendor payments'],
+        'hr' => ['label' => 'HR', 'color' => '#7C3AED', 'desc' => 'HR management: staff records, onboarding, payroll'],
     ],
+
+    'company_email_domain' => 'kretiv.co',
+
+    // HR: fixed allowance types offered in a staff package (amounts set per person).
+    'allowance_types' => ['transport' => 'Transport', 'phone' => 'Phone', 'meal' => 'Meal', 'other' => 'Other'],
+
+    // Employment Act overtime applies to employees earning up to this monthly wage.
+    'ot_wage_limit' => 4000,
 
     'job_types' => [
         'client_project' => ['label' => 'Client Project', 'color' => '#3A86FF', 'desc' => 'Kretivco does custom work for the customer'],

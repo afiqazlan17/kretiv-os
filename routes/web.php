@@ -12,6 +12,8 @@ use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\FinanceReportController;
+use App\Http\Controllers\Hr\MyProfileController;
+use App\Http\Controllers\Hr\StaffController;
 use App\Http\Controllers\ItemLibraryController;
 use App\Http\Controllers\JobController;
 use App\Http\Controllers\JobVendorCostController;
@@ -166,6 +168,25 @@ $financeRoutes = function () {
         Route::delete('/bank-import', [BankImportController::class, 'clear'])->name('finance.bank-import.clear');
     });
 };
+// HR: its own subdomain (hr.kretiv.co) when HR_HOST is set, otherwise /hr.
+$hrRoutes = function () {
+    Route::middleware(['auth', 'module:hr'])->group(function () {
+        Route::get('/', [MyProfileController::class, 'show'])->name('hr.home');
+        Route::put('/profile', [MyProfileController::class, 'update'])->name('hr.profile.update');
+        Route::get('/staff', [StaffController::class, 'index'])->name('hr.staff.index');
+        Route::get('/staff/new', [StaffController::class, 'create'])->name('hr.staff.create');
+        Route::get('/staff/suggest-email', [StaffController::class, 'suggestEmail'])->name('hr.staff.suggest-email');
+        Route::post('/staff', [StaffController::class, 'store'])->name('hr.staff.store');
+        Route::get('/staff/{user}', [StaffController::class, 'show'])->name('hr.staff.show');
+        Route::put('/staff/{user}', [StaffController::class, 'update'])->name('hr.staff.update');
+    });
+};
+if ($host('hr')) {
+    Route::domain($host('hr'))->group($hrRoutes);
+} else {
+    Route::prefix('hr')->group($hrRoutes);
+}
+
 if ($host('finance')) {
     Route::domain($host('finance'))->group($financeRoutes);
 } else {

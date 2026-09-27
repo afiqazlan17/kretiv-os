@@ -169,7 +169,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'.($user ? ",{$user->id}" : '')],
-            'role' => ['required', 'in:'.User::ROLE_BOD.','.User::ROLE_DEPT_HEAD.','.User::ROLE_STAFF.','.User::ROLE_INTERN.','.User::ROLE_FINANCE],
+            'role' => ['required', 'in:'.User::ROLE_BOD.','.User::ROLE_DEPT_HEAD.','.User::ROLE_STAFF.','.User::ROLE_INTERN.','.User::ROLE_FINANCE.','.User::ROLE_HR],
             'department' => ['nullable', 'string'],
             'visible_departments' => ['nullable', 'array'],
             'title' => ['nullable', 'string', 'max:255'],

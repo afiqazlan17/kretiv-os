@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -26,6 +27,8 @@ class User extends Authenticatable
     public const ROLE_INTERN = 'intern';
 
     public const ROLE_FINANCE = 'finance';
+
+    public const ROLE_HR = 'hr';
 
     public const MODULES = ['jobs', 'finance', 'hr'];
 
@@ -72,6 +75,22 @@ class User extends Authenticatable
     public function canAccess(string $module): bool
     {
         return in_array($module, $this->moduleList(), true);
+    }
+
+    public function isHr(): bool
+    {
+        return $this->role === self::ROLE_HR;
+    }
+
+    /** HR management (staff records, onboarding, payroll): BOD and the HR role. */
+    public function canManageHr(): bool
+    {
+        return $this->isBod() || $this->isHr();
+    }
+
+    public function employee(): HasOne
+    {
+        return $this->hasOne(Employee::class);
     }
 
     public function isFinance(): bool

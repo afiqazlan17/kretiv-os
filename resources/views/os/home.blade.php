@@ -74,13 +74,15 @@
                     <p class="text-xs text-white/50 mt-1">{{ $user->canAccess('jobs') ? 'Projects & Clients' : 'No access, ask BOD' }}</p>
                 </div>
 
-                <div class="os-card rounded-2xl p-5 pt-0 flex flex-col items-center text-center overflow-hidden opacity-50">
+                <div class="os-card rounded-2xl p-5 pt-0 flex flex-col items-center text-center overflow-hidden {{ $user->canAccess('hr') ? 'os-card--clickable' : 'opacity-50' }}">
+                    @if ($user->canAccess('hr'))
+                        <a href="{{ route('hr.home') }}" target="_blank" rel="noopener" class="os-card-link" aria-label="Open HR"></a>
+                    @endif
                     <div class="-mx-5 mb-3 aspect-square w-[calc(100%+2.5rem)] overflow-hidden">
                         <img src="{{ asset('images/os-cards/hr.jpg') }}" alt="" class="w-full h-full object-cover">
                     </div>
                     <h2 class="font-semibold text-white">HR</h2>
-                    <p class="text-xs text-white/50 mt-1">People & Culture</p>
-                    <span class="mt-2 text-[10px] font-semibold px-2 py-0.5 rounded bg-white/10 text-white/40">Coming soon</span>
+                    <p class="text-xs text-white/50 mt-1">{{ $user->canAccess('hr') ? 'People & Culture' : 'No access, ask BOD' }}</p>
                 </div>
 
                 <div class="os-card rounded-2xl p-5 pt-0 flex flex-col items-center text-center overflow-hidden {{ $user->canAccess('finance') ? 'os-card--clickable' : 'opacity-50' }}">

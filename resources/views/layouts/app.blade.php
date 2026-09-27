@@ -22,7 +22,7 @@
                          (top-3 left-3, a 40px square) — every page's header content
                          starts at the same top-left corner the button sits in, so
                          without this the first line or two renders right behind it. --}}
-                    <header class="bg-gradient-to-r {{ request()->routeIs('finance.*') ? 'from-[#047857] via-[#059669] to-[#0D9488]' : 'from-[#E91E63] via-[#EE3A62] to-[#F46A3A]' }} pl-16 pr-6 py-6 md:px-8">
+                    <header class="bg-gradient-to-r {{ request()->routeIs('hr.*') ? 'from-[#6D28D9] via-[#7C3AED] to-[#A855F7]' : (request()->routeIs('finance.*') ? 'from-[#047857] via-[#059669] to-[#0D9488]' : 'from-[#E91E63] via-[#EE3A62] to-[#F46A3A]') }} pl-16 pr-6 py-6 md:px-8">
                         {{ $header }}
                     </header>
                 @endisset

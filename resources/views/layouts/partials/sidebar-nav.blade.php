@@ -3,7 +3,8 @@
     // The same shell serves Jobs and Finance (finance.kretiv.co); Finance gets
     // its own name, green accent and menu.
     $inFinance = request()->routeIs('finance.*');
-    $activeCls = $inFinance ? 'bg-gradient-to-r from-[#DCFCE7] to-[#ECFDF5] text-[#047857] font-semibold' : 'bg-gradient-to-r from-[#FFE4EC] to-[#FFF1E6] text-[#C2185B] font-semibold';
+    $inHr = request()->routeIs('hr.*');
+    $activeCls = $inHr ? 'bg-gradient-to-r from-[#EDE9FE] to-[#F5F3FF] text-[#6D28D9] font-semibold' : ($inFinance ? 'bg-gradient-to-r from-[#DCFCE7] to-[#ECFDF5] text-[#047857] font-semibold' : 'bg-gradient-to-r from-[#FFE4EC] to-[#FFF1E6] text-[#C2185B] font-semibold');
     $navItems = [
         ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'layout-dashboard'],
         ['key' => 'jobs', 'label' => 'Job', 'route' => 'jobs.index', 'pattern' => 'jobs.*', 'icon' => 'clipboard-list'],
@@ -18,7 +19,10 @@
 {{-- Logo --}}
 <div class="flex justify-between items-center px-5 pt-6 pb-4">
     <div class="flex items-center gap-2.5">
-        @if ($inFinance)
+        @if ($inHr)
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#C084FC] flex items-center justify-center text-white shadow-[0_6px_16px_-6px_rgba(124,58,237,0.6)]"><x-icon name="users" class="w-5 h-5" /></div>
+            <div class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-[#6D28D9] to-[#A855F7] bg-clip-text text-transparent">HR</div>
+        @elseif ($inFinance)
             <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#059669] to-[#34D399] flex items-center justify-center text-white shadow-[0_6px_16px_-6px_rgba(5,150,105,0.6)]"><x-icon name="wallet" class="w-5 h-5" /></div>
             <div class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-[#047857] to-[#10B981] bg-clip-text text-transparent">Finance</div>
         @else
@@ -32,7 +36,7 @@
 {{-- Kretiv OS module switcher --}}
 <div class="flex flex-wrap gap-1.5 px-4 pb-4 text-[11px]">
     <a href="{{ route('os.home') }}" class="px-2.5 py-1 rounded-full bg-[#FFF1EC] text-[#C2185B] font-medium hover:bg-[#FFE3DA]">← KretivOS</a>
-    @if ($inFinance && $user->canAccess('jobs'))
+    @if (($inFinance || $inHr) && $user->canAccess('jobs'))
         <a href="{{ route('dashboard') }}" class="px-2.5 py-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-800">Jobs</a>
     @elseif (! $inFinance && $user->canAccess('finance') && $user->canManageFinance())
         <a href="{{ route('finance.index') }}" class="px-2.5 py-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-800">Finance</a>
@@ -53,7 +57,26 @@
             ->mapWithKeys(fn ($r, $k) => [$k => $r])->all();
         $activeFinanceReport = request()->routeIs('finance.reports') ? request()->route('report') : (request()->routeIs('finance.index') ? 'finance.index' : null);
     @endphp
-    @if ($inFinance)
+    @if ($inHr)
+        @php
+            $hrNav = [['section' => 'Me'], ['label' => 'My Profile', 'url' => route('hr.home'), 'icon' => 'user-check', 'active' => request()->routeIs('hr.home')]];
+            if ($user->canManageHr()) {
+                $hrNav[] = ['section' => 'Manage'];
+                $hrNav[] = ['label' => 'Staff', 'url' => route('hr.staff.index'), 'icon' => 'users', 'active' => request()->routeIs('hr.staff.index', 'hr.staff.show')];
+                $hrNav[] = ['label' => 'New Joiner', 'url' => route('hr.staff.create'), 'icon' => 'user-plus', 'active' => request()->routeIs('hr.staff.create')];
+            }
+        @endphp
+        @foreach ($hrNav as $item)
+            @if (isset($item['section']))
+                <div class="px-3 pt-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">{{ $item['section'] }}</div>
+            @else
+                <a href="{{ $item['url'] }}" class="flex items-center gap-3 h-10 px-3 mb-0.5 rounded-xl text-[13px] whitespace-nowrap transition-colors {{ $item['active'] ? $activeCls : 'text-gray-600 font-medium hover:bg-[#F5F3FF] hover:text-gray-900' }}">
+                    <x-icon :name="$item['icon']" class="w-[18px] h-[18px] shrink-0 {{ $item['active'] ? '' : 'text-gray-400' }}" />
+                    <span class="truncate">{{ $item['label'] }}</span>
+                </a>
+            @endif
+        @endforeach
+    @elseif ($inFinance)
         @php
             // Line icons per report (the emoji in FinanceReportController::REPORTS are not used).
             $financeIcons = ['general-ledger' => 'book-open', 'trial-balance' => 'scale', 'balance-sheet' => 'receipt', 'cash-book' => 'banknote', 'aging' => 'hourglass', 'bank-reconciliation' => 'landmark', 'sales' => 'chart-line', 'installments' => 'calendar'];

@@ -11,9 +11,9 @@
         <span class="{{ $big ? 'w-12 h-12 text-base' : 'w-9 h-9 text-xs' }} shrink-0 rounded-full flex items-center justify-center font-bold text-white"
               style="background: linear-gradient(135deg, {{ $color }}, {{ $color }}B3)">{{ strtoupper($initials) }}</span>
         <div class="min-w-0">
-            <p class="{{ $big ? 'text-base' : 'text-[13px]' }} font-bold text-gray-900 leading-tight break-words">{{ $person->name }}</p>
+            <p class="{{ $big ? 'text-base whitespace-nowrap' : 'text-[13px] break-words' }} font-bold text-gray-900 leading-tight">{{ $person->name }}</p>
             @if ($showTitle)
-                <p class="{{ $big ? 'text-sm' : 'text-xs' }} text-gray-500 leading-snug break-words mt-0.5">{{ $title }}</p>
+                <p class="{{ $big ? 'text-sm whitespace-nowrap' : 'text-xs break-words' }} text-gray-500 leading-snug mt-0.5">{{ $title }}</p>
             @endif
             @if ($tag)
                 <span class="inline-block mt-1.5 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded whitespace-nowrap" style="color: {{ $color }}; background: {{ $color }}14">{{ $tag }}</span>

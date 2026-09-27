@@ -175,8 +175,11 @@
             <div class="flex-1 min-w-0">
                 <div class="text-xs font-semibold text-gray-800 truncate">{{ $user->name }}</div>
                 <div class="text-[10px] font-medium mt-0.5" style="color: {{ config('kretivco.roles.'.$user->role.'.color', '#3A86FF') }}">
-                    {{ config('kretivco.roles.'.$user->role.'.label', $user->role) }}{{ $user->title ? ' | '.$user->title : '' }}
+                    {{ $user->isBod() ? 'Board Of Directors' : config('kretivco.roles.'.$user->role.'.label', $user->role) }}
                 </div>
+                @if ($user->title)
+                    <div class="text-[10px] text-gray-500 leading-snug">{{ $user->title }}</div>
+                @endif
             </div>
         </div>
         <a href="{{ route('password.change') }}" class="mt-2.5 flex items-center justify-center gap-1.5 w-full py-1.5 text-[11px] font-medium text-gray-500 hover:text-[#C2185B]"><x-icon name="key-round" class="w-3.5 h-3.5" /> Change password</a>

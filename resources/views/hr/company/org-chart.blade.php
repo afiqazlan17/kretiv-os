@@ -42,7 +42,7 @@
                 {{-- Board: top tier, then the members who report to them either side of the trunk. --}}
                 <div class="flex flex-wrap justify-center gap-4">
                     @foreach ($top as $p)
-                        <x-org-person :person="$p" :color="$brand" tag="Board of Directors" size="lg" class="w-full sm:w-80 ring-2 ring-[#F9A8D4]/50" />
+                        <x-org-person :person="$p" :color="$brand" tag="Board of Directors" size="lg" class="w-full sm:w-auto sm:min-w-80 ring-2 ring-[#F9A8D4]/50" />
                     @endforeach
                 </div>
 
@@ -50,9 +50,9 @@
                     <div class="oc-trunk hidden md:block"></div>
                     @php [$left, $right] = $second->split(2)->pad(2, collect())->all(); @endphp
                     <div class="oc-second mt-3 md:mt-0">
-                        <div class="oc-side left">@foreach ($left as $p)<x-org-person :person="$p" :color="$brand" tag="Board of Directors" size="lg" class="md:w-72" />@endforeach<span class="oc-hline"></span></div>
+                        <div class="oc-side left">@foreach ($left as $p)<x-org-person :person="$p" :color="$brand" tag="Board of Directors" size="lg" class="md:min-w-72" />@endforeach<span class="oc-hline"></span></div>
                         <div class="oc-mid"></div>
-                        <div class="oc-side"><span class="oc-hline"></span>@foreach ($right as $p)<x-org-person :person="$p" :color="$brand" tag="Board of Directors" size="lg" class="md:w-72" />@endforeach</div>
+                        <div class="oc-side"><span class="oc-hline"></span>@foreach ($right as $p)<x-org-person :person="$p" :color="$brand" tag="Board of Directors" size="lg" class="md:min-w-72" />@endforeach</div>
                     </div>
                 @endif
 

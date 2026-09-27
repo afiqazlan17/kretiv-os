@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-bold text-2xl text-white leading-tight">Org Chart</h2>
+        <h2 class="font-bold text-2xl text-white leading-tight">Organisation Chart</h2>
     </x-slot>
 
     <style>

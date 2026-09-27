@@ -53,7 +53,7 @@
                         </select></div>
                     <div><label class="text-xs text-gray-500">Position / title</label>
                         <input type="text" name="title" value="{{ $v('title', $user->title) }}" placeholder="Graphic Designer" class="{{ $field }}"></div>
-                    <div><label class="text-xs text-gray-500">Reports to (Board members, for the org chart)</label>
+                    <div><label class="text-xs text-gray-500">Reports to (Board members, for the Organisation Chart)</label>
                         <select name="reports_to_user_id" class="{{ $field }}">
                             <option value="">Nobody (top of the chart)</option>
                             @foreach (\App\Models\User::where('role', \App\Models\User::ROLE_BOD)->where('active', true)->where('id', '!=', $user->id ?? 0)->orderBy('name')->get() as $boss)

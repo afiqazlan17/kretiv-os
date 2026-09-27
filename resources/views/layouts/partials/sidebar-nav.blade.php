@@ -66,7 +66,7 @@
                 ['label' => 'My Claims', 'url' => route('hr.claims'), 'icon' => 'receipt', 'active' => request()->routeIs('hr.claims')],
                 ['label' => 'My Payslips', 'url' => route('hr.payslips'), 'icon' => 'receipt', 'active' => request()->routeIs('hr.payslips')],
                 ['section' => 'Company'],
-                ['label' => 'Org Chart', 'url' => route('hr.org-chart'), 'icon' => 'network', 'active' => request()->routeIs('hr.org-chart')],
+                ['label' => 'Organisation Chart', 'url' => route('hr.org-chart'), 'icon' => 'network', 'active' => request()->routeIs('hr.org-chart')],
                 ['label' => 'Departments', 'url' => route('hr.departments'), 'icon' => 'building-2', 'active' => request()->routeIs('hr.departments')],
                 ['label' => 'Public Holidays', 'url' => route('hr.holidays'), 'icon' => 'calendar', 'active' => request()->routeIs('hr.holidays')],
             ];

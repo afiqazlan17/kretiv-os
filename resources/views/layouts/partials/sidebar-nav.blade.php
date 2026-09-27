@@ -59,11 +59,24 @@
     @endphp
     @if ($inHr)
         @php
-            $hrNav = [['section' => 'Me'], ['label' => 'My Profile', 'url' => route('hr.home'), 'icon' => 'user-check', 'active' => request()->routeIs('hr.home')]];
+            $hrNav = [
+                ['section' => 'Me'],
+                ['label' => 'My Profile', 'url' => route('hr.home'), 'icon' => 'user-check', 'active' => request()->routeIs('hr.home')],
+                ['label' => 'My Attendance', 'url' => route('hr.attendance.mine'), 'icon' => 'clock', 'active' => request()->routeIs('hr.attendance.mine')],
+                ['label' => 'Public Holidays', 'url' => route('hr.holidays'), 'icon' => 'calendar', 'active' => request()->routeIs('hr.holidays')],
+            ];
+            if (\App\Services\AttendanceService::canViewTeam($user)) {
+                $pendingOt = \App\Models\Attendance::with('user')->where('ot_status', 'pending')->get()
+                    ->filter(fn ($a) => \App\Services\AttendanceService::canApproveOt($user, $a->user))->count();
+                $hrNav[] = ['section' => 'Team'];
+                $hrNav[] = ['label' => 'Team Attendance', 'url' => route('hr.attendance.team'), 'icon' => 'users', 'active' => request()->routeIs('hr.attendance.team')];
+                $hrNav[] = ['label' => 'Overtime', 'url' => route('hr.overtime'), 'icon' => 'timer', 'active' => request()->routeIs('hr.overtime'), 'badge' => $pendingOt];
+            }
             if ($user->canManageHr()) {
                 $hrNav[] = ['section' => 'Manage'];
                 $hrNav[] = ['label' => 'Staff', 'url' => route('hr.staff.index'), 'icon' => 'users', 'active' => request()->routeIs('hr.staff.index', 'hr.staff.show')];
                 $hrNav[] = ['label' => 'New Joiner', 'url' => route('hr.staff.create'), 'icon' => 'user-plus', 'active' => request()->routeIs('hr.staff.create')];
+                $hrNav[] = ['label' => 'Profile Requests', 'url' => route('hr.requests'), 'icon' => 'inbox', 'active' => request()->routeIs('hr.requests'), 'badge' => \App\Models\ProfileChangeRequest::where('status', 'pending')->where('user_id', '!=', $user->id)->count()];
             }
         @endphp
         @foreach ($hrNav as $item)
@@ -73,6 +86,7 @@
                 <a href="{{ $item['url'] }}" class="flex items-center gap-3 h-10 px-3 mb-0.5 rounded-xl text-[13px] whitespace-nowrap transition-colors {{ $item['active'] ? $activeCls : 'text-gray-600 font-medium hover:bg-[#F5F3FF] hover:text-gray-900' }}">
                     <x-icon :name="$item['icon']" class="w-[18px] h-[18px] shrink-0 {{ $item['active'] ? '' : 'text-gray-400' }}" />
                     <span class="truncate">{{ $item['label'] }}</span>
+                    @if (! empty($item['badge']))<span class="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#7C3AED] text-white">{{ $item['badge'] }}</span>@endif
                 </a>
             @endif
         @endforeach

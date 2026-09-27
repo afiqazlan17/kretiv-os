@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ProfileChangeRequest;
 use App\Models\User;
 use App\Support\CompanyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -48,9 +49,27 @@ class HrOnboardingTest extends TestCase
         $this->actingAs($staff)->get(route('hr.staff.index'))->assertForbidden();
         $this->actingAs($staff)->get(route('hr.staff.show', $other))->assertForbidden();
 
-        $this->actingAs($staff)->put(route('hr.profile.update'), ['phone' => '0123456789', 'bank_account' => '1234', 'basic_salary' => 99999])->assertRedirect();
+        // Changes go to HR as a request; nothing is saved until HR approves.
+        $this->actingAs($staff)->put(route('hr.profile.update'), ['phone' => '0123456789', 'bank_account' => '1234', 'basic_salary' => 99999, 'reason' => 'New bank'])->assertRedirect();
+        $this->assertNull($staff->refresh()->employee);
+        $request = ProfileChangeRequest::first();
+        $this->assertSame(['phone' => '0123456789', 'bank_account' => '1234'], $request->changes);
+        $this->actingAs($staff)->get(route('hr.requests'))->assertForbidden();
+
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $this->actingAs($bod)->get(route('hr.requests'))->assertOk()->assertSee('New bank');
+        $this->actingAs($bod)->post(route('hr.requests.decide', $request), ['decision' => 'approved'])->assertRedirect();
         $this->assertSame('1234', $staff->refresh()->employee->bank_account);
-        $this->assertEquals(0, $staff->employee->basic_salary); // not self-editable
+        $this->assertEquals(0, $staff->employee->basic_salary); // never requestable
+        $this->assertSame('approved', $request->refresh()->status);
+    }
+
+    public function test_hr_cannot_approve_their_own_profile_request(): void
+    {
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $this->actingAs($bod)->put(route('hr.profile.update'), ['phone' => '011'])->assertRedirect();
+
+        $this->actingAs($bod)->post(route('hr.requests.decide', ProfileChangeRequest::first()), ['decision' => 'approved'])->assertForbidden();
     }
 
     public function test_the_hr_role_manages_staff_but_cannot_change_its_own_role(): void

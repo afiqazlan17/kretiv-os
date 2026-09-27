@@ -12,7 +12,10 @@ use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\FinanceReportController;
+use App\Http\Controllers\Hr\AttendanceController;
+use App\Http\Controllers\Hr\HolidayController;
 use App\Http\Controllers\Hr\MyProfileController;
+use App\Http\Controllers\Hr\ProfileRequestController;
 use App\Http\Controllers\Hr\StaffController;
 use App\Http\Controllers\ItemLibraryController;
 use App\Http\Controllers\JobController;
@@ -36,6 +39,8 @@ $onHost = fn (string $module, Closure $routes) => $host($module) ? Route::domain
 $osRoutes = function () {
     Route::middleware('auth')->group(function () {
         Route::get('/', [OsController::class, 'home'])->name('os.home');
+        Route::post('/clock-in', [AttendanceController::class, 'clockIn'])->name('os.clock-in');
+        Route::post('/clock-out', [AttendanceController::class, 'clockOut'])->name('os.clock-out');
         Route::get('/access', [OsController::class, 'access'])->name('os.access');
         Route::put('/access/{user}', [OsController::class, 'updateAccess'])->name('os.access.update');
     });
@@ -179,6 +184,15 @@ $hrRoutes = function () {
         Route::post('/staff', [StaffController::class, 'store'])->name('hr.staff.store');
         Route::get('/staff/{user}', [StaffController::class, 'show'])->name('hr.staff.show');
         Route::put('/staff/{user}', [StaffController::class, 'update'])->name('hr.staff.update');
+        Route::get('/attendance', [AttendanceController::class, 'mine'])->name('hr.attendance.mine');
+        Route::get('/team/attendance', [AttendanceController::class, 'team'])->name('hr.attendance.team');
+        Route::get('/team/overtime', [AttendanceController::class, 'overtime'])->name('hr.overtime');
+        Route::post('/team/overtime/{attendance}', [AttendanceController::class, 'decideOvertime'])->name('hr.overtime.decide');
+        Route::get('/requests', [ProfileRequestController::class, 'index'])->name('hr.requests');
+        Route::post('/requests/{changeRequest}', [ProfileRequestController::class, 'decide'])->name('hr.requests.decide');
+        Route::get('/holidays', [HolidayController::class, 'index'])->name('hr.holidays');
+        Route::post('/holidays', [HolidayController::class, 'store'])->name('hr.holidays.store');
+        Route::delete('/holidays/{holiday}', [HolidayController::class, 'destroy'])->name('hr.holidays.destroy');
     });
 };
 if ($host('hr')) {

@@ -14,9 +14,6 @@ class Employee extends Model
 {
     public const EMPLOYMENT_TYPES = ['permanent' => 'Permanent', 'contract' => 'Contract', 'intern' => 'Internship', 'part_time' => 'Part-time'];
 
-    /** Fields a staff member may update on their own profile; everything else is HR's. */
-    public const SELF_EDITABLE = ['phone', 'personal_email', 'address', 'bank_name', 'bank_account', 'emergency_name', 'emergency_relation', 'emergency_phone'];
-
     protected function casts(): array
     {
         return [

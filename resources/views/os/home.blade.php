@@ -8,9 +8,8 @@
 
     <div class="space-y-4">
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 items-stretch">
-            {{-- Greeting + attendance (Clock In/Out, WFH/WFO) — both are visual
-                 placeholders for now; they need a real attendance_logs table
-                 and backend before they do anything. --}}
+            {{-- Greeting + attendance. Staff only see their own times; lateness is
+                 for HR, Dept Heads and BOD (HR > Team attendance). --}}
             <div class="os-card rounded-2xl p-5 flex flex-col">
                 <div x-data="{ time: '', date: '' }"
                      x-init="
@@ -30,14 +29,36 @@
                 </div>
 
                 <div class="mt-5 pt-4 border-t border-white/10">
-                    <p class="text-[11px] uppercase tracking-wide text-white/30 mb-2">Attendance · Coming soon</p>
-                    <div class="grid grid-cols-2 gap-1.5 p-1 rounded-lg bg-white/5 text-xs font-semibold text-white/40 mb-2">
-                        <span class="text-center py-1.5 rounded-md">Work From Office</span>
-                        <span class="text-center py-1.5 rounded-md">Work From Home</span>
-                    </div>
-                    <button type="button" disabled class="w-full text-xs font-semibold py-2 rounded-md bg-white/5 text-white/30 cursor-not-allowed">
-                        Clock In
-                    </button>
+                    <p class="text-[11px] uppercase tracking-wide text-white/30 mb-2">Attendance</p>
+                    @if (session('success') && str_starts_with(session('success'), 'Clocked'))
+                        <p class="text-xs text-emerald-300 mb-2">{{ session('success') }}</p>
+                    @endif
+                    @if (! $attendance)
+                        <form method="POST" action="{{ route('os.clock-in') }}" x-data="{ mode: 'wfo' }">
+                            @csrf
+                            <input type="hidden" name="work_mode" :value="mode">
+                            <div class="grid grid-cols-2 gap-1.5 p-1 rounded-lg bg-white/5 text-xs font-semibold mb-2">
+                                <button type="button" @click="mode = 'wfo'" :class="mode === 'wfo' ? 'bg-white/15 text-white' : 'text-white/40'" class="py-1.5 rounded-md">Work From Office</button>
+                                <button type="button" @click="mode = 'wfh'" :class="mode === 'wfh' ? 'bg-white/15 text-white' : 'text-white/40'" class="py-1.5 rounded-md">Work From Home</button>
+                            </div>
+                            <button type="submit" class="w-full text-xs font-semibold py-2 rounded-md text-white" style="background:linear-gradient(135deg,#E91E63,#F46A3A)">Clock In</button>
+                        </form>
+                    @elseif (! $attendance->clock_out)
+                        <div class="flex items-center justify-between text-xs text-white/60 mb-2">
+                            <span>In at <span class="text-white font-semibold">{{ $attendance->clock_in->format('g:i a') }}</span> · {{ $attendance->work_mode === 'wfh' ? 'WFH' : 'Office' }}</span>
+                            <span>Day ends {{ $attendance->expectedEnd()->format('g:i a') }}</span>
+                        </div>
+                        <form method="POST" action="{{ route('os.clock-out') }}">
+                            @csrf
+                            <button type="submit" class="w-full text-xs font-semibold py-2 rounded-md bg-white/10 text-white hover:bg-white/15">Clock Out</button>
+                        </form>
+                    @else
+                        <p class="text-xs text-white/60">{{ $attendance->clock_in->format('g:i a') }} to {{ $attendance->clock_out->format('g:i a') }} · {{ $attendance->work_mode === 'wfh' ? 'WFH' : 'Office' }}</p>
+                        @if ($attendance->ot_minutes > 0)
+                            <p class="text-xs text-white/40 mt-1">Overtime {{ $attendance->otHours() }} h sent for approval.</p>
+                        @endif
+                        <p class="text-xs text-white/40 mt-1">Done for today.</p>
+                    @endif
                 </div>
 
                 {{-- Quick links out: the public site and the company webmail (cPanel). --}}

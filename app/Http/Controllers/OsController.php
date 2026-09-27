@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Job;
 use App\Models\User;
+use App\Services\AttendanceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -39,6 +40,7 @@ class OsController extends Controller
             'queueCount' => $queueCount,
             'dueJobs' => $due,
             'today' => $today,
+            'attendance' => app(AttendanceService::class)->today($user),
         ]);
     }
 

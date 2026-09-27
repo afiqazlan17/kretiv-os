@@ -87,6 +87,20 @@ return [
     // HR: fixed allowance types offered in a staff package (amounts set per person).
     'allowance_types' => ['transport' => 'Transport', 'phone' => 'Phone', 'meal' => 'Meal', 'other' => 'Other'],
 
+    // Flexible hours: clock in from `earliest` (earlier counts from then),
+    // late after `latest`; the day ends `day_hours` after clock in (incl. a
+    // 1-hour break). Weekends are rest days. OT counts in `ot_block_minutes`
+    // blocks, rated by day type, capped at `ot_monthly_cap_hours`.
+    'attendance' => [
+        'earliest' => '08:00',
+        'latest' => '09:30',
+        'day_hours' => 9,
+        'rest_days' => [6, 0], // Saturday, Sunday (Carbon dayOfWeek)
+        'ot_block_minutes' => 30,
+        'ot_rates' => ['normal' => 1.5, 'rest' => 2.0, 'holiday' => 3.0],
+        'ot_monthly_cap_hours' => 104,
+    ],
+
     // Employment Act overtime applies to employees earning up to this monthly wage.
     'ot_wage_limit' => 4000,
 

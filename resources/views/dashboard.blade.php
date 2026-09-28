@@ -1,11 +1,8 @@
 <x-app-layout>
     @php
         $user = auth()->user();
-        $hour = (int) now()->format('G');
-        $greeting = $hour < 12 ? 'Selamat pagi' : ($hour < 15 ? 'Selamat tengah hari' : ($hour < 19 ? 'Selamat petang' : 'Selamat malam'));
-        $first = \Illuminate\Support\Str::of($user->name)->before(' ');
 
-        // One plain line under the greeting, driven by the same deadline
+        // One plain line under the title, driven by the same deadline
         // data as "Needs Attention", so the first thing staff read is a
         // sentence about their day rather than a wall of numbers.
         $overdueCount = $alerts->filter(fn ($j) => now()->startOfDay()->diffInDays($j->deadline, false) < 0)->count();
@@ -20,8 +17,8 @@
     <x-slot name="header">
         <div class="flex items-center justify-between flex-wrap gap-3">
             <div>
-                <h2 class="font-bold text-2xl text-white leading-tight">{{ $greeting }}, {{ $first }}</h2>
-                <p class="text-sm text-white/90 mt-1">{{ $mood }}</p>
+                <h2 class="font-bold text-2xl text-white leading-tight">Dashboard</h2>
+                <p class="text-sm italic text-white/90 mt-1">{{ $mood }}</p>
             </div>
             <div class="flex items-center gap-2">
                 <span class="text-xs font-medium bg-white/20 rounded-full px-3.5 py-1.5 text-white">{{ now()->format('l, j M Y') }}</span>

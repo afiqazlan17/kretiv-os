@@ -1,9 +1,7 @@
 <x-os-layout>
     @php
         $user = auth()->user();
-        $hour = (int) now()->format('G');
-        $greeting = $hour < 12 ? 'Selamat pagi' : ($hour < 15 ? 'Selamat tengah hari' : ($hour < 19 ? 'Selamat petang' : 'Selamat malam'));
-        $first = \Illuminate\Support\Str::of($user->name)->before(' ');
+        $greeting = \App\Support\Greeting::for($user, now());
     @endphp
 
     <div class="space-y-4">
@@ -21,7 +19,8 @@
                         tick();
                         setInterval(tick, 1000);
                      ">
-                    <h1 class="text-2xl font-semibold text-white leading-snug">{{ $greeting }}, {{ $first }}</h1>
+                    <h1 class="text-2xl font-semibold text-white leading-snug">{{ $greeting['title'] }}</h1>
+                    <p class="text-sm italic text-white/55 mt-0.5">{{ $greeting['line'] }}</p>
                     <div class="mt-4">
                         <div class="font-mono text-3xl font-semibold text-[#FCB03C] tracking-wide" x-text="time"></div>
                         <div class="text-xs text-white/50 mt-1" x-text="date"></div>

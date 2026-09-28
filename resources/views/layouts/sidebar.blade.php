@@ -1,7 +1,9 @@
 <div x-data="{ mobileOpen: false }">
     {{-- Mobile hamburger --}}
-    <button @click="mobileOpen = true" x-show="!mobileOpen" class="md:hidden fixed top-3 left-3 z-[60] w-10 h-10 rounded-lg bg-gradient-to-br from-[#E91E63] to-[#F25C54] text-white text-xl flex items-center justify-center shadow-lg">
-        ☰
+    @php $bellCount = \App\Services\NotificationCenter::for(auth()->user())['count']; @endphp
+    <button @click="mobileOpen = true" x-show="!mobileOpen" class="md:hidden fixed top-3 left-3 z-[60] w-10 h-10 rounded-lg bg-gradient-to-br from-[#E91E63] to-[#F25C54] text-white flex items-center justify-center shadow-lg" aria-label="Menu">
+        <x-icon name="menu" class="w-5 h-5" />
+        @if ($bellCount > 0)<span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-white text-[#E91E63] text-[10px] font-bold flex items-center justify-center shadow">{{ $bellCount > 99 ? '99+' : $bellCount }}</span>@endif
     </button>
 
     {{-- Desktop sidebar — always visible at md+, never toggled --}}

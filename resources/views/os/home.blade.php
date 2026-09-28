@@ -130,47 +130,11 @@
             </div>
         </div>
 
-        {{-- Notifications: one merged feed of job alerts and unread HR memos
-             and announcements. --}}
+        {{-- Notifications: everything waiting on this person across Jobs,
+             Finance and HR (App\Services\NotificationCenter). --}}
         <div class="os-card rounded-2xl p-5">
             <h2 class="font-semibold text-white mb-3">Notifications</h2>
-
-            <div class="space-y-2">
-                @forelse ($dueJobs as $job)
-                    <a href="{{ route('jobs.show', $job) }}" target="_blank" rel="noopener" class="flex items-center gap-3 text-sm px-3 py-2.5 rounded-lg bg-red-500/10 hover:bg-red-500/15">
-                        <x-icon name="triangle-alert" class="w-4 h-4 text-red-300 shrink-0" />
-                        <span class="text-red-300"><strong class="text-white">{{ $job->job_id }}</strong> {{ $job->job_type }}: {{ $job->deadline->startOfDay()->eq($today) ? 'deadline today' : 'overdue since '.$job->deadline->format('j M') }}</span>
-                        <span class="ml-auto text-xs underline text-white/50">Open</span>
-                    </a>
-                @empty
-                @endforelse
-
-                @if ($queueCount > 0)
-                    <a href="{{ route('jobs.index', ['view' => 'queue']) }}" target="_blank" rel="noopener" class="flex items-center gap-3 text-sm px-3 py-2.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/15">
-                        <x-icon name="inbox" class="w-4 h-4 text-amber-300 shrink-0" /><span class="text-amber-300">{{ $queueCount }} new {{ \Illuminate\Support\Str::plural('job', $queueCount) }} waiting to be taken in</span>
-                        <span class="ml-auto text-xs underline text-white/50">View new jobs</span>
-                    </a>
-                @endif
-
-                @if ($dueJobs->isEmpty() && $queueCount === 0)
-                    <p class="text-sm text-white/30 px-3 py-2">Nothing needs your attention right now.</p>
-                @endif
-
-                @forelse ($notices as $n)
-                    <a href="{{ route('hr.announcements.show', $n) }}" target="_blank" rel="noopener" class="flex items-center gap-3 text-sm px-3 py-2.5 rounded-lg bg-violet-500/10 hover:bg-violet-500/15">
-                        <x-icon :name="$n->type === 'memo' ? 'notebook-pen' : 'megaphone'" class="w-4 h-4 text-violet-300 shrink-0" />
-                        <span class="text-violet-200 min-w-0 truncate"><strong class="text-white">{{ $n->type === 'memo' ? 'Memo' : 'Announcement' }}</strong> {{ $n->title }}</span>
-                        <span class="ml-auto text-xs underline text-white/50 shrink-0">{{ $n->requires_ack ? 'Read and acknowledge' : 'Read' }}</span>
-                    </a>
-                @empty
-                    @if ($user->canAccess('hr'))
-                        <a href="{{ route('hr.announcements') }}" target="_blank" rel="noopener" class="flex items-center gap-3 text-sm px-3 py-2.5 rounded-lg bg-white/[0.03] text-white/40 hover:bg-white/[0.06]">
-                            <x-icon name="megaphone" class="w-4 h-4 shrink-0" /><span>No new memos or announcements</span>
-                            <span class="ml-auto text-xs underline text-white/40">See all</span>
-                        </a>
-                    @endif
-                @endforelse
-            </div>
+            <x-notification-list :inbox="\App\Services\NotificationCenter::for($user)" dark :limit="20" />
         </div>
     </div>
 </x-os-layout>

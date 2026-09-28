@@ -27,6 +27,7 @@ use App\Http\Controllers\ItemLibraryController;
 use App\Http\Controllers\JobController;
 use App\Http\Controllers\JobVendorCostController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecurringExpenseController;
@@ -47,6 +48,8 @@ $osRoutes = function () {
     Route::middleware('auth')->group(function () {
         Route::get('/', [OsController::class, 'home'])->name('os.home');
         Route::post('/clock-in', [AttendanceController::class, 'clockIn'])->name('os.clock-in');
+        Route::get('/notifications/{key}', [NotificationController::class, 'open'])->name('notifications.open');
+        Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
         Route::post('/clock-out', [AttendanceController::class, 'clockOut'])->name('os.clock-out');
         Route::post('/clock-out/undo', [AttendanceController::class, 'undoClockOut'])->name('os.clock-out.undo');
         Route::get('/access', [OsController::class, 'access'])->name('os.access');

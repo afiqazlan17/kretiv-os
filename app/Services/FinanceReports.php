@@ -162,7 +162,7 @@ class FinanceReports
     public function aging(CarbonInterface $asOf): array
     {
         $live = fn (string $type) => $this->entries->where('type', $type)->where('reversed', false);
-        $receipts = $live('receipt')->groupBy('job_id')->map(fn ($g) => (float) $g->sum('amount'));
+        $receipts = $live('receipt')->merge($live('credit_note'))->groupBy('job_id')->map(fn ($g) => (float) $g->sum('amount'));
         $customers = Job::with('customer')->whereIn('job_id', $live('invoice')->pluck('job_id')->filter())->get()->keyBy('job_id');
 
         $rows = $live('invoice')->map(function (LedgerEntry $invoice) use ($receipts, $customers, $asOf) {

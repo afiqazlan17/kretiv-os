@@ -16,7 +16,7 @@ class CollectionsController extends Controller
         $user = $request->user();
         abort_unless($user->canManageFinance(), 403);
 
-        $entries = LedgerEntry::whereIn('type', ['invoice', 'receipt'])->where('reversed', false)->whereNotNull('job_id')->get()->groupBy('job_id');
+        $entries = LedgerEntry::whereIn('type', ['invoice', 'receipt', 'credit_note'])->where('reversed', false)->whereNotNull('job_id')->get()->groupBy('job_id');
 
         $jobs = Job::with('customer')->whereIn('job_id', $entries->keys())
             ->when(! $user->seesAllDepartments(), fn ($q) => $q->whereIn('department', $user->visibleDepartments()))
@@ -29,7 +29,8 @@ class CollectionsController extends Controller
                 return null;
             }
             $paid = (float) $group->where('type', 'receipt')->sum('amount');
-            $balance = round((float) $invoice->amount - $paid, 2);
+            $credited = (float) $group->where('type', 'credit_note')->sum('amount');
+            $balance = round((float) $invoice->amount - $credited - $paid, 2);
             $phone = preg_replace('/\D/', '', (string) $job->customer?->phone);
 
             return $balance > 0.005 ? [

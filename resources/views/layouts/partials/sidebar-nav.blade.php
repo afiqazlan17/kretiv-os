@@ -29,7 +29,11 @@
         <div class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-[#E91E63] to-[#F57C00] bg-clip-text text-transparent">Jobs</div>
         @endif
     </div>
-    <button @click="mobileOpen = false" class="md:hidden text-gray-400 text-2xl leading-none">×</button>
+    <div class="flex items-center gap-1">
+        {{-- Fixed panel: the sidebar clips anything that overflows it. --}}
+        <x-notification-bell panel="fixed top-4 left-4 md:left-[15.5rem]" />
+        <button @click="mobileOpen = false" class="md:hidden text-gray-400 text-2xl leading-none">×</button>
+    </div>
 </div>
 
 {{-- Kretiv OS module switcher --}}

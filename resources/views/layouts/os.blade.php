@@ -23,6 +23,7 @@
 
                     <div class="flex items-center gap-3 text-sm" x-data="{ open: false }">
                         <span class="hidden sm:inline text-white/70">{{ $user->name }}</span>
+                        <x-notification-bell dark align="right" />
                         <div class="relative" @click.outside="open = false">
                             <button type="button" @click="open = !open" title="Settings" aria-label="Settings"
                                     class="w-8 h-8 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10">

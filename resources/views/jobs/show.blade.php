@@ -584,6 +584,29 @@
                 @endcan
 
                 @php $canSeeMargin = auth()->user()->canManageFinance(); @endphp
+                {{-- Department forms (Creative Brief / UAT sign-off / Run Sheet) --}}
+                @php $deptForms = \App\Models\JobForm::forDepartment($job->department); @endphp
+                @if ($deptForms)
+                    @php $savedForms = \App\Models\JobForm::where('job_id', $job->id)->get()->keyBy('form_key'); @endphp
+                    <div class="k-card p-5 md:p-6">
+                        <h3 class="text-base font-bold text-gray-900 mb-3">Forms</h3>
+                        <div class="space-y-2">
+                            @foreach ($deptForms as $fk => $fd)
+                                @php $saved = $savedForms->get($fk); @endphp
+                                <div class="flex flex-wrap items-center gap-3 rounded-xl border border-[#F5ECE8] px-3.5 py-3">
+                                    <span class="w-9 h-9 rounded-xl bg-[#FFF0F5] text-[#C2185B] flex items-center justify-center shrink-0"><x-icon name="clipboard-list" class="w-4 h-4" /></span>
+                                    <div class="flex-1 min-w-[10rem]">
+                                        <p class="text-sm font-semibold text-gray-900">{{ $fd['label'] }}</p>
+                                        <p class="text-xs text-gray-400">{{ $saved ? 'Updated by '.$saved->updated_by.', '.$saved->updated_at->format('d M') : 'Not started' }}</p>
+                                    </div>
+                                    <a href="{{ route('jobs.forms.edit', [$job, $fk]) }}" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#EFE3DE] text-gray-700 hover:bg-[#FFF7F3]">{{ $saved ? 'Open' : 'Fill in' }}</a>
+                                    @if ($saved)<a href="{{ route('jobs.forms.pdf', [$job, $fk]) }}" target="_blank" class="text-xs font-semibold px-3 py-1.5 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A]">PDF</a>@endif
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
                 <div class="k-card p-5 md:p-6" x-data="{ showVendorForm: false, payingId: null, editingId: null }">
                     @php
                         $vendorCosts = collect($job->vendor_costs ?? []);

@@ -26,6 +26,7 @@ use App\Http\Controllers\Hr\ProfileRequestController;
 use App\Http\Controllers\Hr\StaffController;
 use App\Http\Controllers\ItemLibraryController;
 use App\Http\Controllers\JobController;
+use App\Http\Controllers\JobFormController;
 use App\Http\Controllers\JobVendorCostController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\NotificationController;
@@ -121,6 +122,9 @@ $onHost('jobs', function () {
         Route::post('/jobs/{job}/take-in', [JobController::class, 'takeIn'])->name('jobs.take-in');
         Route::post('/jobs/{job}/advance', [JobController::class, 'advance'])->name('jobs.advance');
         Route::post('/jobs/{job}/duplicate', [JobController::class, 'duplicate'])->name('jobs.duplicate');
+        Route::get('/jobs/{job}/forms/{key}', [JobFormController::class, 'edit'])->name('jobs.forms.edit');
+        Route::put('/jobs/{job}/forms/{key}', [JobFormController::class, 'update'])->name('jobs.forms.update');
+        Route::get('/jobs/{job}/forms/{key}/pdf', [JobFormController::class, 'pdf'])->name('jobs.forms.pdf');
         Route::post('/jobs/{job}/deposit', [JobController::class, 'settleDeposit'])->name('jobs.deposit.settle');
         Route::post('/jobs/{job}/po', [JobController::class, 'updatePo'])->name('jobs.po.update');
         Route::post('/jobs/{job}/approvals', [ApprovalController::class, 'send'])->name('jobs.approvals.send');

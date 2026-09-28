@@ -8,8 +8,22 @@
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 items-stretch">
             {{-- Greeting + attendance. Staff only see their own times; lateness is
                  for HR, Dept Heads and BOD (HR > Team attendance). --}}
-            <div class="os-card rounded-2xl p-5 flex flex-col">
-                <div x-data="{ time: '', date: '' }"
+            <div class="os-card rounded-2xl p-5 flex flex-col relative">
+                {{-- KretivAI: shown now so staff know it's coming; not wired up yet. --}}
+                <div class="absolute top-4 right-4 z-10" x-data="{ soon: false }" @click.outside="soon = false">
+                    <button type="button" @click="soon = !soon" class="group flex flex-col items-center gap-1" aria-label="KretivAI">
+                        <span class="relative w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-[0_8px_20px_-8px_rgba(233,30,99,0.8)] transition-transform group-hover:scale-105" style="background: linear-gradient(135deg, #E91E63, #F46A3A 55%, #FCB03C)">
+                            <span class="absolute inset-0 rounded-2xl animate-ping opacity-20" style="background: #F46A3A; animation-duration: 3s"></span>
+                            <x-icon name="sparkles" class="w-5 h-5 relative" />
+                        </span>
+                        <span class="text-[10px] font-bold tracking-wide text-white/80">KretivAI</span>
+                    </button>
+                    <div x-show="soon" x-cloak x-transition class="absolute right-0 mt-2 w-56 rounded-xl bg-white text-gray-800 text-xs p-3 shadow-xl">
+                        <p class="font-bold text-gray-900 mb-0.5">KretivAI is coming soon</p>
+                        <p class="text-gray-500 leading-snug">Paste a customer's message and get a job and quotation ready in seconds.</p>
+                    </div>
+                </div>
+                <div class="pr-14" x-data="{ time: '', date: '' }"
                      x-init="
                         const tick = () => {
                             const now = new Date();

@@ -47,6 +47,7 @@
         'image' => '<rect x="3" y="3" width="18" height="18" rx="2" /> <circle cx="9" cy="9" r="2" /> <path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21" />',
         'bell' => '<path d="M10.268 21a2 2 0 0 0 3.464 0" /> <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />',
         'menu' => '<path d="M4 6h16" /> <path d="M4 12h16" /> <path d="M4 18h16" />',
+        'sparkles' => '<path d="M9.94 14.06 8 20l-1.94-5.94L0 12l6.06-1.94L8 4l1.94 6.06L16 12Z" transform="translate(2 0) scale(0.9)" /> <path d="M19 2v4" /> <path d="M21 4h-4" /> <path d="M20 15v3" /> <path d="M21.5 16.5h-3" />',
         'chevron-left' => '<path d="m15 18-6-6 6-6" />',
         'clock' => '<circle cx="12" cy="12" r="10" /> <path d="M12 6v6l4 2" />',
         'timer' => '<path d="M10 2h4" /> <path d="M12 14l3-3" /> <circle cx="12" cy="14" r="8" />',

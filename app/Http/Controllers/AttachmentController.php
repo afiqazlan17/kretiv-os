@@ -6,9 +6,9 @@ use App\Models\ActivityLog;
 use App\Models\Job;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response;
 
 // Replaces Supabase Storage's job-attachments bucket. Files live on the
 // local disk (storage/app/public), same path scheme the old app used:

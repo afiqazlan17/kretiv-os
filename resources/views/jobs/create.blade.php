@@ -256,6 +256,10 @@
 
                     <x-input-error :messages="$errors->all()" class="mt-1" />
                     <p x-show="formError" x-cloak x-text="formError" class="mt-2 text-sm font-semibold text-red-600"></p>
+                    <label class="mt-3 flex items-start gap-2 text-sm text-gray-700">
+                        <input type="checkbox" name="take_in" value="1" @checked(old('take_in', true)) class="mt-0.5 rounded">
+                        <span>I'll handle this job <span class="block text-xs text-gray-400">It goes straight to Quotation with you as the person responsible, so you can send the quotation right away. Untick to leave it in the Job Queue for someone else.</span></span>
+                    </label>
                     <div class="mt-2">
                         <x-primary-button type="submit">Save Job</x-primary-button>
                         <a href="{{ route('jobs.index') }}" class="ml-2 text-xs text-gray-500 hover:underline">Cancel</a>

@@ -2,9 +2,10 @@
     <x-slot name="header">
         <div class="flex items-center justify-between flex-wrap gap-3" x-data>
             <h2 class="font-bold text-2xl text-white leading-tight">Users &amp; Access</h2>
-            <button type="button" @click="$store.settingsUi.showAdd = !$store.settingsUi.showAdd" class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white text-[#C2185B] hover:bg-[#FFF1EC] text-sm font-semibold rounded-xl shadow-sm">
-                <x-icon name="plus" class="w-4 h-4" /> Add User
-            </button>
+            {{-- New staff are added once, in HR (login, profile and package together). --}}
+            <a href="{{ route('hr.staff.create') }}" class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white text-[#C2185B] hover:bg-[#FFF1EC] text-sm font-semibold rounded-xl shadow-sm">
+                <x-icon name="plus" class="w-4 h-4" /> Add staff in HR
+            </a>
         </div>
     </x-slot>
 
@@ -37,69 +38,6 @@
             @endforeach
         </div>
 
-        {{-- Add User panel --}}
-        @can('create', \App\Models\User::class)
-        <div class="k-card p-5 md:p-6" x-show="$store.settingsUi.showAdd" x-cloak>
-            <h3 class="text-base font-bold text-gray-900 mb-4">Add User</h3>
-            <form method="POST" action="{{ route('settings.users.store') }}"
-                  x-data="{ role: '{{ old('role', 'staff') }}' }"
-                  class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
-                @csrf
-                <div>
-                    <x-input-label for="name" value="Full Name *" />
-                    <x-text-input id="name" name="name" type="text" class="mt-1 block w-full" :value="old('name')" required />
-                </div>
-                <div>
-                    <x-input-label for="email" value="Email *" />
-                    <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email')" required />
-                </div>
-                <div class="sm:col-span-2">
-                    <x-input-label value="Role *" />
-                    <div class="mt-1 flex flex-wrap gap-2">
-                        @foreach (config('kretivco.roles') as $key => $roleOpt)
-                            <label class="flex items-center gap-2 rounded-xl border px-3 py-2 text-sm cursor-pointer"
-                                   :class="role === '{{ $key }}' ? 'border-2' : 'border-gray-200'"
-                                   :style="role === '{{ $key }}' ? 'border-color: {{ $roleOpt['color'] }}' : ''">
-                                <input type="radio" name="role" value="{{ $key }}" x-model="role" class="text-xs">
-                                {{ $roleOpt['label'] }}
-                            </label>
-                        @endforeach
-                    </div>
-                </div>
-                <div class="sm:col-span-2" x-show="role !== 'bod'" x-cloak>
-                    <x-input-label value="Department *" />
-                    <div class="mt-1 flex flex-wrap gap-2">
-                        @foreach (config('kretivco.departments') as $key => $dept)
-                            <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm cursor-pointer">
-                                <input type="radio" name="department" value="{{ $key }}" required>
-                                {{ $dept['label'] }}
-                            </label>
-                        @endforeach
-                    </div>
-                </div>
-                <div class="sm:col-span-2" x-show="role !== 'bod'" x-cloak>
-                    <x-input-label value="Visible Departments" />
-                    <p class="text-xs text-gray-400 mb-1">Leave empty for their own department only.</p>
-                    <div class="mt-1 flex flex-wrap gap-2">
-                        @foreach (config('kretivco.departments') as $key => $dept)
-                            <label class="flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm cursor-pointer">
-                                <input type="checkbox" name="visible_departments[]" value="{{ $key }}">
-                                {{ $dept['label'] }}
-                            </label>
-                        @endforeach
-                    </div>
-                </div>
-                <div>
-                    <x-input-label for="title" value="Title (optional)" />
-                    <x-text-input id="title" name="title" type="text" class="mt-1 block w-full" :value="old('title')" />
-                </div>
-                <div class="sm:col-span-2">
-                    <x-input-error :messages="$errors->all()" class="mt-1" />
-                    <x-primary-button type="submit">Add User</x-primary-button>
-                </div>
-            </form>
-        </div>
-        @endcan
 
         {{-- Filters --}}
         <form method="GET" action="{{ route('settings.index') }}" class="k-card p-4 flex flex-wrap gap-3 items-center">
@@ -262,7 +200,7 @@
                                             </button>
                                         </form>
                                         <form method="POST" action="{{ route('settings.users.reset-password', $user) }}"
-                                              onsubmit="return confirm('Reset password untuk {{ $user->name }}? Password baru akan dipaparkan sekali sahaja selepas ini.');">
+                                              onsubmit="return confirm('Reset the password for {{ addslashes($user->name) }}? The new temporary password is shown only once.');">
                                             @csrf
                                             <button type="submit" class="text-xs font-semibold px-3 py-1.5 rounded-md border border-amber-200 text-amber-600 hover:bg-amber-50">
                                                 Reset Password

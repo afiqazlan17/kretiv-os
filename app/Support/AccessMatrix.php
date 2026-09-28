@@ -21,9 +21,12 @@ class AccessMatrix
         $capabilities = [
             'See every department' => fn (User $u) => $u->seesAllDepartments(),
             'Create and update jobs (own departments)' => $jobs,
-            'Issue quotations' => fn (User $u) => $jobs($u) && $u->canIssueDocument('quotation'),
+            'Issue quotations and proforma invoices' => fn (User $u) => $jobs($u) && $u->canIssueDocument('quotation') && $u->canIssueDocument('proforma'),
             'Issue invoices' => fn (User $u) => $jobs($u) && $u->canIssueDocument('invoice'),
             'Issue receipts (confirm payment received)' => fn (User $u) => $jobs($u) && $u->canIssueDocument('receipt'),
+            'Issue delivery orders / handover forms' => fn (User $u) => $jobs($u) && $u->canIssueDocument('delivery'),
+            'Issue credit notes' => fn (User $u) => $jobs($u) && $u->canIssueDocument('credit_note'),
+            'Send artwork for customer approval' => fn (User $u) => $jobs($u),
             'Void a recorded payment' => fn (User $u) => $jobs($u) && $u->canVoidPayments(),
             'Delete a job permanently' => fn (User $u) => $jobs($u) && Gate::forUser($u)->allows('delete', new Job),
             'Add customers, vendors and items' => $jobs,

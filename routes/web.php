@@ -85,7 +85,6 @@ $onHost('jobs', function () {
 
     Route::middleware(['auth', 'module:jobs'])->group(function () {
         Route::get('/settings', [UserController::class, 'index'])->name('settings.index');
-        Route::post('/settings/users', [UserController::class, 'store'])->name('settings.users.store');
         Route::put('/settings/users/{user}', [UserController::class, 'update'])->name('settings.users.update');
         Route::post('/settings/users/{user}/toggle-active', [UserController::class, 'toggleActive'])->name('settings.users.toggle-active');
         Route::post('/settings/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('settings.users.reset-password');

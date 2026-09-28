@@ -52,7 +52,7 @@ class ReportController extends Controller
             ['Total Jobs', $live->count()],
             ['Completed', $completed->count()],
             ['Estimate (RM)', (float) $live->sum('estimation_value')],
-            ['Final Value — Completed (RM)', (float) $completed->sum('final_value')],
+            ['Final Value, Completed (RM)', (float) $completed->sum('final_value')],
             ['Variance (RM)', (float) $completed->sum('final_value') - (float) $completed->sum('estimation_value')],
             [],
             ['Department', 'Jobs', 'Estimate (RM)'],
@@ -165,8 +165,8 @@ class ReportController extends Controller
         // one that finished normally — closed_from_status (snapshotted at
         // Close Ticket time) is what tells them apart once status flips to
         // "cancelled".
-        $closedPotential = $jobs->where('status', Job::STATUS_CANCELLED)->where('closed_from_status', Job::STATUS_POTENTIAL)->count();
-        $closedInProgress = $jobs->where('status', Job::STATUS_CANCELLED)->where('closed_from_status', Job::STATUS_IN_PROGRESS)->count();
+        $closedPotential = $jobs->where('status', Job::STATUS_CANCELLED)->whereIn('closed_from_status', [Job::STATUS_NEW, Job::STATUS_POTENTIAL])->count();
+        $closedInProgress = $jobs->where('status', Job::STATUS_CANCELLED)->whereIn('closed_from_status', [Job::STATUS_CONFIRMED, Job::STATUS_IN_PROGRESS, Job::STATUS_DELIVERED])->count();
         $closedTotal = $closedPotential + $closedInProgress + $completed->count();
 
         return view('reports.index', [

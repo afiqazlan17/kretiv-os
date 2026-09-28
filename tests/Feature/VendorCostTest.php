@@ -115,7 +115,7 @@ class VendorCostTest extends TestCase
             'estimated_cost' => 300,
         ]);
 
-        $response = $this->actingAs($bod)->get(route('jobs.index'));
+        $response = $this->actingAs($bod)->get(route('jobs.index', ['view' => 'all']));
 
         $response->assertOk();
         $response->assertSee('Unpaid vendor');
@@ -142,7 +142,7 @@ class VendorCostTest extends TestCase
         $this->job(['vendor_costs' => [['id' => 'c1', 'vendor_id' => $vendor->id, 'estimated_cost' => 100, 'status' => 'unpaid']]]);
         $this->job(['job_id' => 'KP-2026-002']);
 
-        $this->actingAs($bod)->get(route('jobs.index'))->assertOk()->assertSee('ABC Printing')->assertSee('Vendor');
+        $this->actingAs($bod)->get(route('jobs.index', ['view' => 'all']))->assertOk()->assertSee('ABC Printing')->assertSee('Vendor');
     }
 
     public function test_vendor_cost_card_shows_on_the_job_page_with_margin_hidden_from_staff(): void

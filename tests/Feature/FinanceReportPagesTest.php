@@ -52,7 +52,7 @@ class FinanceReportPagesTest extends TestCase
         $bod = User::factory()->create(['role' => User::ROLE_BOD]);
         $this->seedBooks();
 
-        $this->actingAs($bod)->get(route('finance.reports', ['report' => 'general-ledger', 'tab' => 'detail']))->assertOk()->assertSee('Invois INV-2026-001', false);
+        $this->actingAs($bod)->get(route('finance.reports', ['report' => 'general-ledger', 'tab' => 'detail']))->assertOk()->assertSee('Invoice INV-2026-001', false);
         $this->actingAs($bod)->get(route('finance.reports', ['report' => 'general-ledger', 'tab' => 'bank']))->assertOk()->assertSee('Collected');
     }
 

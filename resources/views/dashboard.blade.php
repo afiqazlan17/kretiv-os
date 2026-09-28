@@ -10,10 +10,10 @@
         // sentence about their day rather than a wall of numbers.
         $overdueCount = $alerts->filter(fn ($j) => now()->startOfDay()->diffInDays($j->deadline, false) < 0)->count();
         $mood = match (true) {
-            $overdueCount > 0 => $overdueCount.' job dah lepas deadline. Jom settle hari ni.',
-            $alerts->isNotEmpty() => $alerts->count().' job hampir deadline dalam 3 hari.',
-            $stats['in_progress_count'] > 0 => $stats['in_progress_count'].' job sedang berjalan, semua ikut jadual.',
-            default => 'Semua job dah beres. Apa projek seterusnya?',
+            $overdueCount > 0 => $overdueCount.' '.\Illuminate\Support\Str::plural('job', $overdueCount).' past the deadline. Worth sorting out today.',
+            $alerts->isNotEmpty() => $alerts->count().' '.\Illuminate\Support\Str::plural('job', $alerts->count()).' due in the next 3 days.',
+            $stats['in_progress_count'] > 0 => $stats['in_progress_count'].' '.\Illuminate\Support\Str::plural('job', $stats['in_progress_count']).' in hand and on schedule.',
+            default => 'All caught up. What is next?',
         };
     @endphp
 
@@ -41,9 +41,9 @@
         @php
             $tiles = [
                 ['icon' => 'briefcase-business', 'n' => $stats['total'], 'label' => 'Total jobs', 'sub' => $stats['completed_count'].' completed', 'c1' => '#E91E63', 'c2' => '#FF7A9C'],
-                ['icon' => 'target', 'n' => $stats['potential_count'], 'label' => 'Potential', 'sub' => 'RM '.number_format($stats['potential_value'], 2), 'c1' => '#6366F1', 'c2' => '#9B8CFF'],
-                ['icon' => 'zap', 'n' => $stats['in_progress_count'], 'label' => 'In progress', 'sub' => 'Claimed & working', 'c1' => '#3A86FF', 'c2' => '#6FB7FF'],
-                ['icon' => 'circle-x', 'n' => $stats['cancelled_count'], 'label' => 'Cancelled', 'sub' => 'Did not proceed', 'c1' => '#EF4444', 'c2' => '#FF8A7A'],
+                ['icon' => 'inbox', 'n' => $stats['new_count'], 'label' => 'New in queue', 'sub' => 'Waiting to be taken in', 'c1' => '#F59E0B', 'c2' => '#FCD34D'],
+                ['icon' => 'target', 'n' => $stats['potential_count'] - $stats['new_count'], 'label' => 'Quotation', 'sub' => 'Waiting for the customer', 'c1' => '#6366F1', 'c2' => '#9B8CFF'],
+                ['icon' => 'zap', 'n' => $stats['in_progress_count'], 'label' => 'Confirmed work', 'sub' => 'Confirmed, in progress or delivered', 'c1' => '#3A86FF', 'c2' => '#6FB7FF'],
             ];
         @endphp
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -75,7 +75,7 @@
                     <span class="w-10 h-10 rounded-full bg-[#10B981] text-white flex items-center justify-center shrink-0"><x-icon name="circle-check" class="w-5 h-5" /></span>
                     <div>
                         <div class="font-bold text-[#047857]">Semua on track</div>
-                        <div class="text-sm text-[#059669]">Tiada job yang hampir deadline dalam 3 hari.</div>
+                        <div class="text-sm text-[#059669]">No jobs due in the next 3 days.</div>
                     </div>
                 </div>
             @else
@@ -99,7 +99,7 @@
                                 <div class="text-sm font-medium mt-0.5 truncate text-gray-800">{{ $job->customer?->name }}</div>
                             </div>
                             <span class="text-xs font-bold shrink-0 rounded-full px-3 py-1 {{ $over ? 'bg-[#FEE2E2] text-[#B91C1C]' : 'bg-[#FEF3C7] text-[#B45309]' }}">
-                                {{ $over ? abs($days).' hari lewat' : ($days === 0 ? 'Hari ini' : $days.' hari lagi') }}
+                                {{ $over ? abs($days).' '.\Illuminate\Support\Str::plural('day', abs($days)).' late' : ($days === 0 ? 'Today' : $days.' '.\Illuminate\Support\Str::plural('day', $days).' left') }}
                             </span>
                         </a>
                     @endforeach
@@ -111,8 +111,8 @@
         the amounts are the easiest thing on the page to read. --}}
         @php
             $money = [
-                ['icon' => 'trending-up', 'label' => 'Pipeline value', 'v' => $stats['pipeline_value'], 'sub' => 'Potential + in progress', 'c' => '#E91E63', 'bg' => '#FFF0F5'],
-                ['icon' => 'sprout', 'label' => 'Potential value', 'v' => $stats['potential_value'], 'sub' => 'Not confirmed yet', 'c' => '#6366F1', 'bg' => '#F1F1FF'],
+                ['icon' => 'trending-up', 'label' => 'Pipeline value', 'v' => $stats['pipeline_value'], 'sub' => 'Every open job', 'c' => '#E91E63', 'bg' => '#FFF0F5'],
+                ['icon' => 'sprout', 'label' => 'Quoted, not confirmed', 'v' => $stats['potential_value'], 'sub' => 'New and quotation stage', 'c' => '#6366F1', 'bg' => '#F1F1FF'],
                 ['icon' => 'wallet', 'label' => 'Actual revenue', 'v' => $stats['actual_revenue'], 'sub' => $stats['completed_count'].' '.\Illuminate\Support\Str::plural('job', $stats['completed_count']).' completed', 'c' => '#10B981', 'bg' => '#ECFDF5'],
             ];
         @endphp
@@ -178,31 +178,24 @@
             </div>
 
             <div class="k-card p-5 md:p-6">
-                <div class="flex items-start justify-between gap-3 mb-5">
+                <div class="flex items-start justify-between gap-3 mb-4">
                     <div>
-                        <div class="text-base font-bold text-gray-900">Conversion Funnel</div>
-                        <p class="text-xs text-gray-400 mt-0.5">Potential → In Progress → Completed</p>
+                        <div class="text-base font-bold text-gray-900">Pipeline</div>
+                        <p class="text-xs text-gray-400 mt-0.5">Open jobs at each stage</p>
                     </div>
-                    <span class="text-xs font-bold rounded-full px-3 py-1 bg-[#ECFDF5] text-[#047857] shrink-0">{{ $conversionPct }}% converted</span>
+                    <span class="text-xs font-bold rounded-full px-3 py-1 bg-[#ECFDF5] text-[#047857] shrink-0">{{ $conversionPct }}% completed</span>
                 </div>
-                @php
-                    $stages = [
-                        ['l' => 'Potential', 'icon' => 'target', 'n' => $stats['potential_count'], 'v' => $stats['potential_value'], 'c' => '#6366F1', 'bg' => '#F1F1FF', 'ink' => '#4338CA'],
-                        ['l' => 'In Progress', 'icon' => 'zap', 'n' => $stats['in_progress_count'], 'v' => $stats['in_progress_value'], 'c' => '#3A86FF', 'bg' => '#EEF5FF', 'ink' => '#1D4ED8'],
-                        ['l' => 'Completed', 'icon' => 'circle-check', 'n' => $stats['completed_count'], 'v' => $stats['actual_revenue'], 'c' => '#10B981', 'bg' => '#ECFDF5', 'ink' => '#047857', 'last' => true],
-                    ];
-                @endphp
-                <div class="flex items-stretch gap-2">
-                    @foreach ($stages as $s)
-                        <div class="flex-1 rounded-2xl p-3.5 text-center flex flex-col items-center justify-center min-h-[120px]" style="background:{{ $s['bg'] }}">
-                            <x-icon :name="$s['icon']" class="w-5 h-5" style="color:{{ $s['c'] }}" />
-                            <div class="text-[11px] font-bold uppercase tracking-wide mt-1" style="color:{{ $s['ink'] }}">{{ $s['l'] }}</div>
-                            <div class="text-2xl font-extrabold text-gray-900 mt-0.5">{{ $s['n'] }}</div>
-                            <div class="text-[11px] text-gray-500">RM {{ number_format($s['v'], 2) }}</div>
+                @php $maxN = max(1, collect($stats['stages'])->max('n')); @endphp
+                <div class="space-y-2.5">
+                    @foreach ($stats['stages'] as $s)
+                        <div class="flex items-center gap-3 text-sm">
+                            <span class="w-24 shrink-0 text-xs font-semibold text-gray-600">{{ $s['label'] }}</span>
+                            <div class="flex-1 h-6 rounded-lg bg-gray-100 overflow-hidden">
+                                <div class="h-full rounded-lg" style="width: {{ max(3, round($s['n'] / $maxN * 100)) }}%; background: {{ $s['color'] }}"></div>
+                            </div>
+                            <span class="w-6 text-right font-bold text-gray-900">{{ $s['n'] }}</span>
+                            <span class="w-24 text-right text-xs text-gray-500 hidden sm:block">RM {{ number_format($s['v'], 0) }}</span>
                         </div>
-                        @if (empty($s['last']))
-                            <x-icon name="arrow-right" class="self-center w-4 h-4 text-gray-300 shrink-0" />
-                        @endif
                     @endforeach
                 </div>
             </div>

@@ -197,4 +197,15 @@ class JobCreationTest extends TestCase
 
         $this->assertNull(Job::first()->pic);
     }
+
+    public function test_ticking_ill_handle_this_job_takes_it_in_straight_away(): void
+    {
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+
+        $this->actingAs($bod)->post(route('jobs.store'), $this->payload(['print']) + ['take_in' => 1])->assertRedirect();
+
+        $job = Job::first();
+        $this->assertSame(Job::STATUS_POTENTIAL, $job->status);
+        $this->assertSame($bod->name, $job->pic);
+    }
 }

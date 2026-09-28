@@ -20,7 +20,7 @@ class ForcePasswordChangeTest extends TestCase
         $this->actingAs($bod)->post(route('settings.users.reset-password', $amirul))->assertRedirect();
 
         $this->assertTrue($amirul->refresh()->must_change_password);
-        $this->assertMatchesRegularExpression('/Password sementara: ([a-z2-9]{8}) /', session('success'));
+        $this->assertMatchesRegularExpression('/Temporary password: ([a-z2-9]{8}) /', session('success'));
         $this->assertMatchesRegularExpression('/^[abcdefghjkmnpqrstuvwxyz23456789]{8}$/', UserController::temporaryPassword());
     }
 
@@ -73,7 +73,7 @@ class ForcePasswordChangeTest extends TestCase
     {
         $bod = User::factory()->create(['role' => User::ROLE_BOD]);
 
-        $this->actingAs($bod)->post(route('settings.users.store'), ['name' => 'Ila', 'email' => 'ila@kretiv.co', 'role' => 'staff', 'department' => 'brand'])->assertRedirect();
+        $this->actingAs($bod)->post(route('hr.staff.store'), ['name' => 'Ila', 'email' => 'ila@kretiv.co', 'role' => 'staff', 'department' => 'brand', 'employment_type' => 'permanent'])->assertRedirect();
 
         $this->assertTrue(User::where('email', 'ila@kretiv.co')->first()->must_change_password);
     }

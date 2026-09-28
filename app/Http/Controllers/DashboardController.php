@@ -42,7 +42,17 @@ class DashboardController extends Controller
             'actual_revenue' => (float) $completed->sum('final_value'),
         ];
 
-        $funnelTotal = $stats['potential_count'] + $stats['in_progress_count'] + $stats['completed_count'];
+        // Every stage of the flow, for the pipeline panel.
+        $stats['new_count'] = $notCancelled->where('status', Job::STATUS_NEW)->count();
+        $stats['stages'] = collect(Job::FLOW)->map(fn ($s) => [
+            'key' => $s,
+            'label' => Job::labelFor($s),
+            'color' => config("kretivco.job_statuses.{$s}.color"),
+            'n' => $notCancelled->where('status', $s)->count(),
+            'v' => (float) $notCancelled->where('status', $s)->sum($s === Job::STATUS_COMPLETED ? 'final_value' : 'estimation_value'),
+        ])->all();
+
+        $funnelTotal = $stats['total'];
         $conversionPct = $funnelTotal > 0 ? round($stats['completed_count'] / $funnelTotal * 100) : 0;
 
         $visibleDepartments = collect(config('kretivco.departments'))

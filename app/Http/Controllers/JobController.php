@@ -25,7 +25,8 @@ class JobController extends Controller
      * @var array<string, array{title: string, sub: string}>
      */
     public const VIEW_META = [
-        'queue' => ['title' => 'Job Queue', 'sub' => 'All jobs, sorted by most recently changed'],
+        'queue' => ['title' => 'Job Queue', 'sub' => 'New jobs waiting for someone to take them in'],
+        'all' => ['title' => 'All Jobs', 'sub' => 'Every job, most recently changed first'],
         'aging' => ['title' => 'Aging Job', 'sub' => 'Jobs untouched for the longest'],
         'mine' => ['title' => 'My Jobs', 'sub' => 'Jobs under your responsibility'],
     ];
@@ -68,7 +69,9 @@ class JobController extends Controller
             $query->whereIn('department', $user->visibleDepartments());
         }
 
-        if ($view === 'mine') {
+        if ($view === 'queue') {
+            $query->where('status', Job::STATUS_NEW);
+        } elseif ($view === 'mine') {
             $query->where('pic', $user->name);
         } elseif ($view === 'aging') {
             $query->whereNotIn('status', [Job::STATUS_COMPLETED, Job::STATUS_CANCELLED]);
@@ -277,7 +280,9 @@ class JobController extends Controller
                 'discount_amount' => $fields['discount_amount'] ?? null,
                 'line_items' => $resolved['line_items'],
                 'document_notes' => ($quotationNotes = DocumentData::noteLines($fields['quotation_notes'] ?? null)) ? ['quotation' => $quotationNotes] : null,
-                'status' => Job::STATUS_NEW,
+                // "I'll handle this job" skips the queue: it's taken in straight away.
+                'status' => $request->boolean('take_in') ? Job::STATUS_POTENTIAL : Job::STATUS_NEW,
+                'pic' => $request->boolean('take_in') ? $request->user()->name : null,
                 'created_by' => $request->user()->id,
             ]);
 
@@ -654,7 +659,7 @@ class JobController extends Controller
             'action' => 'edited',
             'field_changed' => 'hold_status',
             'old_value' => $oldLabel,
-            'detail' => 'Resumed — hold cleared.',
+            'detail' => 'Resumed, hold cleared.',
         ]);
 
         return back()->with('success', "{$job->job_id} resumed.");
@@ -807,11 +812,11 @@ class JobController extends Controller
             'Customer: '.($job->customer?->company ?: $job->customer?->name),
             'Department: '.config("kretivco.departments.{$job->department}.label", $job->department),
             'Job Type: '.(config("kretivco.job_types.{$job->job_type_category}.label", (string) $job->job_type_category)),
-            'Bank: '.config("kretivco.banks.{$job->bank}.label", '—'),
-            'PIC: '.($job->pic ?: '—'),
+            'Bank: '.config("kretivco.banks.{$job->bank}.label", '-'),
+            'PIC: '.($job->pic ?: '-'),
             'Est. Value: RM '.number_format((float) $job->estimation_value, 2),
-            'Start: '.($job->start_date?->format('j F Y') ?? '—'),
-            'Deadline: '.($job->deadline?->format('j F Y') ?? '—'),
+            'Start: '.($job->start_date?->format('j F Y') ?? '-'),
+            'Deadline: '.($job->deadline?->format('j F Y') ?? '-'),
         ];
         if ($job->notes) {
             $lines[] = 'Notes: '.$job->notes;

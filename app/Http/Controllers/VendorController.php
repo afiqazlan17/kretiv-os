@@ -41,7 +41,7 @@ class VendorController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
-        return back()->with('success', "{$vendor->vendor_id} · {$vendor->name} ditambah.");
+        return back()->with('success', "{$vendor->vendor_id} · {$vendor->name} added.");
     }
 
     public function update(Request $request, Vendor $vendor): RedirectResponse
@@ -50,7 +50,7 @@ class VendorController extends Controller
 
         $vendor->update($this->validated($request));
 
-        return back()->with('success', "{$vendor->vendor_id} dikemaskini.");
+        return back()->with('success', "{$vendor->vendor_id} updated.");
     }
 
     /**

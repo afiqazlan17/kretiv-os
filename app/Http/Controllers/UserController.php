@@ -59,25 +59,6 @@ class UserController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
-    {
-        $this->authorize('create', User::class);
-
-        $validated = $this->validated($request);
-
-        $password = self::temporaryPassword();
-
-        $user = User::create([
-            ...$validated,
-            'password' => Hash::make($password),
-            'must_change_password' => true,
-            'email_verified_at' => now(),
-            'active' => true,
-        ]);
-
-        return back()->with('success', "{$user->name} ditambah sebagai {$validated['role']}. Password sementara: {$password} (salin sekarang, tidak dipaparkan lagi). Dia akan diminta tukar password semasa log masuk pertama.");
-    }
-
     public function update(Request $request, User $user): RedirectResponse
     {
         $this->authorize('update', $user);
@@ -92,7 +73,7 @@ class UserController extends Controller
 
         $user->update($validated);
 
-        return back()->with('success', "{$user->name} dikemaskini.");
+        return back()->with('success', "{$user->name} updated.");
     }
 
     public function resetPassword(Request $request, User $user): RedirectResponse
@@ -103,7 +84,7 @@ class UserController extends Controller
 
         $user->update(['password' => Hash::make($password), 'must_change_password' => true]);
 
-        return back()->with('success', "Password {$user->name} direset. Password sementara: {$password} (salin sekarang, tidak dipaparkan lagi). Dia akan diminta tukar password semasa log masuk.");
+        return back()->with('success', "Password for {$user->name} reset. Temporary password: {$password} (copy it now, it is not shown again). They will be asked to change it when they log in.");
     }
 
     /**

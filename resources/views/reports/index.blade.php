@@ -68,7 +68,7 @@
 
                 <div class="k-card p-5 md:p-6">
                     <div class="flex items-center justify-between mb-4"><h3 class="text-base font-bold text-gray-900">Conversion Funnel</h3><span class="text-xs font-bold rounded-full px-3 py-1 bg-[#ECFDF5] text-[#047857]">{{ $conversionPct }}% converted</span></div>
-                    <div class="flex gap-2">
+                    <div class="grid grid-cols-3 gap-2">
                         @foreach ([['label' => 'New', 'n' => $funnel['new'], 'color' => '#F59E0B'], ['label' => 'Quotation', 'n' => $funnel['potential'], 'color' => '#6366F1'], ['label' => 'Confirmed', 'n' => $funnel['confirmed'], 'color' => '#0EA5E9'], ['label' => 'In Progress', 'n' => $funnel['in_progress'], 'color' => '#3A86FF'], ['label' => 'Delivered', 'n' => $funnel['delivered'], 'color' => '#14B8A6'], ['label' => 'Completed', 'n' => $funnel['completed'], 'color' => '#10B981']] as $step)
                             <div class="flex-1 text-center rounded-2xl p-3.5" style="background-color: {{ $step['color'] }}10; border-color: {{ $step['color'] }}40">
                                 <div class="text-xs font-medium uppercase" style="color: {{ $step['color'] }}">{{ $step['label'] }}</div>
@@ -81,9 +81,9 @@
 
             <div class="k-card p-5 md:p-6">
                 <h3 class="text-base font-bold text-gray-900 mb-1">Closed Tickets</h3>
-                <p class="text-xs text-gray-400 mb-4">By stage at close. Potential and In Progress tickets never reached Completed.</p>
+                <p class="text-xs text-gray-400 mb-4">Where jobs that were cancelled stopped, next to the ones that finished.</p>
                 <div class="flex gap-2">
-                    @foreach ([['label' => 'Closed (Potential)', 'n' => $closedPotential, 'color' => '#6366F1'], ['label' => 'Closed (In Progress)', 'n' => $closedInProgress, 'color' => '#F59E0B'], ['label' => 'Completed', 'n' => $completedCount, 'color' => '#10B981']] as $step)
+                    @foreach ([['label' => 'Cancelled before confirming', 'n' => $closedPotential, 'color' => '#6366F1'], ['label' => 'Cancelled after confirming', 'n' => $closedInProgress, 'color' => '#F59E0B'], ['label' => 'Completed', 'n' => $completedCount, 'color' => '#10B981']] as $step)
                         <div class="flex-1 text-center rounded-2xl p-3.5" style="background-color: {{ $step['color'] }}10; border-color: {{ $step['color'] }}40">
                             <div class="text-xs font-medium uppercase" style="color: {{ $step['color'] }}">{{ $step['label'] }}</div>
                             <div class="text-xl font-bold text-gray-800 mt-1">{{ $step['n'] }}</div>

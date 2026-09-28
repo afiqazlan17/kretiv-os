@@ -170,7 +170,7 @@ class FinanceReports
             $days = (int) $invoice->date->copy()->startOfDay()->diffInDays($asOf->copy()->startOfDay());
 
             return [
-                'customer' => $customers[$invoice->job_id]?->customer?->name ?? '—',
+                'customer' => $customers[$invoice->job_id]?->customer?->name ?? '-',
                 'job_id' => $invoice->job_id,
                 'date' => $invoice->date,
                 'days' => $days,
@@ -199,7 +199,7 @@ class FinanceReports
         return [
             'total' => (float) $invoices->sum('amount'),
             'byDepartment' => $group('department'),
-            'byCustomer' => $group(fn (LedgerEntry $e) => $customers[$e->job_id]?->customer?->name ?? '—'),
+            'byCustomer' => $group(fn (LedgerEntry $e) => $customers[$e->job_id]?->customer?->name ?? '-'),
         ];
     }
 

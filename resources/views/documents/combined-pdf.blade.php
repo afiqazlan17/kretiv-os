@@ -6,7 +6,7 @@
 </head>
 <body>
     @php
-        $noLabel = ['quotation' => 'QNo#', 'proforma' => 'Invoice No#', 'invoice' => 'Invoice No#', 'receipt' => 'Receipt No#'][$type] ?? 'No#';
+        $noLabel = \App\Support\DocumentData::noLabel($type);
         $showBreakdown = in_array($type, ['quotation', 'proforma'], true);
         $subtotal = $amounts->sum();
         $delivery = $showBreakdown ? (float) $jobs->sum('delivery_amount') : 0;

@@ -133,7 +133,7 @@ class LedgerService
             $this->addEntry([
                 'date' => now(),
                 'type' => 'reversal',
-                'description' => "Reversal — {$orig->description}",
+                'description' => "Reversal: {$orig->description}",
                 'department' => $orig->department,
                 'job_id' => $orig->job_id,
                 'doc_number' => $orig->doc_number,
@@ -225,7 +225,7 @@ class LedgerService
         return $this->addEntry([
             'date' => now(),
             'type' => 'invoice',
-            'description' => "Invois {$docNumber} — {$job->customer?->name}",
+            'description' => "Invoice {$docNumber}: {$job->customer?->name}",
             'department' => $job->department,
             'job_id' => $job->job_id,
             'doc_number' => $docNumber,
@@ -265,7 +265,7 @@ class LedgerService
         return $this->addEntry([
             'date' => now(),
             'type' => 'receipt',
-            'description' => "Resit {$docNumber} — {$job->customer?->name}",
+            'description' => "Receipt {$docNumber}: {$job->customer?->name}",
             'department' => $job->department,
             'job_id' => $job->job_id,
             'doc_number' => $docNumber,

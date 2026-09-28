@@ -54,6 +54,7 @@
     @php
         $jobSubmenu = [
             ['key' => 'queue', 'label' => 'Job Queue', 'icon' => 'list-todo'],
+            ['key' => 'all', 'label' => 'All Jobs', 'icon' => 'clipboard-list'],
             ['key' => 'aging', 'label' => 'Aging Job', 'icon' => 'hourglass'],
             ['key' => 'mine', 'label' => 'My Jobs', 'icon' => 'user-check'],
         ];
@@ -115,7 +116,7 @@
         @endforeach
     @elseif ($inFinance)
         @php
-            // Line icons per report (the emoji in FinanceReportController::REPORTS are not used).
+            // Line icon per report.
             $financeIcons = ['general-ledger' => 'book-open', 'trial-balance' => 'scale', 'balance-sheet' => 'receipt', 'cash-book' => 'banknote', 'aging' => 'hourglass', 'bank-reconciliation' => 'landmark', 'sales' => 'chart-line', 'installments' => 'calendar'];
             $financeNav = [
                 ['label' => 'Dashboard', 'url' => route('finance.index'), 'icon' => 'layout-dashboard', 'active' => request()->routeIs('finance.index')],

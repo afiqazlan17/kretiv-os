@@ -103,7 +103,7 @@ class CustomerController extends Controller
             return response()->json($customer);
         }
 
-        return back()->with('success', "{$customer->customer_id} · {$customer->name} ditambah.");
+        return back()->with('success', "{$customer->customer_id} · {$customer->name} added.");
     }
 
     public function update(Request $request, Customer $customer): RedirectResponse
@@ -112,7 +112,7 @@ class CustomerController extends Controller
 
         $customer->update($this->validated($request));
 
-        return back()->with('success', "{$customer->customer_id} dikemaskini.");
+        return back()->with('success', "{$customer->customer_id} updated.");
     }
 
     /**

@@ -218,18 +218,14 @@ return [
     // and closed). Approvals (artwork, UAT, run sheet) sit on top of this
     // as a marker, not a stage. job_status_labels renames a stage for a
     // department.
-    // Each status carries an icon alongside its color so a status badge
-    // never depends on color alone to be told apart — Potential (indigo)
-    // and In Progress (blue) sit close enough in hue that color-only
-    // badges were hard to distinguish at a glance.
     'job_statuses' => [
-        'new' => ['label' => 'New', 'color' => '#F59E0B', 'icon' => '✦'],
-        'potential' => ['label' => 'Quotation', 'color' => '#6366F1', 'icon' => '🎯'],
-        'confirmed' => ['label' => 'Confirmed', 'color' => '#0EA5E9', 'icon' => '✔'],
-        'in_progress' => ['label' => 'In Progress', 'color' => '#3A86FF', 'icon' => '⚡'],
-        'delivered' => ['label' => 'Delivered', 'color' => '#14B8A6', 'icon' => '📦'],
-        'completed' => ['label' => 'Completed', 'color' => '#6B7280', 'icon' => '✓'],
-        'cancelled' => ['label' => 'Cancelled', 'color' => '#EF4444', 'icon' => '🚫'],
+        'new' => ['label' => 'New', 'color' => '#F59E0B'],
+        'potential' => ['label' => 'Quotation', 'color' => '#6366F1'],
+        'confirmed' => ['label' => 'Confirmed', 'color' => '#0EA5E9'],
+        'in_progress' => ['label' => 'In Progress', 'color' => '#3A86FF'],
+        'delivered' => ['label' => 'Delivered', 'color' => '#14B8A6'],
+        'completed' => ['label' => 'Completed', 'color' => '#6B7280'],
+        'cancelled' => ['label' => 'Cancelled', 'color' => '#EF4444'],
     ],
 
     'job_status_labels' => [
@@ -244,8 +240,8 @@ return [
     // waiting on customer confirmation). Visible flag + reason only, no
     // automatic SLA timer.
     'hold_statuses' => [
-        'pending' => ['label' => 'Pending', 'color' => '#F59E0B', 'icon' => '⏸'],
-        'suspended' => ['label' => 'Suspended', 'color' => '#EF4444', 'icon' => '⛔'],
+        'pending' => ['label' => 'Pending', 'color' => '#F59E0B'],
+        'suspended' => ['label' => 'Suspended', 'color' => '#EF4444'],
     ],
 
     'cancel_reasons' => [

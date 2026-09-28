@@ -19,14 +19,14 @@ class FinanceReportController extends Controller
     public const COMPANY_REPORTS = ['trial-balance', 'balance-sheet', 'cash-book', 'bank-reconciliation'];
 
     public const REPORTS = [
-        'general-ledger' => ['General Ledger Report', '📒'],
-        'trial-balance' => ['Trial Balance', '⚖️'],
-        'balance-sheet' => ['Balance Sheet', '🧾'],
-        'cash-book' => ['Cash Book Statement', '💵'],
-        'aging' => ['Aging Report', '⏳'],
-        'bank-reconciliation' => ['Bank Reconciliation Report', '🏦'],
-        'sales' => ['Sales Report', '📈'],
-        'installments' => ['Installment Outstanding', '📅'],
+        'general-ledger' => ['General Ledger Report'],
+        'trial-balance' => ['Trial Balance'],
+        'balance-sheet' => ['Balance Sheet'],
+        'cash-book' => ['Cash Book Statement'],
+        'aging' => ['Aging Report'],
+        'bank-reconciliation' => ['Bank Reconciliation Report'],
+        'sales' => ['Sales Report'],
+        'installments' => ['Installment Outstanding'],
     ];
 
     public function show(Request $request, string $report): View
@@ -96,7 +96,7 @@ class FinanceReportController extends Controller
             ->whereNotNull('installments')->where('archived', false)->get()
             ->flatMap(fn (Job $job) => collect($job->installments)->map(fn ($i) => [
                 'job_id' => $job->job_id,
-                'customer' => $job->customer?->name ?? '—',
+                'customer' => $job->customer?->name ?? '-',
                 'due' => $this->date($i['due_date'] ?? $i['due'] ?? null),
                 'amount' => (float) ($i['amount'] ?? 0),
                 'paid' => ($i['status'] ?? null) === 'paid' || ! empty($i['paid']),

@@ -237,7 +237,7 @@ class DocumentController extends Controller
         $this->authorize('update', $job);
 
         $validated = $request->validate([
-            'doc_type' => ['required', Rule::in(DocumentData::TYPES)],
+            'doc_type' => ['required', Rule::in(['quotation', 'proforma', 'invoice', 'receipt'])],
             'job_ids' => ['required', 'array', 'min:1'],
             'job_ids.*' => ['integer', 'exists:jobs,id'],
         ]);

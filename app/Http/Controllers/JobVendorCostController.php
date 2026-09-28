@@ -101,7 +101,7 @@ class JobVendorCostController extends Controller
             'amount' => $item['actual_cost'],
             'bank' => $validated['bank'],
             'date' => $validated['date'] ?? now(),
-            'notes' => "Vendor: {$vendorName}".($item['notes'] ? ' — '.$item['notes'] : ''),
+            'notes' => "Vendor: {$vendorName}".($item['notes'] ? ': '.$item['notes'] : ''),
         ], $request->user()->name);
 
         $items = $items->map(fn (array $i) => $i['id'] === $costId ? [

@@ -33,6 +33,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TaxSummaryController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VendorController;
+use App\Support\DocumentData;
 use Illuminate\Support\Facades\Route;
 
 // Kretiv OS: with the *_HOST env vars set each module answers only on its own
@@ -106,6 +107,8 @@ $onHost('jobs', function () {
         Route::put('/jobs/{job}/line-items', [JobController::class, 'updateLineItems'])->name('jobs.line-items.update');
         Route::post('/jobs/{job}/take-in', [JobController::class, 'takeIn'])->name('jobs.take-in');
         Route::post('/jobs/{job}/advance', [JobController::class, 'advance'])->name('jobs.advance');
+        Route::post('/jobs/{job}/po', [JobController::class, 'updatePo'])->name('jobs.po.update');
+        Route::get('/jobs/{job}/po', [JobController::class, 'poFile'])->name('jobs.po.file');
         Route::post('/jobs/{job}/close-ticket', [JobController::class, 'closeTicket'])->name('jobs.close-ticket');
         Route::post('/jobs/{job}/complete', [JobController::class, 'complete'])->name('jobs.complete');
         Route::put('/jobs/{job}/reassign', [JobController::class, 'reassign'])->name('jobs.reassign');
@@ -118,7 +121,7 @@ $onHost('jobs', function () {
         Route::post('/jobs/{job}/attachments', [AttachmentController::class, 'store'])->name('jobs.attachments.store');
         Route::get('/jobs/{job}/attachments/{attachmentId}', [AttachmentController::class, 'show'])->name('jobs.attachments.show');
         Route::delete('/jobs/{job}/attachments/{attachmentId}', [AttachmentController::class, 'destroy'])->name('jobs.attachments.destroy');
-        Route::prefix('/jobs/{job}/documents/{type}')->whereIn('type', ['quotation', 'proforma', 'invoice', 'receipt'])->group(function () {
+        Route::prefix('/jobs/{job}/documents/{type}')->whereIn('type', DocumentData::TYPES)->group(function () {
             Route::get('/draft', [DocumentController::class, 'draft'])->name('jobs.documents.draft');
             Route::post('/preview', [DocumentController::class, 'preview'])->name('jobs.documents.preview');
             Route::post('/save', [DocumentController::class, 'save'])->name('jobs.documents.save');

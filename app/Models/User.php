@@ -139,6 +139,8 @@ class User extends Authenticatable
             'quotation', 'proforma' => true,
             'invoice' => $this->role !== self::ROLE_INTERN,
             'receipt' => $this->canManageFinance(),
+            'delivery' => true,
+            'credit_note' => $this->canManageFinance(),
             default => false,
         };
     }

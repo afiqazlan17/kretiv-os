@@ -9,6 +9,7 @@ use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Support\DocumentData;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -108,16 +109,26 @@ class DocumentControllerTest extends TestCase
         $this->actingAs($bod)->getJson(route('jobs.documents.draft', [$job, 'invoice']))->assertStatus(422);
     }
 
-    public function test_a_receipt_needs_an_existing_invoice(): void
+    public function test_a_deposit_can_be_receipted_before_the_invoice_and_the_invoice_takes_it_off(): void
     {
         Storage::fake('public');
         $bod = User::factory()->create(['role' => User::ROLE_BOD]);
         $job = $this->job();
+        $total = DocumentData::jobTotal($job);
 
-        $this->generate($bod, $job, 'receipt')->assertStatus(422);
+        $this->generate($bod, $job, 'receipt', ['amount_paid' => 300])->assertOk();
+        $this->assertEquals(300, DocumentData::paidSoFar($job));
 
-        $this->assertSame(0, JobDocument::where('doc_type', 'receipt')->count());
-        $this->assertSame(0, LedgerEntry::count());
+        $invoiceDraft = $this->actingAs($bod)->getJson(route('jobs.documents.draft', [$job, 'invoice']))->json();
+        $this->assertEquals(300, $invoiceDraft['paid_before']);
+        $invoice = DocumentData::build($job, 'invoice', [], 'INV-1', 'Afiq', null, null, 300);
+        $this->assertEquals(300, $invoice['deposit_paid']);
+        $this->assertEquals(round($invoice['total'] - 300, 2), $invoice['balance_due']);
+
+        $deposit = DocumentData::build($job, 'receipt', ['amount_paid' => 100], 'RC-1', 'Afiq', $total, null, 0);
+        $this->assertSame('DEPOSIT RECEIPT', $deposit['doc_title']);
+        $final = DocumentData::build($job, 'receipt', [], 'RC-2', 'Afiq', $total, null, 300);
+        $this->assertSame('PAYMENT RECEIPT', $final['doc_title']);
     }
 
     public function test_a_receipt_can_record_a_partial_payment_against_the_invoice(): void
@@ -287,12 +298,13 @@ class DocumentControllerTest extends TestCase
         $this->assertSame(['Pay by Friday please.'], $job->refresh()->document_notes['invoice']);
     }
 
-    public function test_quotation_is_valid_14_days_and_invoice_due_date_defaults_to_7_days_but_can_be_set(): void
+    public function test_quotation_is_valid_14_days_invoice_due_in_14_and_proforma_in_7(): void
     {
         $job = $this->job();
 
         $this->assertSame(['Valid until', now()->addDays(14)->format('d M Y')], DocumentData::build($job, 'quotation', [], 'QT-1', 'Afiq')['header_extra']);
-        $this->assertSame(['Due', now()->addDays(7)->format('d M Y')], DocumentData::build($job, 'invoice', [], 'INV-1', 'Afiq')['header_extra']);
+        $this->assertSame(['Due', now()->addDays(14)->format('d M Y')], DocumentData::build($job, 'invoice', [], 'INV-1', 'Afiq')['header_extra']);
+        $this->assertSame(['Due', now()->addDays(7)->format('d M Y')], DocumentData::build($job, 'proforma', [], 'PRF-1', 'Afiq')['header_extra']);
         $this->assertSame(['Due', '15 Oct 2026'], DocumentData::build($job, 'invoice', ['due_date' => '2026-10-15'], 'INV-1', 'Afiq')['header_extra']);
         $this->assertNull(DocumentData::build($job, 'receipt', [], 'RC-1', 'Afiq', 1000)['header_extra']);
     }
@@ -491,7 +503,7 @@ class DocumentControllerTest extends TestCase
         $this->assertStringNotContainsString('Please indicate quotation number', $text);
     }
 
-    public function test_issued_by_shows_the_company_name_and_proforma_is_hidden_from_the_job_page(): void
+    public function test_issued_by_shows_the_company_name_and_every_document_is_on_the_job_page(): void
     {
         if (! shell_exec('command -v pdftotext')) {
             $this->markTestSkipped('pdftotext not installed.');
@@ -505,6 +517,64 @@ class DocumentControllerTest extends TestCase
         $this->assertStringContainsString('Kretivco Mediaworks', $this->pdfText($response->getContent()));
 
         $this->actingAs($bod)->get(route('jobs.show', $job))
-            ->assertOk()->assertDontSee('Proforma Invoice')->assertSee('Quotation', false);
+            ->assertOk()->assertSee('Proforma Invoice')->assertSee('Delivery Order')->assertSee('Credit Note')->assertSee('Quotation', false);
+    }
+
+    public function test_credit_note_needs_an_invoice_and_takes_the_amount_off_revenue_and_what_is_owed(): void
+    {
+        Storage::fake('public');
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $job = $this->job();
+
+        $this->generate($bod, $job, 'credit_note', ['credit_amount' => 50])->assertStatus(422);
+        $this->generate($bod, $job, 'invoice')->assertOk();
+        $invoiceAmount = (float) LedgerEntry::where('type', 'invoice')->value('amount');
+
+        $this->generate($bod, $job, 'credit_note', ['credit_amount' => $invoiceAmount + 1])->assertStatus(422);
+        $this->generate($bod, $job, 'credit_note', ['credit_amount' => 50, 'credit_reason' => 'discount', 'credit_reason_text' => 'Loyalty'])->assertOk();
+
+        $cn = LedgerEntry::where('type', 'credit_note')->first();
+        $this->assertEquals(50, $cn->amount);
+        $this->assertSame('ar', $cn->credit_account);
+        $this->assertStringStartsWith('CN', $cn->doc_number);
+        $this->assertEquals(50, DocumentData::creditedSoFar($job));
+
+        // The receipt now only asks for what's left after the credit.
+        $draft = $this->actingAs($bod)->getJson(route('jobs.documents.draft', [$job, 'receipt']))->json();
+        $this->assertEquals($invoiceAmount - 50, $draft['invoice_total']);
+    }
+
+    public function test_delivery_order_for_print_and_handover_form_for_other_departments(): void
+    {
+        Storage::fake('public');
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $job = $this->job();
+        $job->update(['po_number' => 'PO-7788']);
+
+        $this->generate($bod, $job, 'delivery')->assertOk();
+        $doc = JobDocument::where('doc_type', 'delivery')->first();
+        $this->assertStringStartsWith('DO', $doc->doc_number);
+        $this->assertSame(0, LedgerEntry::count());
+
+        $built = DocumentData::build($job->refresh(), 'delivery', [], 'DO-1', 'Afiq');
+        $this->assertSame('DELIVERY ORDER', $built['doc_title']);
+        $this->assertSame('PO-7788', $built['po_number']);
+
+        $job->update(['department' => 'tech']);
+        $this->assertSame('HANDOVER FORM', DocumentData::build($job->refresh(), 'delivery', [], 'HO-1', 'Afiq')['doc_title']);
+        $this->assertStringStartsWith('HO', DocumentData::number('delivery', $job));
+    }
+
+    public function test_po_is_saved_on_the_job_and_a_mismatch_is_flagged(): void
+    {
+        Storage::fake('public');
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $job = $this->job();
+
+        $this->actingAs($bod)->post(route('jobs.po.update', $job), ['po_number' => 'PO-1', 'po_amount' => 1, 'po_file' => UploadedFile::fake()->create('po.pdf', 10, 'application/pdf')])->assertRedirect();
+        $job->refresh();
+        $this->assertSame('PO-1', $job->po_number);
+        $this->actingAs($bod)->get(route('jobs.po.file', $job))->assertOk();
+        $this->actingAs($bod)->get(route('jobs.show', $job))->assertSee("doesn't match the job total", false);
     }
 }

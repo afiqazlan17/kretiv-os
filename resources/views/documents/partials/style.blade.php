@@ -38,6 +38,7 @@
 
     table.sign { width: 511pt; border-collapse: collapse; margin-top: 14.8pt; page-break-inside: avoid; }
     table.sign td { padding: 0 0 0 5.5pt; border: none; vertical-align: top; }
+    .recv-line { width: 200pt; border-bottom: 0.5pt solid #bbbbbb; padding: 9pt 0 2pt; font-size: 8.5pt; color: #505050; }
     .sign-line { width: 166.7pt; border-top: 0.5pt solid #141414; margin-top: 70pt; padding-top: 3pt; font-size: 9pt; }
     .signed-name { width: 166.7pt; text-align: center; margin-top: 24pt; font-size: 9pt; }
     .sign-rule { width: 166.7pt; border-top: 0.5pt solid #141414; margin-top: 4pt; }

@@ -12,7 +12,8 @@
             ->map(fn ($l) => preg_match('/^\s*[\*\-•·]+\s*/u', $l) ? ['bullet', preg_replace('/^\s*[\*\-•·]+\s*/u', '', $l)] : ['head', trim($l)])
             ->values();
         $count = $lines->count();
-        $empty = $money ? '<td></td><td></td><td></td>' : '';
+        $qtyOnly = $qtyOnly ?? false;
+        $empty = $money ? '<td></td><td></td><td></td>' : ($qtyOnly ? '<td></td>' : '');
     @endphp
     <tr class="first {{ $count === 0 ? 'last' : '' }}">
         <td class="c">{{ $i + 1 }}</td>
@@ -21,6 +22,8 @@
             <td class="c">{{ rtrim(rtrim(number_format($item['qty'], 2, '.', ''), '0'), '.') }}</td>
             <td class="c">RM {{ number_format($item['price'], 2) }}</td>
             <td class="rt">RM {{ number_format($item['amount'], 2) }}</td>
+        @elseif ($qtyOnly)
+            <td class="c">{{ rtrim(rtrim(number_format($item['qty'], 2, '.', ''), '0'), '.') }}</td>
         @endif
     </tr>
     @foreach ($lines as $n => [$kind, $text])

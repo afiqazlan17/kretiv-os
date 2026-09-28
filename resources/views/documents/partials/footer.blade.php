@@ -36,8 +36,16 @@
             @endif
             <div class="sign-line"></div>
         </td>
-        @unless ($isReceipt ?? false)
+        @if ($receivedBy ?? false)
+            <td>
+                <b>Received by:</b>
+                <div class="recv-line">Name:</div>
+                <div class="recv-line">IC / Staff No:</div>
+                <div class="recv-line">Date:</div>
+                <div class="sign-line" style="margin-top:22pt;">Signature &amp; company stamp</div>
+            </td>
+        @elseif (! ($isReceipt ?? false))
             <td><b>Accepted by:</b><div class="sign-line"></div></td>
-        @endunless
+        @endif
     </tr>
 </table>

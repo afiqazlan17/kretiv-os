@@ -277,6 +277,29 @@ class LedgerService
         ]);
     }
 
+    // Credit note against the invoice: takes the amount off revenue and off
+    // what the customer owes. Each credit note has its own number.
+    public function postCreditNote($job, string $docNumber, string $userName, float $amount): ?LedgerEntry
+    {
+        if ($amount <= 0) {
+            return null;
+        }
+
+        return $this->addEntry([
+            'date' => now(),
+            'type' => 'credit_note',
+            'description' => "Credit Note {$docNumber}: {$job->customer?->name}",
+            'department' => $job->department,
+            'job_id' => $job->job_id,
+            'doc_number' => $docNumber,
+            'debit_account' => self::revenueAccount($job->department),
+            'credit_account' => 'ar',
+            'amount' => $amount,
+            'bank' => null,
+            'created_by' => $userName ?: 'System',
+        ]);
+    }
+
     /** Cancels one recorded payment (e.g. keyed in twice by mistake) by reversing its entry. */
     public function voidReceipt(LedgerEntry $entry, string $userName): void
     {

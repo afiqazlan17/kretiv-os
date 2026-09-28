@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'estimation_value', 'delivery_amount', 'discount_amount', 'final_value', 'pic', 'start_date', 'deadline', 'notes', 'drive_link', 'priority',
     'archived', 'cancel_reason', 'cancel_reason_text', 'source', 'special_arrangement', 'installments',
     'cost_breakdown', 'baki_kretivco', 'line_items', 'attachments', 'bank', 'hold_status', 'hold_reason',
-    'project_id', 'created_by', 'vendor_costs', 'document_notes',
+    'project_id', 'created_by', 'vendor_costs', 'document_notes', 'po_number', 'po_amount', 'po_path', 'po_name',
 ])]
 class Job extends Model
 {

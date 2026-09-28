@@ -123,4 +123,29 @@ return [
             'Please keep this receipt for your records.',
         ],
     ],
+
+    // Delivery Order (KretivPrint) and Handover / Completion Form (others).
+    'delivery' => [
+        'print' => [
+            'Goods are delivered in good condition unless stated otherwise.',
+            'Please check the quantity and condition upon receipt.',
+            'Any shortage or damage must be reported within 3 days of delivery. Claims after that period cannot be accepted.',
+            'Please sign and stamp this DO as proof of receipt.',
+        ],
+        'default' => [
+            'The client confirms receipt of the deliverables listed above and that they have been delivered as agreed.',
+            'Any defect must be reported within 7 days of handover.',
+            'Please sign and stamp as proof of acceptance.',
+        ],
+    ],
+
+    // ':reason' is replaced with the reason picked on the credit note.
+    'credit_note' => [
+        'default' => [
+            'This credit note is issued against the invoice number stated above.',
+            'The credited amount will be deducted from the outstanding balance or refunded, as agreed in writing.',
+            'Reason for credit: :reason.',
+            'This credit note does not change the payment terms of any other invoice.',
+        ],
+    ],
 ];

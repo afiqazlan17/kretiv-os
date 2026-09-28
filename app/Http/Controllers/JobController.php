@@ -486,6 +486,34 @@ class JobController extends Controller
         return back()->with('success', "{$job->job_id} taken in. You can send the quotation now.");
     }
 
+    /** The customer's Purchase Order: number (printed on proforma, invoice and DO), amount and the PO file. */
+    public function updatePo(Request $request, Job $job): RedirectResponse
+    {
+        $this->authorize('update', $job);
+        $data = $request->validate([
+            'po_number' => ['nullable', 'string', 'max:100'],
+            'po_amount' => ['nullable', 'numeric', 'min:0'],
+            'po_file' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png,heic,webp', 'max:20480'],
+        ]);
+
+        $update = ['po_number' => $data['po_number'] ?? null, 'po_amount' => $data['po_amount'] ?? null];
+        if ($file = $request->file('po_file')) {
+            $update['po_path'] = $file->store("{$job->job_id}/po", 'public');
+            $update['po_name'] = $file->getClientOriginalName();
+        }
+        $job->update($update);
+
+        return back()->with('success', 'Purchase order saved.');
+    }
+
+    public function poFile(Job $job)
+    {
+        $this->authorize('view', $job);
+        abort_unless($job->po_path && Storage::disk('public')->exists($job->po_path), 404);
+
+        return Storage::disk('public')->response($job->po_path, $job->po_name);
+    }
+
     /** One stage forward: Quotation -> Confirmed -> In Progress -> Delivered. */
     public function advance(Request $request, Job $job): RedirectResponse
     {

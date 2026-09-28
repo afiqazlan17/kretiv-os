@@ -45,7 +45,7 @@
                         <div><label class="text-xs font-semibold text-gray-500">By (Staff)</label>
                             <input type="text" x-model="form.by_staff" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></div>
 
-                        <div>
+                        <div x-show="type !== 'credit_note'">
                             <div class="flex items-center justify-between">
                                 <label class="text-xs font-semibold text-gray-500">Item</label>
                                 <button type="button" @click="addItem()" class="inline-flex items-center gap-1 text-xs font-bold text-[#C2185B] hover:underline"><x-icon name="plus" class="w-3.5 h-3.5" /> Add</button>
@@ -61,7 +61,7 @@
                                         <div class="flex items-end gap-2">
                                             <div class="flex-1"><label class="text-[11px] text-gray-400">Quantity (Qty)</label>
                                                 <input type="number" min="0" step="any" x-model="row.qty" class="block w-full rounded-md border-gray-300 shadow-sm text-sm"></div>
-                                            <div class="flex-1"><label class="text-[11px] text-gray-400">Price (RM)</label>
+                                            <div class="flex-1" x-show="type !== 'delivery'"><label class="text-[11px] text-gray-400">Price (RM)</label>
                                                 <input type="number" min="0" step="0.01" x-model="row.price" class="block w-full rounded-md border-gray-300 shadow-sm text-sm"></div>
                                             <button type="button" @click="removeItem(idx)" class="text-gray-400 hover:text-red-500 pb-2.5" title="Remove item" aria-label="Remove item"><x-icon name="trash-2" class="w-4 h-4" /></button>
                                         </div>
@@ -70,7 +70,7 @@
                             </div>
                         </div>
 
-                        <template x-if="type !== 'receipt'">
+                        <template x-if="!['receipt', 'delivery', 'credit_note'].includes(type)">
                             <div class="grid grid-cols-2 gap-2">
                                 <div><label class="text-xs font-semibold text-gray-500">Delivery (RM)</label>
                                     <input type="number" min="0" step="0.01" x-model="form.delivery" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></div>
@@ -79,10 +79,27 @@
                             </div>
                         </template>
 
-                        <template x-if="type === 'invoice'">
+                        <template x-if="type === 'invoice' || type === 'proforma'">
                             <div><label class="text-xs font-semibold text-gray-500">Due Date</label>
                                 <input type="date" x-model="form.due_date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
-                                <p class="mt-1 text-[11px] text-gray-400">Defaults to 7 days from today.</p></div>
+                                <p class="mt-1 text-[11px] text-gray-400" x-text="type === 'invoice' ? 'Defaults to 14 days from today.' : 'Defaults to 7 days from today.'"></p>
+                                <p x-show="type === 'invoice' && paidBefore > 0" class="mt-1 text-[11px] text-[#047857]">Deposit already received (RM <span x-text="paidBefore.toFixed(2)"></span>) is taken off the balance on this invoice.</p></div>
+                        </template>
+
+                        <template x-if="type === 'credit_note'">
+                            <div class="space-y-3">
+                                <div class="rounded-lg bg-[#FFF7ED] px-3 py-2 text-xs text-[#9A3412]">
+                                    Against Invoice <b x-text="invoiceNumber"></b>. Up to <b x-text="'RM ' + (parseFloat(invoiceTotal) || 0).toFixed(2)"></b> can be credited. It comes off revenue and what the customer owes.
+                                </div>
+                                <div><label class="text-xs font-semibold text-gray-500">Reason</label>
+                                    <select x-model="form.credit_reason" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                                        <template x-for="(lbl, key) in creditReasons" :key="key"><option :value="key" x-text="lbl"></option></template>
+                                    </select></div>
+                                <div><label class="text-xs font-semibold text-gray-500">Details (optional)</label>
+                                    <input type="text" x-model="form.credit_reason_text" maxlength="255" placeholder="e.g. 10% loyalty discount agreed on 3 Oct" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></div>
+                                <div><label class="text-xs font-semibold text-gray-500">Credit Amount (RM)</label>
+                                    <input type="number" min="0" step="0.01" x-model="form.credit_amount" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></div>
+                            </div>
                         </template>
 
                         <template x-if="type === 'receipt'">
@@ -91,11 +108,14 @@
                                     <select x-model="form.payment_method" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
                                         <template x-for="m in paymentMethods" :key="m"><option :value="m" x-text="m"></option></template>
                                     </select></div>
+                                <div x-show="!invoiceNumber" class="rounded-lg bg-[#EFF6FF] px-3 py-2 text-xs text-[#1D4ED8]">
+                                    No invoice yet, so this is a deposit against the quoted total of <b x-text="'RM ' + (parseFloat(invoiceTotal) || 0).toFixed(2)"></b>. The invoice will show it as already received.
+                                </div>
                                 <div x-show="paidBefore > 0" class="rounded-lg bg-[#ECFDF5] px-3 py-2 text-xs text-[#047857]">
                                     Already paid on earlier receipts: <b x-text="'RM ' + paidBefore.toFixed(2)"></b>. This receipt records the next payment.
                                 </div>
                                 <div><label class="text-xs font-semibold text-gray-500">Amount Paid Now (RM)</label>
-                                    <input type="number" min="0" step="0.01" x-model="form.amount_paid" :placeholder="invoiceNumber ? `Auto from Invoice ${invoiceNumber}` : ''" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></div>
+                                    <input type="number" min="0" step="0.01" x-model="form.amount_paid" :placeholder="invoiceNumber ? `Auto from Invoice ${invoiceNumber}` : 'Deposit against the quoted total'" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></div>
                                 <div><label class="text-xs font-semibold text-gray-500">Balance Due (RM)</label>
                                     <input type="text" :value="balanceDue.toFixed(2)" readonly class="mt-1 block w-full rounded-md border-gray-200 !bg-[#F7F1EE] shadow-sm text-sm"></div>
                             </div>
@@ -159,11 +179,11 @@
 <script>
     function documentModal(cfg) {
         const blank = () => ({ customer_name: '', company: '', phone: '', address_line_1: '', address_line_2: '', title: '', by_staff: '', due_date: '',
-            items: [], delivery: 0, discount: 0, payment_method: 'Bank Transfer', amount_paid: null });
+            items: [], delivery: 0, discount: 0, payment_method: 'Bank Transfer', amount_paid: null, credit_reason: 'discount', credit_reason_text: '', credit_amount: null });
         return {
             jobCode: cfg.jobCode, urls: cfg.urls, mobileTab: 'form',
             open: false, type: 'quotation', label: 'Quotation', loading: false, busy: false, previewing: false,
-            error: '', notice: '', form: blank(), paymentMethods: [], invoiceNumber: null, invoiceTotal: null, paidBefore: 0, customerPhone: '', docNumber: '',
+            error: '', notice: '', form: blank(), paymentMethods: [], creditReasons: {}, invoiceNumber: null, invoiceTotal: null, paidBefore: 0, customerPhone: '', docNumber: '',
             editNotes: false, notesText: '', defaultNotes: [], previewUrl: null, frameSrc: ['', ''], active: 0, pending: null, dirty: false, timer: null, seq: 0, pageDirty: false,
             pager: window.createPdfPager(),
 
@@ -198,7 +218,7 @@
                 if (!res.ok) { this.error = await this.failure(res); this.loading = false; return; }
                 const d = await res.json();
                 this.label = d.label; this.docNumber = d.doc_number; this.customerPhone = d.customer_phone || '';
-                this.invoiceNumber = d.invoice_number; this.invoiceTotal = d.invoice_total; this.paidBefore = d.paid_before || 0; this.paymentMethods = d.payment_methods;
+                this.invoiceNumber = d.invoice_number; this.invoiceTotal = d.invoice_total; this.paidBefore = d.paid_before || 0; this.paymentMethods = d.payment_methods; this.creditReasons = d.credit_reasons || {};
                 // Standard wording for "Use default"; the job's own saved notes (if any) open in edit mode.
                 this.defaultNotes = d.standard_notes; this.notesText = d.defaults.notes.join('\n'); this.editNotes = d.notes_custom;
                 const f = d.defaults; delete f.notes;
@@ -231,12 +251,13 @@
             toggleNotes() { this.editNotes = !this.editNotes; if (!this.editNotes) this.notesText = this.defaultNotes.join('\n'); },
             payload() {
                 const p = { ...JSON.parse(JSON.stringify(this.form)) };
-                if (this.type === 'receipt') { p.delivery = 0; p.discount = 0; }
+                if (this.type === 'receipt' || this.type === 'credit_note') { p.delivery = 0; p.discount = 0; }
                 else { delete p.payment_method; delete p.amount_paid; }
                 if (this.editNotes) p.notes = this.notesText; else p.use_default_notes = true;
                 return p;
             },
             get total() {
+                if (this.type === 'credit_note') return parseFloat(this.form.credit_amount) || 0;
                 const sub = this.form.items.reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.price) || 0), 0);
                 return sub + (parseFloat(this.form.delivery) || 0) - (parseFloat(this.form.discount) || 0);
             },

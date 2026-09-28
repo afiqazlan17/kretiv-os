@@ -32,18 +32,18 @@ class DocumentController extends Controller
         $this->authorize('update', $job);
         $this->ensureAllowed($job, $type);
 
-        $invoice = $this->invoiceEntry($job);
-        $paidBefore = $type === 'receipt' ? DocumentData::paidSoFar($job) : 0.0;
+        [$basis, $invoiceNumber, $paidBefore] = $this->basis($job, $type);
 
         return response()->json([
             'doc_number' => DocumentData::number($type, $job),
-            'label' => DocumentData::label($type),
+            'label' => DocumentData::label($type, $job->department),
             'customer_phone' => $job->customer?->phone,
-            'invoice_number' => $invoice?->doc_number,
-            'invoice_total' => $invoice ? (float) $invoice->amount : null,
+            'invoice_number' => $invoiceNumber,
+            'invoice_total' => $basis,
             'paid_before' => $paidBefore,
+            'credit_reasons' => DocumentData::CREDIT_REASONS,
             'payment_methods' => DocumentData::PAYMENT_METHODS,
-            'defaults' => DocumentData::defaults($job, $type, $request->user()->shortName(), $invoice ? (float) $invoice->amount : null, $paidBefore),
+            'defaults' => DocumentData::defaults($job, $type, $request->user()->shortName(), $basis, $paidBefore),
             'standard_notes' => DocumentData::defaultNotes($type, DocumentData::bank($job), $job->department),
             'notes_custom' => DocumentData::customNotes($job, $type) !== null,
         ]);
@@ -180,9 +180,16 @@ class DocumentController extends Controller
             abort_unless($ledger->postInvoiceEntry($job, $docNumber, $userName, $doc['total']), 422, 'Nothing to post — the invoice total is empty.');
         }
 
+        if ($type === 'credit_note') {
+            $open = round($doc['invoice_total'], 2);
+            abort_if($doc['total'] <= 0, 422, 'Enter the credit amount.');
+            abort_if($doc['total'] > $open + 0.005, 422, 'The credit is more than the invoice (RM '.number_format($open, 2).' after earlier credit notes).');
+            $ledger->postCreditNote($job, $docNumber, $userName, $doc['total']);
+        }
+
         if ($type === 'receipt') {
             $owed = round($doc['invoice_total'] - $doc['paid_before'], 2);
-            abort_if($owed <= 0, 422, 'This invoice is already fully paid.');
+            abort_if($owed <= 0, 422, 'This job is already fully paid.');
             abort_if($doc['amount_paid'] > $owed + 0.005, 422, 'Amount paid is more than the balance still owed (RM '.number_format($owed, 2).').');
             abort_unless($ledger->postReceiptEntry($job, $docNumber, $userName, $doc['amount_paid']), 422, 'Enter the amount paid.');
         }
@@ -346,11 +353,34 @@ class DocumentController extends Controller
             'Mark the job as Customer Confirmed before issuing an invoice or receipt.'
         );
 
-        abort_if(
-            $type === 'receipt' && ! self::invoiceEntry($job),
-            422,
-            'Generate an Invoice for this job first — Receipt only records payment against an existing invoice.'
-        );
+        abort_if($job->status === Job::STATUS_CANCELLED, 422, 'This job is cancelled.');
+        abort_if($type === 'credit_note' && ! self::invoiceEntry($job), 422, 'Issue the invoice first. A credit note is always against an invoice.');
+    }
+
+    /**
+     * What a payment or credit is measured against: the invoice (less any
+     * credit notes) once there is one, otherwise the job's quoted total, so
+     * a deposit can be receipted before the invoice. Returns [total,
+     * invoice number, already paid].
+     *
+     * @return array{0: ?float, 1: ?string, 2: float}
+     */
+    private function basis(Job $job, string $type): array
+    {
+        if (! in_array($type, ['receipt', 'invoice', 'credit_note'], true)) {
+            return [null, null, 0.0];
+        }
+        $invoice = self::invoiceEntry($job);
+        $paid = DocumentData::paidSoFar($job);
+
+        if ($type === 'invoice') {
+            return [null, null, $paid];
+        }
+        if ($invoice) {
+            return [round((float) $invoice->amount - DocumentData::creditedSoFar($job), 2), $invoice->doc_number, $type === 'receipt' ? $paid : 0.0];
+        }
+
+        return [DocumentData::jobTotal($job), null, $paid];
     }
 
     /** @return array<string, mixed> */
@@ -376,9 +406,12 @@ class DocumentController extends Controller
             'use_default_notes' => ['nullable', 'boolean'],
             'payment_method' => ['nullable', Rule::in(DocumentData::PAYMENT_METHODS)],
             'amount_paid' => ['nullable', 'numeric', 'min:0'],
+            'credit_reason' => ['nullable', Rule::in(array_keys(DocumentData::CREDIT_REASONS))],
+            'credit_reason_text' => ['nullable', 'string', 'max:255'],
+            'credit_amount' => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        $invoice = $type === 'receipt' ? self::invoiceEntry($job) : null;
+        [$basis, $invoiceNumber, $paidBefore] = $this->basis($job, $type);
 
         return DocumentData::build(
             $job,
@@ -386,9 +419,9 @@ class DocumentController extends Controller
             $data,
             DocumentData::number($type, $job),
             $request->user()->shortName(),
-            $invoice ? (float) $invoice->amount : null,
-            $invoice?->doc_number,
-            $type === 'receipt' ? DocumentData::paidSoFar($job) : 0.0,
+            $basis,
+            $invoiceNumber,
+            $paidBefore,
         );
     }
 
@@ -424,7 +457,8 @@ class DocumentController extends Controller
             'generated_at' => now(),
         ]);
 
-        $label = ['quotation' => 'a Quotation', 'proforma' => 'a Proforma Invoice', 'invoice' => 'an Invoice', 'receipt' => 'a Receipt'][$type] ?? "a {$type}";
+        $name = DocumentData::label($type, $job->department);
+        $label = (in_array(strtolower($name[0]), ['a', 'e', 'i', 'o', 'u'], true) ? 'an ' : 'a ').$name;
         ActivityLog::create([
             'job_id' => $job->id,
             'job_code' => $job->job_id,

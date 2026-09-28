@@ -43,7 +43,7 @@ class LedgerEntry extends Model
     public function isVoidable(): bool
     {
         return ! $this->reversed
-            && in_array($this->type, ['operating_expense', 'job_expense'], true)
+            && in_array($this->type, ['operating_expense', 'job_expense', 'credit_note'], true)
             && ! str_starts_with((string) $this->description, 'Vendor:');
     }
 }

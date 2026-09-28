@@ -15,25 +15,35 @@ use Illuminate\Support\Carbon;
 // can't drift apart.
 class DocumentData
 {
-    public const TYPES = ['quotation', 'proforma', 'invoice', 'receipt'];
+    public const TYPES = ['quotation', 'proforma', 'invoice', 'receipt', 'delivery', 'credit_note'];
+
+    /** Why a credit note is issued (shown on the document). */
+    public const CREDIT_REASONS = ['discount' => 'Discount', 'pricing_correction' => 'Pricing correction', 'cancellation' => 'Cancellation', 'other' => 'Other'];
 
     public const PAYMENT_METHODS = ['Bank Transfer', 'Cash', 'Online Banking'];
 
     public const QUOTATION_VALID_DAYS = 14;
 
-    public const INVOICE_DUE_DAYS = 7;
+    public const INVOICE_DUE_DAYS = 14;
 
-    private const PREFIXES = ['quotation' => 'QTN', 'proforma' => 'PRF', 'invoice' => 'INV', 'receipt' => 'RCP'];
+    public const PROFORMA_DUE_DAYS = 7;
+
+    private const PREFIXES = ['quotation' => 'QTN', 'proforma' => 'PRF', 'invoice' => 'INV', 'receipt' => 'RCP', 'delivery' => 'DO', 'credit_note' => 'CN'];
 
     /** Department letter at the end of every document number. */
     private const DEPT_SUFFIX = ['print' => 'P', 'tech' => 'T', 'brand' => 'B', 'event' => 'E'];
 
-    private const NO_LABELS = ['quotation' => 'QNo#', 'proforma' => 'Invoice No#', 'invoice' => 'Invoice No#', 'receipt' => 'Receipt No#'];
+    private const NO_LABELS = ['quotation' => 'QNo#', 'proforma' => 'Proforma No#', 'invoice' => 'Invoice No#', 'receipt' => 'Receipt No#', 'delivery' => 'Ref No#', 'credit_note' => 'CN No#'];
 
-    private const LABELS = ['quotation' => 'Quotation', 'proforma' => 'Proforma Invoice', 'invoice' => 'Invoice', 'receipt' => 'Receipt'];
+    private const LABELS = ['quotation' => 'Quotation', 'proforma' => 'Proforma Invoice', 'invoice' => 'Invoice', 'receipt' => 'Receipt', 'delivery' => 'Delivery Order', 'credit_note' => 'Credit Note'];
 
-    public static function label(string $type): string
+    /** KretivPrint delivers goods (Delivery Order); the other departments hand work over (Handover Form). */
+    public static function label(string $type, ?string $department = null): string
     {
+        if ($type === 'delivery' && $department && $department !== 'print') {
+            return 'Handover Form';
+        }
+
         return self::LABELS[$type] ?? ucfirst($type);
     }
 
@@ -42,9 +52,9 @@ class DocumentData
         return self::NO_LABELS[$type] ?? 'No#';
     }
 
-    public static function prefix(string $type): string
+    public static function prefix(string $type, ?string $department = null): string
     {
-        return self::PREFIXES[$type];
+        return $type === 'delivery' && $department && $department !== 'print' ? 'HO' : self::PREFIXES[$type];
     }
 
     /**
@@ -56,27 +66,41 @@ class DocumentData
      */
     public static function number(string $type, Job $job): string
     {
-        if ($type !== 'receipt' && $job->exists) {
+        $prefix = self::prefix($type, $job->department);
+        if (! in_array($type, ['receipt', 'credit_note'], true) && $job->exists) {
             $existing = JobDocument::where('job_id', $job->id)->where('doc_type', $type)
-                ->where('doc_number', 'like', self::prefix($type).'%')->oldest('id')->value('doc_number');
-            if ($existing && preg_match('/^'.self::prefix($type).'\d{8}-[A-Z]$/', $existing)) {
+                ->where('doc_number', 'like', $prefix.'%')->oldest('id')->value('doc_number');
+            if ($existing && preg_match('/^'.$prefix.'\d{8}-[A-Z]$/', $existing)) {
                 return $existing;
             }
         }
 
-        return self::prefix($type).now()->format('ym').str_pad((string) (self::lastSequence($type) + 1), 4, '0', STR_PAD_LEFT)
+        return $prefix.now()->format('ym').str_pad((string) (self::lastSequence($prefix) + 1), 4, '0', STR_PAD_LEFT)
             .'-'.(self::DEPT_SUFFIX[$job->department] ?? 'X');
     }
 
-    /** Highest running number issued so far for a document type (documents and ledger). */
-    private static function lastSequence(string $type): int
+    /** Highest running number issued so far for a number prefix (documents and ledger). */
+    private static function lastSequence(string $prefix): int
     {
-        $prefix = self::prefix($type);
         $pattern = '/^'.$prefix.'\d{4}(\d{4})-/';
-        $numbers = JobDocument::where('doc_type', $type)->where('doc_number', 'like', $prefix.'%')->pluck('doc_number')
+        $numbers = JobDocument::where('doc_number', 'like', $prefix.'%')->pluck('doc_number')
             ->merge(LedgerEntry::where('doc_number', 'like', $prefix.'%')->pluck('doc_number'));
 
         return (int) $numbers->map(fn ($n) => preg_match($pattern, (string) $n, $m) ? (int) $m[1] : 0)->max();
+    }
+
+    /** The job's own figure before any invoice: items + delivery - discount (what the quotation / proforma asked for). */
+    public static function jobTotal(Job $job): float
+    {
+        $items = collect(self::itemsFromJob($job))->sum(fn ($i) => (float) $i['qty'] * (float) $i['price']);
+
+        return round(($items ?: (float) ($job->estimation_value ?? 0)) + (float) ($job->delivery_amount ?? 0) - (float) ($job->discount_amount ?? 0), 2);
+    }
+
+    /** Total taken off the job's invoice by (non-voided) credit notes. */
+    public static function creditedSoFar(Job $job): float
+    {
+        return round((float) LedgerEntry::where('job_id', $job->job_id)->where('type', 'credit_note')->where('reversed', false)->sum('amount'), 2);
     }
 
     /** Total already received for the job across all its (non-voided) receipts. */
@@ -173,7 +197,10 @@ class DocumentData
             'notes' => self::customNotes($job, $type) ?? self::defaultNotes($type, self::bank($job), $job->department),
             'payment_method' => self::PAYMENT_METHODS[0],
             'amount_paid' => $invoiceTotal === null ? null : max(0.0, round($invoiceTotal - $paidBefore, 2)),
-            'due_date' => now()->addDays(self::INVOICE_DUE_DAYS)->toDateString(),
+            'due_date' => now()->addDays($type === 'proforma' ? self::PROFORMA_DUE_DAYS : self::INVOICE_DUE_DAYS)->toDateString(),
+            'credit_reason' => 'discount',
+            'credit_reason_text' => '',
+            'credit_amount' => null,
         ];
     }
 
@@ -231,9 +258,16 @@ class DocumentData
         $pick = fn (string $key) => array_key_exists($key, $input) && $input[$key] !== null ? $input[$key] : $defaults[$key];
 
         $items = self::normalizeItems(array_key_exists('items', $input) ? (array) $input['items'] : $defaults['items']);
+        $creditReason = null;
+        if ($type === 'credit_note') {
+            // One line: the credit against the invoice, with the reason.
+            $creditReason = trim((self::CREDIT_REASONS[$input['credit_reason'] ?? 'discount'] ?? 'Other').(! empty($input['credit_reason_text']) ? ': '.$input['credit_reason_text'] : ''));
+            $amount = round((float) ($input['credit_amount'] ?? 0), 2);
+            $items = [['item' => 'Credit against Invoice '.($invoiceNumber ?? ''), 'desc' => 'Reason: '.$creditReason, 'qty' => 1.0, 'price' => $amount, 'amount' => $amount]];
+        }
         $subtotal = round(array_sum(array_column($items, 'amount')), 2);
-        $delivery = (float) $pick('delivery');
-        $discount = (float) $pick('discount');
+        $delivery = $type === 'credit_note' ? 0.0 : (float) $pick('delivery');
+        $discount = $type === 'credit_note' ? 0.0 : (float) $pick('discount');
         $total = round($subtotal + $delivery - $discount, 2);
 
         $invoiceTotal ??= $total;
@@ -246,6 +280,9 @@ class DocumentData
             self::customNotes($job, $type) === null => self::defaultNotes($type, $bank, $job->department, $isFinal),
             default => $defaults['notes'],
         };
+        if ($creditReason !== null) {
+            $notes = array_map(fn ($n) => str_replace(':reason', $creditReason, $n), $notes);
+        }
 
         // Extra header line under Date: how long a quotation holds, or when an invoice is due.
         $headerExtra = match ($type) {
@@ -257,8 +294,12 @@ class DocumentData
 
         return [
             'type' => $type,
-            'doc_title' => $type === 'proforma' ? 'PROFORMA INVOICE' : strtoupper($type),
+            'doc_title' => match ($type) {
+                'receipt' => $isFinal ? 'PAYMENT RECEIPT' : 'DEPOSIT RECEIPT',
+                default => strtoupper(self::label($type, $job->department)),
+            },
             'no_label' => self::noLabel($type),
+            'po_number' => in_array($type, ['proforma', 'invoice', 'delivery'], true) ? $job->po_number : null,
             'doc_number' => $docNumber,
             'by' => (string) $pick('by_staff'),
             'customer' => [
@@ -285,7 +326,14 @@ class DocumentData
             'invoice_total' => $invoiceTotal,
             'amount_paid' => $amountPaid,
             'paid_before' => $paidBefore,
-            'balance_due' => $amountPaid === null ? null : max(0.0, round($invoiceTotal - $paidBefore - $amountPaid, 2)),
+            'balance_due' => match (true) {
+                $amountPaid !== null => max(0.0, round($invoiceTotal - $paidBefore - $amountPaid, 2)),
+                $type === 'invoice' && $paidBefore > 0 => max(0.0, round($total - $paidBefore, 2)),
+                default => null,
+            },
+            // An invoice issued after a deposit shows it taken off.
+            'deposit_paid' => $type === 'invoice' ? $paidBefore : 0.0,
+            'is_final' => $isFinal,
         ];
     }
 

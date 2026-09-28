@@ -417,17 +417,53 @@
                         $docsLocked = in_array($job->status, [\App\Models\Job::STATUS_NEW, \App\Models\Job::STATUS_CANCELLED], true);
                         $docButtons = [
                             'quotation' => ['Quotation', '#6366F1', 'file-text'],
-                            // 'proforma' => ['Proforma Invoice', '#3A86FF', 'files'], // hidden for now, not deleted
-                            'invoice' => ['Invoice', '#10B981', 'files'],
+                            'proforma' => ['Proforma Invoice', '#3A86FF', 'files'],
                             'receipt' => ['Receipt', '#E85D04', 'receipt'],
+                            'invoice' => ['Invoice', '#10B981', 'files'],
+                            'delivery' => [\App\Support\DocumentData::label('delivery', $job->department), '#0D9488', 'package'],
+                            'credit_note' => ['Credit Note', '#B45309', 'file-minus'],
                         ];
+                        $docWhy = fn (string $t) => match (true) {
+                            $docsLocked => 'Take In Job first before generating documents.',
+                            $job->status === 'potential' && ! in_array($t, ['quotation', 'proforma'], true) => 'Mark the job as Customer Confirmed first.',
+                            $t === 'credit_note' && ! $hasInvoice => 'Issue the invoice first. A credit note is always against an invoice.',
+                            default => null,
+                        };
                     @endphp
+                    {{-- Customer's Purchase Order: number prints on proforma, invoice and DO; amount checked against the job. --}}
+                    @php
+                        $jobTotal = \App\Support\DocumentData::jobTotal($job);
+                        $poMismatch = $job->po_amount !== null && abs((float) $job->po_amount - $jobTotal) > 0.005;
+                    @endphp
+                    <div class="mb-4 rounded-xl border border-[#F5ECE8] bg-[#FFFBF9] p-3" x-data="{ editPo: false }">
+                        <div class="flex flex-wrap items-center gap-2 text-xs">
+                            <span class="font-semibold text-gray-700">Purchase Order</span>
+                            @if ($job->po_number)
+                                <span class="text-gray-600">{{ $job->po_number }}{{ $job->po_amount !== null ? ' · RM '.number_format((float) $job->po_amount, 2) : '' }}</span>
+                                @if ($job->po_path)<a href="{{ route('jobs.po.file', $job) }}" target="_blank" class="text-[#C2185B] hover:underline inline-flex items-center gap-1"><x-icon name="paperclip" class="w-3.5 h-3.5" /> PO file</a>@endif
+                            @else
+                                <span class="text-gray-400">None yet (government and larger companies usually send one)</span>
+                            @endif
+                            <button type="button" @click="editPo = !editPo" class="ml-auto font-semibold text-[#C2185B] hover:underline" x-text="editPo ? 'Close' : '{{ $job->po_number ? 'Edit' : 'Add PO' }}'"></button>
+                        </div>
+                        @if ($poMismatch)
+                            <p class="mt-2 flex items-start gap-1.5 text-xs text-amber-700"><x-icon name="triangle-alert" class="w-4 h-4 shrink-0" /> PO amount RM {{ number_format((float) $job->po_amount, 2) }} doesn't match the job total RM {{ number_format($jobTotal, 2) }}. Check with the customer before invoicing.</p>
+                        @endif
+                        <form x-show="editPo" x-cloak method="POST" action="{{ route('jobs.po.update', $job) }}" enctype="multipart/form-data" class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            @csrf
+                            <input type="text" name="po_number" value="{{ $job->po_number }}" placeholder="PO number" class="rounded-md border-gray-300 shadow-sm text-xs h-9">
+                            <input type="number" step="0.01" min="0" name="po_amount" value="{{ $job->po_amount }}" placeholder="PO amount (RM)" class="rounded-md border-gray-300 shadow-sm text-xs h-9">
+                            <input type="file" name="po_file" accept="application/pdf,image/*" class="text-xs">
+                            <button class="sm:col-span-3 justify-self-start text-xs font-semibold px-3.5 py-1.5 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A]">Save PO</button>
+                        </form>
+                    </div>
+
                     <div class="flex flex-wrap gap-2 mb-2">
                         @foreach ($docButtons as $docType => [$docLabel, $docColor, $docIcon])
                             @continue(! auth()->user()->canIssueDocument($docType))
-                            @php $docDisabled = $docsLocked || ($docType === 'receipt' && ! $hasInvoice) || (in_array($docType, ['invoice', 'receipt'], true) && $job->status === 'potential'); @endphp
+                            @php $docDisabled = $docWhy($docType) !== null; @endphp
                             <button type="button"
-                                    @if ($docDisabled) disabled title="{{ $docsLocked ? 'Take In Job first before generating documents.' : ($job->status === 'potential' ? 'Mark the job as Customer Confirmed before invoicing.' : 'Generate an Invoice for this job first. A Receipt only records payment against an existing invoice.') }}" @else @click="$dispatch('open-document', { type: '{{ $docType }}' })" @endif
+                                    @if ($docDisabled) disabled title="{{ $docWhy($docType) }}" @else @click="$dispatch('open-document', { type: '{{ $docType }}' })" @endif
                                     class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg text-white {{ $docDisabled ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-110' }}"
                                     style="background: {{ $docColor }}"><x-icon :name="$docIcon" class="w-4 h-4" /> {{ $docLabel }}</button>
                         @endforeach
@@ -440,8 +476,6 @@
                                 <button type="submit" form="takein-form" class="inline-flex items-center gap-1 font-semibold px-3 py-1.5 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110"><x-icon name="user-plus" class="w-3.5 h-3.5" /> Take In Job</button>
                             @endif
                         </div>
-                    @elseif (! $hasInvoice && auth()->user()->canIssueDocument('receipt'))
-                        <p class="flex items-start gap-1.5 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 mb-3"><x-icon name="triangle-alert" class="w-4 h-4 shrink-0" /> Generate an Invoice before a Receipt. A Receipt only records payment against an existing invoice and doesn't create revenue on its own.</p>
                     @endif
 
                     @if ($combineCandidates->isNotEmpty())

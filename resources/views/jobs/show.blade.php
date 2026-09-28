@@ -458,13 +458,14 @@
                         </form>
                     </div>
 
-                    <div class="flex flex-wrap gap-2 mb-2">
+                    {{-- Two tidy rows of three (two per row on phones), in the order they're usually issued. --}}
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-2">
                         @foreach ($docButtons as $docType => [$docLabel, $docColor, $docIcon])
                             @continue(! auth()->user()->canIssueDocument($docType))
                             @php $docDisabled = $docWhy($docType) !== null; @endphp
                             <button type="button"
                                     @if ($docDisabled) disabled title="{{ $docWhy($docType) }}" @else @click="$dispatch('open-document', { type: '{{ $docType }}' })" @endif
-                                    class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg text-white {{ $docDisabled ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-110' }}"
+                                    class="inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2.5 rounded-lg text-white whitespace-nowrap {{ $docDisabled ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-110' }}"
                                     style="background: {{ $docColor }}"><x-icon :name="$docIcon" class="w-4 h-4" /> {{ $docLabel }}</button>
                         @endforeach
                     </div>

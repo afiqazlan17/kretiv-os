@@ -37,6 +37,23 @@ class Job extends Model
         return self::labelFor($status ?? $this->status, $this->department);
     }
 
+    /**
+     * A clear sign the customer has said yes (a payment or their PO) moves a
+     * job still at Quotation to Confirmed, logged as done by the system.
+     */
+    public function confirmBecause(string $reason): void
+    {
+        if ($this->status !== self::STATUS_POTENTIAL) {
+            return;
+        }
+        $this->update(['status' => self::STATUS_CONFIRMED]);
+        ActivityLog::create([
+            'job_id' => $this->id, 'job_code' => $this->job_id, 'user_id' => auth()->id(), 'user_name' => 'System',
+            'action' => 'status_change', 'field_changed' => 'status',
+            'old_value' => self::STATUS_POTENTIAL, 'new_value' => self::STATUS_CONFIRMED, 'note' => "Confirmed automatically: {$reason}.",
+        ]);
+    }
+
     public static function labelFor(string $status, ?string $department = null): string
     {
         return config("kretivco.job_status_labels.{$department}.{$status}")

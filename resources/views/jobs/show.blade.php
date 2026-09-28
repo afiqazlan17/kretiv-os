@@ -436,7 +436,7 @@
                         ];
                         $docWhy = fn (string $t) => match (true) {
                             $docsLocked => 'Take In Job first before generating documents.',
-                            $job->status === 'potential' && ! in_array($t, ['quotation', 'proforma'], true) => 'Mark the job as Customer Confirmed first.',
+                            $job->status === 'potential' && ! in_array($t, ['quotation', 'proforma', 'receipt'], true) => 'Mark the job as Customer Confirmed first.',
                             $t === 'credit_note' && ! $hasInvoice => 'Issue the invoice first. A credit note is always against an invoice.',
                             default => null,
                         };

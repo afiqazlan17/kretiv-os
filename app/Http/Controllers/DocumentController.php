@@ -194,6 +194,7 @@ class DocumentController extends Controller
             abort_if($owed <= 0, 422, 'This job is already fully paid.');
             abort_if($doc['amount_paid'] > $owed + 0.005, 422, 'Amount paid is more than the balance still owed (RM '.number_format($owed, 2).').');
             abort_unless($ledger->postReceiptEntry($job, $docNumber, $userName, $doc['amount_paid']), 422, 'Enter the amount paid.');
+            $job->confirmBecause('payment received ('.$docNumber.')');
         }
 
         $this->rememberNotes($request, $job, $type);
@@ -350,9 +351,9 @@ class DocumentController extends Controller
 
         abort_if($job->status === Job::STATUS_NEW, 422, 'Take In the job first before generating documents.');
         abort_if(
-            $job->status === Job::STATUS_POTENTIAL && ! in_array($type, ['quotation', 'proforma'], true),
+            $job->status === Job::STATUS_POTENTIAL && ! in_array($type, ['quotation', 'proforma', 'receipt'], true),
             422,
-            'Mark the job as Customer Confirmed before issuing an invoice or receipt.'
+            'Mark the job as Customer Confirmed before issuing this document.'
         );
 
         abort_if($job->status === Job::STATUS_CANCELLED, 422, 'This job is cancelled.');

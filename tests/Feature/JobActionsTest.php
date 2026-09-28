@@ -264,4 +264,19 @@ class JobActionsTest extends TestCase
 
         $response->assertForbidden();
     }
+
+    public function test_a_deposit_or_the_customers_po_confirms_a_job_at_quotation(): void
+    {
+        Storage::fake('public');
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+
+        $a = $this->job(['status' => Job::STATUS_POTENTIAL, 'pic' => $bod->name, 'line_items' => [['item' => 'Banner', 'qty' => 1, 'price' => 200]]]);
+        $this->actingAs($bod)->postJson(route('jobs.documents.generate', [$a, 'receipt']), ['title' => 'X', 'amount_paid' => 50])->assertOk();
+        $this->assertSame(Job::STATUS_CONFIRMED, $a->refresh()->status);
+
+        $b = $this->job(['job_id' => 'KP-2026-099', 'status' => Job::STATUS_POTENTIAL, 'pic' => $bod->name]);
+        $this->actingAs($bod)->post(route('jobs.po.update', $b), ['po_number' => 'PO-1'])->assertRedirect();
+        $this->assertSame(Job::STATUS_CONFIRMED, $b->refresh()->status);
+        $this->assertDatabaseHas('activity_log', ['job_id' => $b->id, 'new_value' => 'confirmed', 'user_name' => 'System']);
+    }
 }

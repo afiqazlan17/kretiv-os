@@ -507,6 +507,9 @@ class JobController extends Controller
             $update['po_name'] = $file->getClientOriginalName();
         }
         $job->update($update);
+        if (! empty($update['po_number'])) {
+            $job->confirmBecause("customer's PO {$update['po_number']} received");
+        }
 
         return back()->with('success', 'Purchase order saved.');
     }

@@ -51,7 +51,7 @@
         <div class="k-card p-5 md:p-6">
             <h3 class="text-base font-bold text-gray-900 mb-3">What's inside</h3>
             <ul class="space-y-2 text-sm text-gray-600">
-                <li class="flex gap-2"><x-icon name="file-text" class="w-4 h-4 text-[#047857] shrink-0 mt-0.5" /> <span><b>Kretivco_Accounts_….xlsx</b>: Summary (P&amp;L for the period, balance sheet at the end date), Ledger (every entry, voided ones marked), Trial Balance, Receivables.</span></li>
+                <li class="flex gap-2"><x-icon name="file-text" class="w-4 h-4 text-[#047857] shrink-0 mt-0.5" /> <span><b>Kretivco_Accounts_….xlsx</b>: Summary (P&amp;L for the period, balance sheet at the end date), Ledger (every entry, voided ones marked), Trial Balance, a Cash Book for each bank (money in and out with a running balance, to tick against the bank statement), Assets, Tax Summary and Receivables.</span></li>
                 <li class="flex gap-2"><x-icon name="paperclip" class="w-4 h-4 text-[#047857] shrink-0 mt-0.5" /> <span><b>receipts/</b>: photos and files attached to expenses, claims and director loans, named by date so they line up with the Ledger sheet.</span></li>
                 <li class="flex gap-2"><x-icon name="files" class="w-4 h-4 text-[#047857] shrink-0 mt-0.5" /> <span><b>documents/</b>: invoice and receipt PDFs issued to customers in the period.</span></li>
             </ul>

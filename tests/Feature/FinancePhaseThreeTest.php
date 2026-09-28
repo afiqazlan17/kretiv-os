@@ -37,6 +37,15 @@ class FinancePhaseThreeTest extends TestCase
         $names = collect(range(0, $zip->numFiles - 1))->map(fn ($i) => $zip->getNameIndex($i));
         $this->assertTrue($names->contains('Kretivco_Accounts_2026-08-01_to_2026-08-31.xlsx'));
         $this->assertTrue($names->contains(fn ($n) => str_starts_with($n, 'receipts/2026-08-15_') && str_ends_with($n, 'tnb.jpg')));
+
+        // One cash book sheet per bank inside the workbook.
+        $xlsx = tempnam(sys_get_temp_dir(), 'pack');
+        file_put_contents($xlsx, $zip->getFromName('Kretivco_Accounts_2026-08-01_to_2026-08-31.xlsx'));
+        $book = new ZipArchive;
+        $book->open($xlsx);
+        $workbookXml = $book->getFromName('xl/workbook.xml');
+        $this->assertStringContainsString('Cash Book Maybank', $workbookXml);
+        $this->assertStringContainsString('Cash Book AFFIN', $workbookXml);
     }
 
     public function test_statement_csv_is_parsed_in_debit_credit_or_single_amount_form(): void

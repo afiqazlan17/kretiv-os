@@ -6,6 +6,7 @@ use App\Models\Asset;
 use App\Models\JobDocument;
 use App\Models\LedgerEntry;
 use App\Services\FinanceReports;
+use App\Services\LedgerService;
 use App\Support\ChartOfAccounts;
 use App\Support\SimpleXlsx;
 use Carbon\Carbon;
@@ -51,6 +52,25 @@ class AccountantPackController extends Controller
         $label = $from->format('Y-m-d').'_to_'.$to->format('Y-m-d');
         $receiptFile = fn (LedgerEntry $e) => 'receipts/'.$e->date->format('Y-m-d').'_'.$e->id.'_'.basename((string) $e->receipt_name ?: 'receipt');
 
+        // One cash book per bank, laid out like the bank statement it's checked against.
+        $cashBooks = collect(config('kretivco.banks'))->mapWithKeys(function ($b, $key) use ($all, $from, $to) {
+            $account = "bank_{$key}";
+            $touching = $all->filter(fn (LedgerEntry $e) => $e->date && ($e->debit_account === $account || $e->credit_account === $account))->sortBy(fn ($e) => [$e->date, $e->id])->values();
+            $balance = LedgerService::balanceFor($touching->filter(fn ($e) => $e->date->lt($from)), $account);
+            $rows = [['Date', 'Particulars', 'Ref', 'Money in (RM)', 'Money out (RM)', 'Balance (RM)'], [$from->format('Y-m-d'), 'Balance brought forward', '', '', '', round($balance, 2)]];
+            [$in, $out] = [0.0, 0.0];
+            foreach ($touching->filter(fn ($e) => $e->date->between($from, $to)) as $e) {
+                $credit = $e->debit_account === $account ? (float) $e->amount : 0.0;
+                $debit = $e->credit_account === $account ? (float) $e->amount : 0.0;
+                $balance += $credit - $debit;
+                [$in, $out] = [$in + $credit, $out + $debit];
+                $rows[] = [$e->date->format('Y-m-d'), $e->description, $e->doc_number ?? '', $credit ?: '', $debit ?: '', round($balance, 2)];
+            }
+            $rows[] = [$to->format('Y-m-d'), 'Balance carried forward', '', round($in, 2), round($out, 2), round($balance, 2)];
+
+            return ['Cash Book '.$b['label'] => $rows];
+        })->all();
+
         $workbook = SimpleXlsx::build([
             'Summary' => [
                 [config('kretivco.brand.name', 'Kretivco Mediaworks').' accounts'],
@@ -82,6 +102,7 @@ class AccountantPackController extends Controller
                 ...$tb['rows']->map(fn ($r) => [$r['code'], $r['name'], $r['debit'], $r['credit']])->all(),
                 ['', 'Total', $tb['debit'], $tb['credit']],
             ],
+            ...$cashBooks,
             'Assets' => [
                 ['Asset', 'Type', 'Bought', 'Cost (RM)', 'Capital allowance '.$to->year.' (RM)', 'Remaining (RM)', 'Disposed'],
                 ...Asset::orderBy('purchase_date')->get()->map(fn (Asset $a) => [

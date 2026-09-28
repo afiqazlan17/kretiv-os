@@ -197,7 +197,7 @@ class DocumentController extends Controller
         $this->rememberNotes($request, $job, $type);
 
         $bytes = Pdf::loadView('documents.pdf', ['doc' => $doc])->output();
-        $filename = "{$docNumber}_{$job->job_id}.pdf";
+        $filename = "{$docNumber}.pdf";
         $path = "{$job->job_id}/document/".time()."_{$filename}";
         Storage::disk('public')->put($path, $bytes);
 
@@ -283,7 +283,7 @@ class DocumentController extends Controller
             'generatedBy' => $request->user()->shortName(),
         ]);
 
-        $filename = "{$docNumber}_{$job->job_id}.pdf";
+        $filename = "{$docNumber}.pdf";
         $bytes = $pdf->output();
         $path = "{$job->job_id}/document/".time()."_{$filename}";
         Storage::disk('public')->put($path, $bytes);

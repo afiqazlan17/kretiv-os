@@ -18,6 +18,7 @@
                         @endif
                         <button type="button" @click="$store.jobActions.panel = 'reassign'" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1]"><x-icon name="repeat" class="w-4 h-4 text-gray-400" /> Change Current Responsible</button>
                         <button type="button" @click="$store.jobActions.panel = 'edit'" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1]"><x-icon name="pencil" class="w-4 h-4 text-gray-400" /> Edit Job Details</button>
+                        <button type="submit" form="duplicate-form" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1]"><x-icon name="copy" class="w-4 h-4 text-gray-400" /> Duplicate Job (repeat order)</button>
                         @if (! $job->hold_status)
                             <button type="button" @click="$store.jobActions.panel = 'hold-pending'" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1] text-amber-600"><x-icon name="circle-pause" class="w-4 h-4" /> Pending Job</button>
                             <button type="button" @click="$store.jobActions.panel = 'hold-suspended'" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1] text-red-600"><x-icon name="octagon-x" class="w-4 h-4" /> Suspend Job</button>
@@ -201,6 +202,7 @@
         @can('update', $job)
         <form id="takein-form" method="POST" action="{{ route('jobs.take-in', $job) }}" class="hidden">@csrf</form>
         <form id="advance-form" method="POST" action="{{ route('jobs.advance', $job) }}" class="hidden">@csrf</form>
+        <form id="duplicate-form" method="POST" action="{{ route('jobs.duplicate', $job) }}" class="hidden" onsubmit="return confirm('Create a new job for the same customer with the same items and prices?')">@csrf</form>
         <div x-show="$store.jobActions.panel" x-cloak class="bg-white shadow-sm sm:rounded-lg p-6 border-2 border-pink-100">
             <div x-show="$store.jobActions.panel === 'reassign'">
                 <h3 class="text-sm font-semibold text-gray-700 mb-3">Change Current Responsible</h3>

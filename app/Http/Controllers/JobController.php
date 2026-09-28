@@ -13,6 +13,7 @@ use App\Support\DocumentData;
 use App\Support\NoteSanitizer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -520,6 +521,48 @@ class JobController extends Controller
         abort_unless($job->po_path && Storage::disk('public')->exists($job->po_path), 404);
 
         return Storage::disk('public')->response($job->po_path, $job->po_name);
+    }
+
+    /**
+     * Repeat order: a new job for the same customer with the same items,
+     * prices, delivery, discount and quotation notes, handled by whoever
+     * duplicated it (so it starts at Quotation). Dates, payments, vendor
+     * costs, files and the PO are not copied.
+     */
+    public function duplicate(Request $request, Job $job): RedirectResponse
+    {
+        $this->authorize('view', $job);
+        $this->authorize('create', Job::class);
+
+        $copy = DB::transaction(function () use ($request, $job) {
+            $copy = Job::create([
+                'job_id' => $this->nextJobId($job->department),
+                'customer_id' => $job->customer_id,
+                'department' => $job->department,
+                'job_type' => $job->job_type,
+                'job_type_category' => $job->job_type_category,
+                'bank' => $job->bank,
+                'line_items' => $job->line_items,
+                'estimation_value' => $job->estimation_value,
+                'delivery_amount' => $job->delivery_amount,
+                'discount_amount' => $job->discount_amount,
+                'document_notes' => isset($job->document_notes['quotation']) ? ['quotation' => $job->document_notes['quotation']] : null,
+                'notes' => $job->notes,
+                'source' => $job->source,
+                'priority' => $job->priority,
+                'status' => Job::STATUS_POTENTIAL,
+                'pic' => $request->user()->name,
+                'created_by' => $request->user()->id,
+            ]);
+            ActivityLog::create([
+                'job_id' => $copy->id, 'job_code' => $copy->job_id, 'user_id' => $request->user()->id, 'user_name' => $request->user()->name,
+                'action' => 'created', 'note' => "Duplicated from {$job->job_id}.",
+            ]);
+
+            return $copy;
+        });
+
+        return redirect()->route('jobs.show', $copy)->with('success', "{$copy->job_id} created from {$job->job_id}. Check the items and send the quotation.");
     }
 
     /** One stage forward: Quotation -> Confirmed -> In Progress -> Delivered. */

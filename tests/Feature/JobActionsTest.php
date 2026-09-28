@@ -279,4 +279,20 @@ class JobActionsTest extends TestCase
         $this->assertSame(Job::STATUS_CONFIRMED, $b->refresh()->status);
         $this->assertDatabaseHas('activity_log', ['job_id' => $b->id, 'new_value' => 'confirmed', 'user_name' => 'System']);
     }
+
+    public function test_duplicate_makes_a_repeat_order_with_the_same_items(): void
+    {
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $job = $this->job(['status' => Job::STATUS_COMPLETED, 'pic' => 'Someone', 'line_items' => [['item' => 'Banner', 'qty' => 2, 'price' => 79]], 'delivery_amount' => 5, 'po_number' => 'PO-OLD']);
+
+        $this->actingAs($bod)->post(route('jobs.duplicate', $job))->assertRedirect();
+
+        $copy = Job::where('id', '!=', $job->id)->first();
+        $this->assertNotSame($job->job_id, $copy->job_id);
+        $this->assertSame(Job::STATUS_POTENTIAL, $copy->status);
+        $this->assertSame($bod->name, $copy->pic);
+        $this->assertEquals($job->line_items, $copy->line_items);
+        $this->assertEquals(5, $copy->delivery_amount);
+        $this->assertNull($copy->po_number);
+    }
 }

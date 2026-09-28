@@ -116,6 +116,7 @@ $onHost('jobs', function () {
         Route::put('/jobs/{job}/line-items', [JobController::class, 'updateLineItems'])->name('jobs.line-items.update');
         Route::post('/jobs/{job}/take-in', [JobController::class, 'takeIn'])->name('jobs.take-in');
         Route::post('/jobs/{job}/advance', [JobController::class, 'advance'])->name('jobs.advance');
+        Route::post('/jobs/{job}/duplicate', [JobController::class, 'duplicate'])->name('jobs.duplicate');
         Route::post('/jobs/{job}/po', [JobController::class, 'updatePo'])->name('jobs.po.update');
         Route::post('/jobs/{job}/approvals', [ApprovalController::class, 'send'])->name('jobs.approvals.send');
         Route::get('/jobs/{job}/po', [JobController::class, 'poFile'])->name('jobs.po.file');

@@ -39,12 +39,21 @@ class JobController extends Controller
      * @var array<string, string>
      */
     public const ROLLBACK_MAP = [
-        Job::STATUS_COMPLETED => Job::STATUS_IN_PROGRESS,
-        Job::STATUS_IN_PROGRESS => Job::STATUS_POTENTIAL,
+        Job::STATUS_COMPLETED => Job::STATUS_DELIVERED,
+        Job::STATUS_DELIVERED => Job::STATUS_IN_PROGRESS,
+        Job::STATUS_IN_PROGRESS => Job::STATUS_CONFIRMED,
+        Job::STATUS_CONFIRMED => Job::STATUS_POTENTIAL,
+    ];
+
+    /** Moving a job one stage forward (Take In and Close have their own actions). */
+    public const ADVANCE_MAP = [
+        Job::STATUS_POTENTIAL => Job::STATUS_CONFIRMED,
+        Job::STATUS_CONFIRMED => Job::STATUS_IN_PROGRESS,
+        Job::STATUS_IN_PROGRESS => Job::STATUS_DELIVERED,
     ];
 
     /** Statuses still open (not completed or cancelled). */
-    public const OPEN_STATUSES = [Job::STATUS_NEW, Job::STATUS_POTENTIAL, Job::STATUS_IN_PROGRESS];
+    public const OPEN_STATUSES = [Job::STATUS_NEW, Job::STATUS_POTENTIAL, Job::STATUS_CONFIRMED, Job::STATUS_IN_PROGRESS, Job::STATUS_DELIVERED];
 
     public function index(Request $request): View
     {
@@ -477,20 +486,21 @@ class JobController extends Controller
         return back()->with('success', "{$job->job_id} taken in. You can send the quotation now.");
     }
 
-    /** The customer said yes: Potential -> In Progress. */
-    public function confirm(Request $request, Job $job): RedirectResponse
+    /** One stage forward: Quotation -> Confirmed -> In Progress -> Delivered. */
+    public function advance(Request $request, Job $job): RedirectResponse
     {
         $this->authorize('update', $job);
-        abort_unless($job->status === Job::STATUS_POTENTIAL, 422, 'Only a Potential job can be confirmed.');
+        $from = $job->status;
+        $to = self::ADVANCE_MAP[$from] ?? null;
+        abort_if($to === null, 422, 'This job can\'t move forward from here.');
 
-        $job->update(['status' => Job::STATUS_IN_PROGRESS]);
+        $job->update(['status' => $to]);
         ActivityLog::create([
             'job_id' => $job->id, 'job_code' => $job->job_id, 'user_id' => $request->user()->id, 'user_name' => $request->user()->name,
-            'action' => 'status_change', 'field_changed' => 'status',
-            'old_value' => Job::STATUS_POTENTIAL, 'new_value' => Job::STATUS_IN_PROGRESS, 'note' => 'Customer confirmed.',
+            'action' => 'status_change', 'field_changed' => 'status', 'old_value' => $from, 'new_value' => $to,
         ]);
 
-        return back()->with('success', "{$job->job_id} confirmed and now In Progress.");
+        return back()->with('success', "{$job->job_id} is now {$job->statusLabel()}.");
     }
 
     /** Close Ticket — from Potential or In Progress, mandatory reason, snapshots the stage it closed at. */
@@ -691,7 +701,7 @@ class JobController extends Controller
             'note' => $validated['reason'] ?? null,
         ]);
 
-        $targetLabel = config("kretivco.job_statuses.{$target}.label");
+        $targetLabel = $job->statusLabel($target);
 
         return back()->with('success', "{$job->job_id} rolled back to {$targetLabel}.");
     }

@@ -27,7 +27,7 @@ class OsController extends Controller
         if ($user->canAccess('jobs')) {
             $myJobs = (clone $visible)->with('customer')
                 ->where('pic', $user->name)
-                ->where('status', Job::STATUS_IN_PROGRESS)
+                ->whereIn('status', [Job::STATUS_POTENTIAL, Job::STATUS_CONFIRMED, Job::STATUS_IN_PROGRESS, Job::STATUS_DELIVERED])
                 ->orderByRaw('deadline is null')
                 ->orderBy('deadline')
                 ->get();

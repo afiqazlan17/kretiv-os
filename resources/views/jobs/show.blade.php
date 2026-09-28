@@ -12,8 +12,9 @@
                     <div x-show="open" x-cloak x-transition @click="open = false" class="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-[#F5E7E1] p-1.5 z-20 text-sm text-gray-700">
                         @if ($job->status === 'new')
                             <button type="submit" form="takein-form" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1]"><x-icon name="user-plus" class="w-4 h-4 text-gray-400" /> Take In Job</button>
-                        @elseif ($job->status === 'potential')
-                            <button type="submit" form="confirm-form" onclick="return confirm('Customer confirmed? The job moves to In Progress.')" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1] text-green-600"><x-icon name="circle-check" class="w-4 h-4" /> Customer Confirmed</button>
+                        @elseif ($next = \App\Http\Controllers\JobController::ADVANCE_MAP[$job->status] ?? null)
+                            @php $nextLabel = ['confirmed' => 'Customer Confirmed', 'in_progress' => 'Start '.$job->statusLabel('in_progress'), 'delivered' => 'Mark as '.$job->statusLabel('delivered')][$next]; @endphp
+                            <button type="submit" form="advance-form" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1] text-green-600"><x-icon name="circle-check" class="w-4 h-4" /> {{ $nextLabel }}</button>
                         @endif
                         <button type="button" @click="$store.jobActions.panel = 'reassign'" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1]"><x-icon name="repeat" class="w-4 h-4 text-gray-400" /> Change Current Responsible</button>
                         <button type="button" @click="$store.jobActions.panel = 'edit'" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1]"><x-icon name="pencil" class="w-4 h-4 text-gray-400" /> Edit Job Details</button>
@@ -74,7 +75,7 @@
                     $chip = 'inline-flex items-center gap-1 text-xs rounded-full px-3 py-1 bg-white/15 text-white/90';
                 @endphp
                 <div class="flex flex-wrap items-center gap-2">
-                    <span class="inline-block text-xs font-bold rounded-full px-3 py-1 bg-white" style="color: {{ $st['color'] ?? '#374151' }}">{{ $st['label'] ?? $job->status }}</span>
+                    <span class="inline-block text-xs font-bold rounded-full px-3 py-1 bg-white" style="color: {{ $st['color'] ?? '#374151' }}">{{ $job->statusLabel() }}</span>
                     <span class="{{ $chip }}">Responsible: <span class="font-semibold text-white">{{ $job->pic ?? 'Not yet assigned' }}</span></span>
                     <span class="{{ $chip }}">Department: <span class="font-semibold text-white">{{ config('kretivco.departments.'.$job->department.'.label') }}</span></span>
                     @if ($job->deadline)
@@ -129,20 +130,19 @@
                 </div>
             @else
                 @php
-                    $stages = [
-                        'new' => 'New',
-                        'potential' => 'Potential',
-                        'in_progress' => 'In Progress',
-                        'completed' => 'Completed',
-                    ];
+                    $stages = collect(\App\Models\Job::FLOW)->mapWithKeys(fn ($s) => [$s => $job->statusLabel($s)])->all();
                     $stageKeys = array_keys($stages);
                     $currentIdx = array_search($job->status, $stageKeys, true);
                     $canForwardTo = match ($job->status) {
                         'new' => 'potential',
-                        'potential' => 'in_progress',
-                        'in_progress' => 'completed',
-                        default => null,
+                        'delivered' => 'completed',
+                        default => \App\Http\Controllers\JobController::ADVANCE_MAP[$job->status] ?? null,
                     };
+                    $forwardAsk = [
+                        'confirmed' => 'Customer confirmed the job?',
+                        'in_progress' => 'Start the work? The job moves to '.$job->statusLabel('in_progress').'.',
+                        'delivered' => 'Mark as '.$job->statusLabel('delivered').'?',
+                    ];
                     $canRollbackTo = \App\Http\Controllers\JobController::ROLLBACK_MAP[$job->status] ?? null;
                 @endphp
                 <div class="flex items-center">
@@ -157,7 +157,7 @@
                                 <div class="absolute top-4 h-0.5 {{ $i <= $currentIdx ? 'bg-green-400' : 'bg-gray-200' }}" style="right: 50%; width: 100%;"></div>
                             @endif
                             @if ($clickableForward)
-                                <button type="{{ $key === 'completed' ? 'button' : 'submit' }}" @if ($key === 'potential') form="takein-form" @elseif ($key === 'in_progress') form="confirm-form" onclick="return confirm('Customer confirmed? The job moves to In Progress.')" @else @click="$store.jobActions.panel = 'complete'" @endif
+                                <button type="{{ $key === 'completed' ? 'button' : 'submit' }}" @if ($key === 'potential') form="takein-form" @elseif ($key === 'completed') @click="$store.jobActions.panel = 'complete'" @else form="advance-form" onclick="return confirm({{ Js::from($forwardAsk[$key] ?? 'Move forward?') }})" @endif
                                         class="relative z-10 w-8 h-8 rounded-full border-2 border-[#F48FB1] bg-white text-[#C2185B] text-xs font-bold flex items-center justify-center hover:bg-[#FFF0F5]" title="Advance to {{ $stages[$key] }}">{{ $i + 1 }}</button>
                             @elseif ($clickableBack)
                                 <button type="button" @click="$store.jobActions.panel = 'rollback'"
@@ -189,7 +189,7 @@
         {{-- Action panels — toggled by the header's Action dropdown or the stepper --}}
         @can('update', $job)
         <form id="takein-form" method="POST" action="{{ route('jobs.take-in', $job) }}" class="hidden">@csrf</form>
-        <form id="confirm-form" method="POST" action="{{ route('jobs.confirm', $job) }}" class="hidden">@csrf</form>
+        <form id="advance-form" method="POST" action="{{ route('jobs.advance', $job) }}" class="hidden">@csrf</form>
         <div x-show="$store.jobActions.panel" x-cloak class="bg-white shadow-sm sm:rounded-lg p-6 border-2 border-pink-100">
             <div x-show="$store.jobActions.panel === 'reassign'">
                 <h3 class="text-sm font-semibold text-gray-700 mb-3">Change Current Responsible</h3>
@@ -414,7 +414,7 @@
                     @endif
                     @can('update', $job)
                     @php
-                        $docsLocked = ! in_array($job->status, [\App\Models\Job::STATUS_POTENTIAL, \App\Models\Job::STATUS_IN_PROGRESS, \App\Models\Job::STATUS_COMPLETED], true);
+                        $docsLocked = in_array($job->status, [\App\Models\Job::STATUS_NEW, \App\Models\Job::STATUS_CANCELLED], true);
                         $docButtons = [
                             'quotation' => ['Quotation', '#6366F1', 'file-text'],
                             // 'proforma' => ['Proforma Invoice', '#3A86FF', 'files'], // hidden for now, not deleted

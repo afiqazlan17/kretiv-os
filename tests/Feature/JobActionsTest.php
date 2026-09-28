@@ -66,8 +66,13 @@ class JobActionsTest extends TestCase
         $this->assertSame($bod->name, $job->pic);
         $this->assertSame(Job::STATUS_POTENTIAL, $job->status);
 
-        $this->actingAs($bod)->post(route('jobs.confirm', $job))->assertRedirect();
-        $this->assertSame(Job::STATUS_IN_PROGRESS, $job->refresh()->status);
+        // Quotation -> Confirmed -> In Progress -> Delivered, one step at a time.
+        foreach ([Job::STATUS_CONFIRMED, Job::STATUS_IN_PROGRESS, Job::STATUS_DELIVERED] as $next) {
+            $this->actingAs($bod)->post(route('jobs.advance', $job))->assertRedirect();
+            $this->assertSame($next, $job->refresh()->status);
+        }
+        $this->actingAs($bod)->post(route('jobs.advance', $job))->assertStatus(422);
+        $this->assertSame('In Production', $job->statusLabel(Job::STATUS_IN_PROGRESS));
     }
 
     public function test_reassign_changes_pic_without_touching_status(): void
@@ -187,8 +192,8 @@ class JobActionsTest extends TestCase
         $response = $this->actingAs($bod)->post(route('jobs.rollback', $job), ['reason' => 'Mistake']);
 
         $response->assertRedirect();
-        $this->assertSame(Job::STATUS_POTENTIAL, $job->refresh()->status);
-        $this->assertDatabaseHas('activity_log', ['job_id' => $job->id, 'action' => 'rollback', 'old_value' => 'in_progress', 'new_value' => 'potential']);
+        $this->assertSame(Job::STATUS_CONFIRMED, $job->refresh()->status);
+        $this->assertDatabaseHas('activity_log', ['job_id' => $job->id, 'action' => 'rollback', 'old_value' => 'in_progress', 'new_value' => 'confirmed']);
     }
 
     public function test_rollback_from_potential_is_rejected(): void

@@ -20,9 +20,28 @@ class Job extends Model
 
     public const STATUS_POTENTIAL = 'potential';
 
+    public const STATUS_CONFIRMED = 'confirmed';
+
     public const STATUS_IN_PROGRESS = 'in_progress';
 
+    public const STATUS_DELIVERED = 'delivered';
+
     public const STATUS_COMPLETED = 'completed';
+
+    /** The stages every job moves through, in order (Cancelled sits outside it). */
+    public const FLOW = ['new', 'potential', 'confirmed', 'in_progress', 'delivered', 'completed'];
+
+    /** A status as this job's department calls it, e.g. In Progress is "In Production" for KretivPrint. */
+    public function statusLabel(?string $status = null): string
+    {
+        return self::labelFor($status ?? $this->status, $this->department);
+    }
+
+    public static function labelFor(string $status, ?string $department = null): string
+    {
+        return config("kretivco.job_status_labels.{$department}.{$status}")
+            ?? config("kretivco.job_statuses.{$status}.label", ucfirst(str_replace('_', ' ', $status)));
+    }
 
     public const STATUS_CANCELLED = 'cancelled';
 

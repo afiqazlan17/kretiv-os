@@ -211,20 +211,32 @@ return [
         'affin' => ['label' => 'AFFIN', 'code' => 'AFFIN', 'color' => '#E53935'],
     ],
 
-    // New: an enquiry in the queue, nobody on it yet. Take In sets the PIC
-    // and makes it Potential, where the quotation / proforma can be issued
-    // while the customer decides. Once the customer confirms it moves to
-    // In Progress for the actual work, then Completed when closed.
+    // One flow for every department: New (enquiry, nobody on it) ->
+    // Quotation (taken in, quote sent; key "potential") -> Confirmed
+    // (customer said yes, deposit / PO) -> In Progress (the work) ->
+    // Delivered (goods delivered / work handed over) -> Completed (paid
+    // and closed). Approvals (artwork, UAT, run sheet) sit on top of this
+    // as a marker, not a stage. job_status_labels renames a stage for a
+    // department.
     // Each status carries an icon alongside its color so a status badge
     // never depends on color alone to be told apart — Potential (indigo)
     // and In Progress (blue) sit close enough in hue that color-only
     // badges were hard to distinguish at a glance.
     'job_statuses' => [
         'new' => ['label' => 'New', 'color' => '#F59E0B', 'icon' => '✦'],
-        'potential' => ['label' => 'Potential', 'color' => '#6366F1', 'icon' => '🎯'],
+        'potential' => ['label' => 'Quotation', 'color' => '#6366F1', 'icon' => '🎯'],
+        'confirmed' => ['label' => 'Confirmed', 'color' => '#0EA5E9', 'icon' => '✔'],
         'in_progress' => ['label' => 'In Progress', 'color' => '#3A86FF', 'icon' => '⚡'],
+        'delivered' => ['label' => 'Delivered', 'color' => '#14B8A6', 'icon' => '📦'],
         'completed' => ['label' => 'Completed', 'color' => '#6B7280', 'icon' => '✓'],
         'cancelled' => ['label' => 'Cancelled', 'color' => '#EF4444', 'icon' => '🚫'],
+    ],
+
+    'job_status_labels' => [
+        'print' => ['in_progress' => 'In Production', 'delivered' => 'Delivered'],
+        'tech' => ['in_progress' => 'Development', 'delivered' => 'Handed Over'],
+        'brand' => ['in_progress' => 'Design', 'delivered' => 'Handed Over'],
+        'event' => ['in_progress' => 'Preparation', 'delivered' => 'Event Done'],
     ],
 
     // Orthogonal to job_statuses above — a job can be "In Progress" and

@@ -105,7 +105,7 @@ $onHost('jobs', function () {
         Route::delete('/jobs/{job}', [JobController::class, 'destroy'])->name('jobs.destroy');
         Route::put('/jobs/{job}/line-items', [JobController::class, 'updateLineItems'])->name('jobs.line-items.update');
         Route::post('/jobs/{job}/take-in', [JobController::class, 'takeIn'])->name('jobs.take-in');
-        Route::post('/jobs/{job}/confirm', [JobController::class, 'confirm'])->name('jobs.confirm');
+        Route::post('/jobs/{job}/advance', [JobController::class, 'advance'])->name('jobs.advance');
         Route::post('/jobs/{job}/close-ticket', [JobController::class, 'closeTicket'])->name('jobs.close-ticket');
         Route::post('/jobs/{job}/complete', [JobController::class, 'complete'])->name('jobs.complete');
         Route::put('/jobs/{job}/reassign', [JobController::class, 'reassign'])->name('jobs.reassign');

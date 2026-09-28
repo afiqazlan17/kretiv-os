@@ -84,7 +84,7 @@
                     <tbody class="divide-y divide-[#F5ECE8]">
                         @forelse ($jobs as $job)
                             @php
-                                $st = config('kretivco.job_statuses.'.$job->status);
+                                $st = ['label' => $job->statusLabel()] + (array) config('kretivco.job_statuses.'.$job->status);
                                 $dept = config('kretivco.departments.'.$job->department);
                                 $siblingCount = $job->project_id ? ($siblingsByProject[$job->project_id] ?? collect())->count() - 1 : 0;
                                 $jobLine = collect([$job->job_type, $job->customer?->company])->filter()->join(' · ');

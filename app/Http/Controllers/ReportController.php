@@ -136,7 +136,7 @@ class ReportController extends Controller
                     'completed' => $done->count(),
                     'final' => $done->sum('final_value'),
                     'on_time_pct' => $judged->isNotEmpty() ? (int) round($onTime / $judged->count() * 100) : null,
-                    'late' => $group->filter(fn (Job $j) => in_array($j->status, [Job::STATUS_NEW, Job::STATUS_POTENTIAL, Job::STATUS_IN_PROGRESS], true)
+                    'late' => $group->filter(fn (Job $j) => in_array($j->status, JobController::OPEN_STATUSES, true)
                         && $j->deadline && $j->deadline->lt(now()->startOfDay()))->count(),
                 ];
             })
@@ -152,7 +152,9 @@ class ReportController extends Controller
         $funnel = [
             'new' => $jobs->where('status', Job::STATUS_NEW)->count(),
             'potential' => $jobs->where('status', Job::STATUS_POTENTIAL)->count(),
+            'confirmed' => $jobs->where('status', Job::STATUS_CONFIRMED)->count(),
             'in_progress' => $jobs->where('status', Job::STATUS_IN_PROGRESS)->count(),
+            'delivered' => $jobs->where('status', Job::STATUS_DELIVERED)->count(),
             'completed' => $completed->count(),
         ];
         $funnelTotal = array_sum($funnel);

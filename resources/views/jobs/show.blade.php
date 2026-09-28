@@ -76,6 +76,17 @@
                 @endphp
                 <div class="flex flex-wrap items-center gap-2">
                     <span class="inline-block text-xs font-bold rounded-full px-3 py-1 bg-white" style="color: {{ $st['color'] ?? '#374151' }}">{{ $job->statusLabel() }}</span>
+                    @php
+                        // Approval marker: the newest version of each design decides.
+                        $apLatest = \App\Models\Approval::where('job_id', $job->id)->orderByDesc('version')->get()->unique(fn ($ap) => $ap->line_item_id.'-'.$ap->design);
+                        $openAp = $apLatest->first(fn ($ap) => in_array($ap->status, ['sent', 'changes_requested'], true));
+                        $anyApproved = ! $openAp && $apLatest->isNotEmpty() && $apLatest->every(fn ($ap) => $ap->status === 'approved');
+                    @endphp
+                    @if ($openAp)
+                        <span class="inline-flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1 bg-white {{ $openAp->status === 'sent' ? 'text-amber-600' : 'text-blue-600' }}"><x-icon name="image" class="w-3.5 h-3.5" /> {{ $openAp->status === 'sent' ? 'Awaiting approval v'.$openAp->version : 'Changes requested v'.$openAp->version }}</span>
+                    @elseif ($anyApproved)
+                        <span class="inline-flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1 bg-white text-green-600"><x-icon name="check" class="w-3.5 h-3.5" /> Artwork approved</span>
+                    @endif
                     <span class="{{ $chip }}">Responsible: <span class="font-semibold text-white">{{ $job->pic ?? 'Not yet assigned' }}</span></span>
                     <span class="{{ $chip }}">Department: <span class="font-semibold text-white">{{ config('kretivco.departments.'.$job->department.'.label') }}</span></span>
                     @if ($job->deadline)
@@ -751,6 +762,10 @@
                         return ['idx' => $idx, 'name' => $name, 'designs' => $designs, 'max' => max(1, (int) $designs->keys()->max())];
                     });
                     $otherAtt = $allAtt->reject(fn ($a) => ($a['kind'] ?? '') === 'artwork');
+                    // Latest approval per item + design.
+                    $latestApprovals = \App\Models\Approval::where('job_id', $job->id)->orderByDesc('version')->get()
+                        ->unique(fn ($ap) => $ap->line_item_id.'-'.$ap->design)->keyBy(fn ($ap) => $ap->line_item_id.'-'.$ap->design);
+                    $waCustomer = \App\Support\Phone::whatsapp($job->customer?->phone);
                 @endphp
                 <div class="k-card p-5 md:p-6">
                     <h3 class="text-base font-bold text-gray-900 mb-4">Artwork</h3>
@@ -777,6 +792,54 @@
                                                 @empty
                                                     <p class="text-gray-400 text-xs">No files</p>
                                                 @endforelse
+
+                                                {{-- Customer approval for this design --}}
+                                                @php
+                                                    $ap = $latestApprovals->get($g['idx'].'-'.$d);
+                                                    $hasFiles = $g['designs']->get($d, collect())->isNotEmpty();
+                                                    $apTone = ['sent' => 'bg-amber-50 text-amber-700', 'approved' => 'bg-green-50 text-green-700', 'changes_requested' => 'bg-blue-50 text-blue-700', 'superseded' => 'bg-gray-100 text-gray-500'];
+                                                    $lineItem = $job->line_items[$g['idx']] ?? [];
+                                                    $prefill = trim(preg_replace('/^\s*[\*\-•]+\s*/mu', '', (string) ($lineItem['desc'] ?? ''))."\nQuantity: ".rtrim(rtrim(number_format((float) ($lineItem['qty'] ?? 1), 2, '.', ''), '0'), '.'));
+                                                @endphp
+                                                @if ($ap || $hasFiles)
+                                                    <div class="mt-2 rounded-lg bg-[#FFFBF9] border border-[#F5ECE8] p-2.5 space-y-2" x-data="{ send: false }">
+                                                        @if ($ap)
+                                                            <div class="flex flex-wrap items-center gap-2 text-xs">
+                                                                <span class="font-semibold px-2 py-0.5 rounded-full {{ $apTone[$ap->status] }}">v{{ $ap->version }} · {{ \App\Models\Approval::STATUSES[$ap->status] }}</span>
+                                                                @if ($ap->responded_at)<span class="text-gray-500">{{ $ap->customer_name }}, {{ $ap->responded_at->format('d M, g:ia') }}</span>@endif
+                                                                @if ($ap->isOpen() && $ap->created_at->lt(now()->subDay()))<span class="text-rose-600">No reply for over a day, remind the customer</span>@endif
+                                                            </div>
+                                                            @if ($ap->comment)<p class="text-xs text-gray-700 bg-white rounded p-2 whitespace-pre-line">{{ $ap->comment }}</p>@endif
+                                                            @if ($ap->isOpen())
+                                                                @php $waText = "Hi {$job->customer?->name}, please check the artwork for {$ap->item_name} (version {$ap->version}) and press Proceed or Request Changes here:\n".$ap->url(); @endphp
+                                                                <div class="flex flex-wrap items-center gap-2" x-data="{ copied: false }">
+                                                                    <input type="text" readonly value="{{ $ap->url() }}" class="flex-1 min-w-[10rem] text-[11px] h-8 rounded-md border-gray-200 bg-white">
+                                                                    <button type="button" @click="navigator.clipboard.writeText('{{ $ap->url() }}'); copied = true" class="text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-[#EFE3DE]" x-text="copied ? 'Copied' : 'Copy link'"></button>
+                                                                    <a href="https://wa.me/{{ $waCustomer }}?text={{ rawurlencode($waText) }}" target="_blank" rel="noopener" class="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-[#25D366] text-white">WhatsApp</a>
+                                                                </div>
+                                                            @elseif ($ap->status === 'approved')
+                                                                <a href="{{ route('approval.record', $ap->token) }}" target="_blank" class="text-xs font-semibold text-[#C2185B] hover:underline">Approval record (PDF)</a>
+                                                            @endif
+                                                        @endif
+                                                        @can('update', $job)
+                                                            @if ($hasFiles && (! $ap || $ap->status !== 'approved'))
+                                                                <button type="button" @click="send = !send" x-show="!send" class="text-xs font-semibold text-[#C2185B] hover:underline">{{ $ap ? 'Send a new version for approval' : 'Send for approval' }}</button>
+                                                                <form x-show="send" x-cloak method="POST" action="{{ route('jobs.approvals.send', $job) }}" class="space-y-2">
+                                                                    @csrf
+                                                                    <input type="hidden" name="line_item_id" value="{{ $g['idx'] }}">
+                                                                    <input type="hidden" name="design" value="{{ $d }}">
+                                                                    <label class="text-[11px] text-gray-500">Details the customer sees (material, size, quantity, colour, cutting)</label>
+                                                                    <textarea name="details" rows="4" class="block w-full text-xs rounded-md border-gray-300">{{ $ap?->details ?? $prefill }}</textarea>
+                                                                    <p class="text-[11px] text-gray-400">Sends the files above as version {{ ($ap?->version ?? 0) + 1 }}.{{ $ap && $ap->isOpen() ? ' The link for v'.$ap->version.' stops working.' : '' }}</p>
+                                                                    <div class="flex gap-2">
+                                                                        <button class="text-xs font-semibold px-3 py-1.5 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A]">Create approval link</button>
+                                                                        <button type="button" @click="send = false" class="text-xs text-gray-500">Cancel</button>
+                                                                    </div>
+                                                                </form>
+                                                            @endif
+                                                        @endcan
+                                                    </div>
+                                                @endif
                                             </div>
                                         @endforeach
                                         <div x-show="d > {{ $g['max'] }}"><p class="text-gray-400 text-xs">No files</p></div>

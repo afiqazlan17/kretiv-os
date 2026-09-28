@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountantPackController;
+use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\BankImportController;
@@ -70,6 +71,12 @@ $onHost('jobs', function () {
     // Signed, expiring link to a generated document, sent to customers on WhatsApp.
     Route::get('/d/{document}', [DocumentController::class, 'shared'])->middleware('signed')->name('documents.shared');
 
+    // Customer artwork approval: the link itself is the key (no login).
+    Route::get('/approval/{token}', [ApprovalController::class, 'show'])->name('approval.show');
+    Route::get('/approval/{token}/file/{attachmentId}', [ApprovalController::class, 'file'])->name('approval.file');
+    Route::post('/approval/{token}', [ApprovalController::class, 'respond'])->middleware('throttle:10,1')->name('approval.respond');
+    Route::get('/approval/{token}/record', [ApprovalController::class, 'record'])->name('approval.record');
+
     Route::middleware('auth')->group(function () {
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -108,6 +115,7 @@ $onHost('jobs', function () {
         Route::post('/jobs/{job}/take-in', [JobController::class, 'takeIn'])->name('jobs.take-in');
         Route::post('/jobs/{job}/advance', [JobController::class, 'advance'])->name('jobs.advance');
         Route::post('/jobs/{job}/po', [JobController::class, 'updatePo'])->name('jobs.po.update');
+        Route::post('/jobs/{job}/approvals', [ApprovalController::class, 'send'])->name('jobs.approvals.send');
         Route::get('/jobs/{job}/po', [JobController::class, 'poFile'])->name('jobs.po.file');
         Route::post('/jobs/{job}/close-ticket', [JobController::class, 'closeTicket'])->name('jobs.close-ticket');
         Route::post('/jobs/{job}/complete', [JobController::class, 'complete'])->name('jobs.complete');

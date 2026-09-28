@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\MalaysianPhone;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -24,7 +25,7 @@ class Customer extends Model
     protected function casts(): array
     {
         return [
-            'phone' => \App\Casts\MalaysianPhone::class,
+            'phone' => MalaysianPhone::class,
             'created_at' => 'datetime',
         ];
     }

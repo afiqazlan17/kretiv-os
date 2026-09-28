@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\MalaysianPhone;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,7 +20,7 @@ class Employee extends Model
         return [
             'date_of_birth' => 'date', 'start_date' => 'date', 'end_date' => 'date',
             'basic_salary' => 'decimal:2', 'allowances' => 'array', 'ot_eligible' => 'boolean',
-            'phone' => \App\Casts\MalaysianPhone::class, 'emergency_phone' => \App\Casts\MalaysianPhone::class,
+            'phone' => MalaysianPhone::class, 'emergency_phone' => MalaysianPhone::class,
         ];
     }
 

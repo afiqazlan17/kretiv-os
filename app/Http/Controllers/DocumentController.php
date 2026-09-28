@@ -86,6 +86,7 @@ class DocumentController extends Controller
 
         $data = $request->validate([
             'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
+            'department' => ['nullable', Rule::in(array_keys(config('kretivco.departments')))],
             'bank' => ['nullable', Rule::in(['mbb', 'affin'])],
             'title' => ['nullable', 'string', 'max:255'],
             'estimation_value' => ['nullable', 'numeric', 'min:0'],
@@ -102,6 +103,7 @@ class DocumentController extends Controller
         $job = (new Job)->forceFill([
             'job_id' => 'XX-'.now()->year.'-000',
             'job_type' => $data['title'] ?? '',
+            'department' => $data['department'] ?? null,
             'bank' => $data['bank'] ?? null,
             'estimation_value' => $data['estimation_value'] ?? null,
         ]);

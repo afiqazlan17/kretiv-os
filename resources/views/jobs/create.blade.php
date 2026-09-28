@@ -258,7 +258,7 @@
                     <p x-show="formError" x-cloak x-text="formError" class="mt-2 text-sm font-semibold text-red-600"></p>
                     <label class="mt-3 flex items-start gap-2 text-sm text-gray-700">
                         <input type="checkbox" name="take_in" value="1" @checked(old('take_in', true)) class="mt-0.5 rounded">
-                        <span>I'll handle this job <span class="block text-xs text-gray-400">It goes straight to Quotation with you as the person responsible, so you can send the quotation right away. Untick to leave it in the Job Queue for someone else.</span></span>
+                        <span>I'll handle this job <span class="block text-xs text-gray-400">It goes straight to Quotation with you as the person responsible, so you can send the quotation right away. Untick to leave it in New Jobs for someone else.</span></span>
                     </label>
                     <div class="mt-2">
                         <x-primary-button type="submit">Save Job</x-primary-button>
@@ -347,7 +347,7 @@
                         ? [{ item: `${tier.pkg.label} (${tier.tier.pcs}pcs)`, desc: this.packageItemLines(d, pd.productLine, pd.segment, pd.pkg).join('\n'), qty: 1, price: tier.tier.price }]
                         : pd.lineItems.filter(r => (r.item || '').trim() !== '').map(r => ({ item: r.item, desc: r.desc || '', qty: r.qty === '' ? 0 : r.qty, price: r.price === '' ? 0 : r.price }));
                     const payload = {
-                        customer_id: this.customerId || null, bank: pd.bank || null, title: pd.jobType || '',
+                        customer_id: this.customerId || null, department: d, bank: pd.bank || null, title: pd.jobType || '',
                         estimation_value: tier ? tier.tier.price : null,
                         delivery: pd.delivery === '' ? 0 : pd.delivery, discount: pd.discount === '' ? 0 : pd.discount, items,
                     };

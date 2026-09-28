@@ -577,4 +577,20 @@ class DocumentControllerTest extends TestCase
         $this->actingAs($bod)->get(route('jobs.po.file', $job))->assertOk();
         $this->actingAs($bod)->get(route('jobs.show', $job))->assertSee("doesn't match the job total", false);
     }
+
+    public function test_new_job_preview_uses_the_chosen_departments_notes(): void
+    {
+        if (! shell_exec('command -v pdftotext')) {
+            $this->markTestSkipped('pdftotext not installed.');
+        }
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $payload = ['title' => 'Website', 'items' => [['item' => 'Website', 'qty' => 1, 'price' => 1000]]];
+
+        $tech = $this->pdfText($this->actingAs($bod)->postJson(route('jobs.quotation-preview'), $payload + ['department' => 'tech'])->getContent());
+        $print = $this->pdfText($this->actingAs($bod)->postJson(route('jobs.quotation-preview'), $payload + ['department' => 'print'])->getContent());
+
+        $this->assertStringContainsString('30% upon system demo', $tech);
+        $this->assertStringNotContainsString('80% deposit', $tech);
+        $this->assertStringContainsString('80% deposit', $print);
+    }
 }

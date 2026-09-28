@@ -35,7 +35,7 @@
                             <button type="button" @click="$store.jobActions.panel = 'cancel'" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1] text-red-600"><x-icon name="circle-x" class="w-4 h-4" /> Cancel Job</button>
                         @endif
                         @if (! $job->archived && $job->status !== 'cancelled')
-                            <form method="POST" action="{{ route('jobs.archive', $job) }}" onsubmit="return confirm('Archive {{ $job->job_id }}? It will be hidden from the Job Queue.')">
+                            <form method="POST" action="{{ route('jobs.archive', $job) }}" onsubmit="return confirm('Archive {{ $job->job_id }}? It will be hidden from the job lists.')">
                                 @csrf
                                 <button type="submit" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1] text-gray-500"><x-icon name="archive" class="w-4 h-4" /> Archive</button>
                             </form>

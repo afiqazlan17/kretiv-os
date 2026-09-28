@@ -665,7 +665,7 @@ class JobController extends Controller
         return back()->with('success', "{$job->job_id} resumed.");
     }
 
-    /** Archive — hides the job from the default Job Queue view. */
+    /** Archive — hides the job from the job lists. */
     public function archive(Request $request, Job $job): RedirectResponse
     {
         $this->authorize('update', $job);
@@ -690,7 +690,7 @@ class JobController extends Controller
 
     /**
      * Permanently removes a job — BOD-only (JobPolicy::delete), unlike
-     * archive() which just hides it from the Job Queue. Job documents
+     * archive() which just hides it from the job lists. Job documents
      * cascade-delete via the DB FK; activity log and ledger entries are
      * cleaned up explicitly here since they aren't hard-linked the same
      * way (activity_log.job_id is nullable/nullOnDelete, and

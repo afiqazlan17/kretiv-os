@@ -32,6 +32,7 @@ use App\Http\Controllers\OsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecurringExpenseController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\StatementController;
 use App\Http\Controllers\TaxSummaryController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VendorController;
@@ -73,6 +74,7 @@ $onHost('jobs', function () {
 
     // Signed, expiring link to a generated document, sent to customers on WhatsApp.
     Route::get('/d/{document}', [DocumentController::class, 'shared'])->middleware('signed')->name('documents.shared');
+    Route::get('/soa/{customer}', [StatementController::class, 'shared'])->middleware('signed')->name('statement.shared');
 
     // Customer artwork approval: the link itself is the key (no login).
     Route::get('/approval/{token}', [ApprovalController::class, 'show'])->name('approval.show');
@@ -97,6 +99,7 @@ $onHost('jobs', function () {
         Route::get('/postcode-lookup/{postcode}', [CustomerController::class, 'postcodeLookup'])->name('postcode.lookup');
         Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store');
         Route::put('/customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
+        Route::get('/customers/{customer}/statement', [StatementController::class, 'show'])->name('customers.statement');
         Route::get('/vendors', [VendorController::class, 'index'])->name('vendors.index');
         Route::post('/vendors', [VendorController::class, 'store'])->name('vendors.store');
         Route::put('/vendors/{vendor}', [VendorController::class, 'update'])->name('vendors.update');

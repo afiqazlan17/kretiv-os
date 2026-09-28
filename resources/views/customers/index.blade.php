@@ -178,6 +178,22 @@
                                                 {{ collect([$customer->address_line_1, $customer->address_line_2, trim($customer->postcode.' '.$customer->city), $customer->state])->filter()->implode(', ') ?: 'Not set' }}
                                             </div>
                                         </div>
+                                        @if (auth()->user()->canManageFinance() || auth()->user()->isBod())
+                                            {{-- Statement of Account: everything invoiced, paid and still owed. --}}
+                                            @php $soa = \App\Http\Controllers\StatementController::build($customer); @endphp
+                                            @if (count($soa['rows']))
+                                                <div class="mb-5 rounded-xl border border-[#F1E3DD] bg-white p-3.5 flex flex-wrap items-center gap-3">
+                                                    <div class="flex-1 min-w-[12rem]">
+                                                        <p class="text-[11px] font-semibold text-gray-400 uppercase">Statement of Account</p>
+                                                        <p class="text-sm font-bold {{ $soa['balance'] > 0.005 ? 'text-[#C2185B]' : 'text-green-600' }}">{{ $soa['balance'] > 0.005 ? 'RM '.number_format($soa['balance'], 2).' outstanding' : 'Fully settled' }}</p>
+                                                    </div>
+                                                    <a href="{{ route('customers.statement', $customer) }}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#EFE3DE] text-gray-700 hover:bg-[#FFF7F3]"><x-icon name="file-text" class="w-3.5 h-3.5" /> View PDF</a>
+                                                    @if ($customer->phone)
+                                                        <a href="{{ \App\Http\Controllers\StatementController::whatsappUrl($customer, $soa['balance']) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#25D366] text-white hover:brightness-105"><x-icon name="message-circle" class="w-3.5 h-3.5" /> Send on WhatsApp</a>
+                                                    @endif
+                                                </div>
+                                            @endif
+                                        @endif
 
                                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
                                             <div class="rounded-xl bg-white border border-[#F5E7E1] p-3"><div class="text-[11px] font-semibold text-gray-400 uppercase">Total Value</div><div class="text-lg font-bold">RM {{ number_format($st['value'], 2) }}</div><div class="text-xs text-gray-400">{{ $st['jobs'] }} {{ \Illuminate\Support\Str::plural('job', $st['jobs']) }}</div></div>

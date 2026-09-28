@@ -63,7 +63,7 @@ class KretivOsTest extends TestCase
 
         $this->actingAs($staff)->get(route('os.home'))
             ->assertOk()->assertSee('KP-2026-001')->assertSee('deadline today')
-            ->assertDontSee('KP-2026-002')->assertSee('1 job in the queue');
+            ->assertDontSee('KP-2026-002')->assertSee('1 new job waiting');
     }
 
     public function test_users_and_access_is_bod_only_and_saves_modules_role_and_active(): void

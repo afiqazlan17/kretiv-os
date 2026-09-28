@@ -11,6 +11,17 @@
     </x-slot>
 
     <div class="p-5 md:p-7 space-y-4">
+        {{-- Same four views as the sidebar, here too because phones hide the sidebar. --}}
+        <div class="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-1">
+            @foreach (\App\Http\Controllers\JobController::VIEW_META as $key => $meta)
+                @php $count = $key === 'queue' ? \App\Models\Job::where('status', \App\Models\Job::STATUS_NEW)->where('archived', false)->when(! auth()->user()->isBod(), fn ($q) => $q->whereIn('department', auth()->user()->visibleDepartments()))->count() : 0; @endphp
+                <a href="{{ route('jobs.index', ['view' => $key]) }}"
+                   class="shrink-0 inline-flex items-center gap-1.5 text-sm font-semibold px-3.5 py-1.5 rounded-full {{ $view === $key ? 'bg-[#E91E63] text-white' : 'bg-white border border-[#F1E3DD] text-gray-600 hover:bg-[#FFF5F1]' }}">
+                    {{ $meta['title'] }}
+                    @if ($count > 0)<span class="text-[11px] rounded-full px-1.5 {{ $view === $key ? 'bg-white/25' : 'bg-[#FFE4EC] text-[#C2185B]' }}">{{ $count }}</span>@endif
+                </a>
+            @endforeach
+        </div>
 
         @if (session('success'))
             <div class="rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3">{{ session('success') }}</div>
@@ -156,7 +167,8 @@
                                 <td class="px-4 py-3.5 align-top whitespace-nowrap text-right font-bold text-gray-900 hidden sm:table-cell">RM {{ number_format($job->estimation_value ?? 0, 2) }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="6" class="px-4 py-10 text-center text-gray-400">No jobs found. Try a different filter.</td></tr>
+                            <tr><td colspan="6" class="px-4 py-10 text-center text-gray-400">{{ request()->hasAny(['search', 'department', 'status']) ? 'No jobs match this filter.' : \App\Http\Controllers\JobController::VIEW_META[$view]['empty'] }}
+                                @if ($view !== 'all')<a href="{{ route('jobs.index', ['view' => 'all']) }}" class="block mt-2 text-sm font-semibold text-[#C2185B] hover:underline">View all jobs</a>@endif</td></tr>
                         @endforelse
                     </tbody>
                 </table>

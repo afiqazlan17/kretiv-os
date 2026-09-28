@@ -52,13 +52,15 @@
 {{-- Navigation --}}
 <nav class="flex-1 px-3 py-1 overflow-y-auto">
     @php
+        $newJobCount = $user->canAccess('jobs') ? \App\Models\Job::where('status', \App\Models\Job::STATUS_NEW)->where('archived', false)
+            ->when(! $user->isBod(), fn ($q) => $q->whereIn('department', $user->visibleDepartments()))->count() : 0;
         $jobSubmenu = [
-            ['key' => 'queue', 'label' => 'Job Queue', 'icon' => 'list-todo'],
-            ['key' => 'all', 'label' => 'All Jobs', 'icon' => 'clipboard-list'],
-            ['key' => 'aging', 'label' => 'Aging Job', 'icon' => 'hourglass'],
             ['key' => 'mine', 'label' => 'My Jobs', 'icon' => 'user-check'],
+            ['key' => 'queue', 'label' => 'New Jobs', 'icon' => 'list-todo', 'badge' => $newJobCount],
+            ['key' => 'all', 'label' => 'All Jobs', 'icon' => 'clipboard-list'],
+            ['key' => 'aging', 'label' => 'Aging Jobs', 'icon' => 'hourglass'],
         ];
-        $activeJobView = request()->routeIs('jobs.index') ? (request()->query('view', 'queue')) : null;
+        $activeJobView = request()->routeIs('jobs.index') ? (request()->query('view', 'mine')) : null;
         $financeSubmenu = ['finance.index' => ['Overview', '']] + collect(\App\Http\Controllers\FinanceReportController::REPORTS)
             ->reject(fn ($r, $k) => in_array($k, \App\Http\Controllers\FinanceReportController::COMPANY_REPORTS, true) && ! $user->seesCompanyFinance())
             ->mapWithKeys(fn ($r, $k) => [$k => $r])->all();
@@ -167,6 +169,7 @@
                        class="flex items-start gap-2 min-h-[34px] py-[7px] pl-11 pr-2.5 text-xs leading-tight rounded-lg {{ $activeJobView === $sub['key'] ? 'text-[#C2185B] font-semibold' : 'text-gray-500 font-normal hover:text-gray-800' }}">
                         <x-icon :name="$sub['icon']" class="w-3.5 h-3.5 shrink-0 mt-px" />
                         <span>{{ $sub['label'] }}</span>
+                        @if (! empty($sub['badge']))<span class="ml-auto text-[10px] font-bold px-1.5 rounded-full bg-[#E91E63] text-white">{{ $sub['badge'] }}</span>@endif
                     </a>
                 @endforeach
             </div>

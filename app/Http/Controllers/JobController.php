@@ -22,13 +22,13 @@ class JobController extends Controller
     use GeneratesJobIds;
 
     /**
-     * @var array<string, array{title: string, sub: string}>
+     * @var array<string, array{title: string, sub: string, empty: string}>
      */
     public const VIEW_META = [
-        'queue' => ['title' => 'Job Queue', 'sub' => 'New jobs waiting for someone to take them in'],
-        'all' => ['title' => 'All Jobs', 'sub' => 'Every job, most recently changed first'],
-        'aging' => ['title' => 'Aging Job', 'sub' => 'Jobs untouched for the longest'],
-        'mine' => ['title' => 'My Jobs', 'sub' => 'Jobs under your responsibility'],
+        'mine' => ['title' => 'My Jobs', 'sub' => 'Jobs under your responsibility', 'empty' => 'Nothing under your name right now. Take in a job from New Jobs.'],
+        'queue' => ['title' => 'New Jobs', 'sub' => 'New jobs waiting for someone to take them in', 'empty' => 'No new jobs waiting. Every job has someone on it.'],
+        'all' => ['title' => 'All Jobs', 'sub' => 'Every job, most recently changed first', 'empty' => 'No jobs match this filter.'],
+        'aging' => ['title' => 'Aging Jobs', 'sub' => 'Open jobs untouched for the longest', 'empty' => 'No open jobs.'],
     ];
 
     /**
@@ -61,7 +61,7 @@ class JobController extends Controller
         $this->authorize('viewAny', Job::class);
 
         $user = $request->user();
-        $view = array_key_exists($request->query('view'), self::VIEW_META) ? $request->query('view') : 'queue';
+        $view = array_key_exists($request->query('view'), self::VIEW_META) ? $request->query('view') : 'mine';
 
         $query = Job::query()->with(['customer', 'activityLog'])->where('archived', false);
 

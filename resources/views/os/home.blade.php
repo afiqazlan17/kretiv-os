@@ -147,8 +147,8 @@
 
                 @if ($queueCount > 0)
                     <a href="{{ route('jobs.index', ['view' => 'queue']) }}" target="_blank" rel="noopener" class="flex items-center gap-3 text-sm px-3 py-2.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/15">
-                        <x-icon name="inbox" class="w-4 h-4 text-amber-300 shrink-0" /><span class="text-amber-300">{{ $queueCount }} {{ \Illuminate\Support\Str::plural('job', $queueCount) }} in the queue waiting to be taken in</span>
-                        <span class="ml-auto text-xs underline text-white/50">View queue</span>
+                        <x-icon name="inbox" class="w-4 h-4 text-amber-300 shrink-0" /><span class="text-amber-300">{{ $queueCount }} new {{ \Illuminate\Support\Str::plural('job', $queueCount) }} waiting to be taken in</span>
+                        <span class="ml-auto text-xs underline text-white/50">View new jobs</span>
                     </a>
                 @endif
 

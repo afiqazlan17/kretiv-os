@@ -315,6 +315,34 @@ class LedgerService
         }
     }
 
+    /** What's still held as a deposit for the job (received before any invoice, not yet applied, refunded or kept). */
+    public static function depositHeld($job): float
+    {
+        return round(self::balanceFor(LedgerEntry::where('job_id', $job->job_id)->get(), 'customer_deposits'), 2);
+    }
+
+    /**
+     * A cancelled job's deposit: paid back to the customer (money out of the
+     * bank) or kept under the non-refundable terms (becomes income).
+     */
+    public function settleDeposit($job, string $how, float $amount, ?string $bank, string $userName, ?string $date = null): LedgerEntry
+    {
+        $refund = $how === 'refund';
+
+        return $this->addEntry([
+            'date' => $date ?? now(),
+            'type' => $refund ? 'deposit_refund' : 'deposit_forfeit',
+            'description' => ($refund ? 'Deposit refunded' : 'Deposit kept (non-refundable)').": {$job->customer?->name}, {$job->job_id}",
+            'department' => $job->department,
+            'job_id' => $job->job_id,
+            'debit_account' => 'customer_deposits',
+            'credit_account' => $refund ? self::bankAccount($bank) : self::revenueAccount($job->department),
+            'amount' => round($amount, 2),
+            'bank' => $refund ? $bank : null,
+            'created_by' => $userName ?: 'System',
+        ]);
+    }
+
     private function afterPosting($job, string $userName, LedgerEntry $entry): LedgerEntry
     {
         $this->syncDeposits($job, $userName);
@@ -332,7 +360,8 @@ class LedgerService
     public function syncDeposits($job, string $userName): void
     {
         $entries = LedgerEntry::where('job_id', $job->job_id)->where('reversed', false)->get();
-        $held = (float) $entries->where('type', 'receipt')->where('credit_account', 'customer_deposits')->sum('amount');
+        $held = (float) $entries->where('type', 'receipt')->where('credit_account', 'customer_deposits')->sum('amount')
+            - (float) $entries->whereIn('type', ['deposit_refund', 'deposit_forfeit'])->sum('amount');
         $hasInvoice = $entries->where('type', 'invoice')->isNotEmpty();
         $target = $hasInvoice ? round($held, 2) : 0.0;
         $applied = round((float) $entries->where('type', 'deposit_applied')->sum('amount'), 2);

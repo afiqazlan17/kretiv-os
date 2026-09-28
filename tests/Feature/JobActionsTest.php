@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\Job;
 use App\Models\LedgerEntry;
 use App\Models\User;
+use App\Services\LedgerService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -294,5 +295,28 @@ class JobActionsTest extends TestCase
         $this->assertEquals($job->line_items, $copy->line_items);
         $this->assertEquals(5, $copy->delivery_amount);
         $this->assertNull($copy->po_number);
+    }
+
+    public function test_a_cancelled_jobs_deposit_is_refunded_or_kept(): void
+    {
+        Storage::fake('public');
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $staff = User::factory()->create(['role' => User::ROLE_STAFF, 'department' => 'print']);
+        $job = $this->job(['status' => Job::STATUS_POTENTIAL, 'pic' => $bod->name, 'line_items' => [['item' => 'Banner', 'qty' => 1, 'price' => 1000]]]);
+        $this->actingAs($bod)->postJson(route('jobs.documents.generate', [$job, 'receipt']), ['title' => 'X', 'amount_paid' => 500])->assertOk();
+        $job->refresh()->update(['status' => Job::STATUS_CANCELLED]);
+
+        $this->assertEquals(500, LedgerService::depositHeld($job));
+        $this->actingAs($bod)->get(route('jobs.show', $job))->assertSee('RM 500.00 deposit still held');
+
+        $this->actingAs($staff)->post(route('jobs.deposit.settle', $job), ['how' => 'refund', 'amount' => 100, 'bank' => 'mbb'])->assertForbidden();
+        $this->actingAs($bod)->post(route('jobs.deposit.settle', $job), ['how' => 'refund', 'amount' => 600, 'bank' => 'mbb'])->assertSessionHasErrors('amount');
+        $this->actingAs($bod)->post(route('jobs.deposit.settle', $job), ['how' => 'refund', 'amount' => 200, 'bank' => 'mbb'])->assertRedirect();
+        $this->actingAs($bod)->post(route('jobs.deposit.settle', $job), ['how' => 'forfeit', 'amount' => 300])->assertRedirect();
+
+        $this->assertEquals(0, LedgerService::depositHeld($job));
+        $entries = LedgerEntry::where('job_id', $job->job_id)->get();
+        $this->assertEquals(300, LedgerService::balanceFor($entries, 'revenue_print'));
+        $this->assertEquals(300, LedgerService::balanceFor($entries, 'bank_mbb'));   // 500 in, 200 back
     }
 }

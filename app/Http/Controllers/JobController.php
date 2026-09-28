@@ -9,6 +9,7 @@ use App\Models\Job;
 use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Models\Vendor;
+use App\Services\LedgerService;
 use App\Support\DocumentData;
 use App\Support\NoteSanitizer;
 use Illuminate\Http\RedirectResponse;
@@ -563,6 +564,29 @@ class JobController extends Controller
         });
 
         return redirect()->route('jobs.show', $copy)->with('success', "{$copy->job_id} created from {$job->job_id}. Check the items and send the quotation.");
+    }
+
+    /** Refund or keep the deposit held for a cancelled job (BOD / Finance). */
+    public function settleDeposit(Request $request, Job $job, LedgerService $ledger): RedirectResponse
+    {
+        abort_unless($request->user()->canVoidPayments(), 403);
+        abort_unless($job->status === Job::STATUS_CANCELLED, 422, 'Cancel the job first.');
+        $held = LedgerService::depositHeld($job);
+        $data = $request->validate([
+            'how' => ['required', 'in:refund,forfeit'],
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:'.$held],
+            'bank' => ['required_if:how,refund', 'nullable', 'in:'.implode(',', array_keys(config('kretivco.banks')))],
+            'date' => ['nullable', 'date'],
+        ]);
+
+        $entry = $ledger->settleDeposit($job, $data['how'], (float) $data['amount'], $data['bank'] ?? null, $request->user()->name, $data['date'] ?? null);
+        ActivityLog::create([
+            'job_id' => $job->id, 'job_code' => $job->job_id, 'user_id' => $request->user()->id, 'user_name' => $request->user()->name,
+            'action' => 'edited', 'field_changed' => 'deposit',
+            'detail' => ($data['how'] === 'refund' ? 'Refunded deposit' : 'Kept deposit (non-refundable)').' RM '.number_format((float) $entry->amount, 2),
+        ]);
+
+        return back()->with('success', $data['how'] === 'refund' ? 'Deposit refund recorded.' : 'Deposit recorded as kept income.');
     }
 
     /** One stage forward: Quotation -> Confirmed -> In Progress -> Delivered. */

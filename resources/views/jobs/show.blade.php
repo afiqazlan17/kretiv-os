@@ -140,6 +140,40 @@
                 <div class="rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 font-medium">
                     Job cancelled: {{ config('kretivco.cancel_reasons.'.$job->cancel_reason, $job->cancel_reason) }}@if ($job->cancel_reason_text): {{ $job->cancel_reason_text }}@endif
                 </div>
+                {{-- A deposit taken before the job was cancelled: refund it or keep it (non-refundable terms). --}}
+                @php $depositHeld = \App\Services\LedgerService::depositHeld($job); @endphp
+                @if ($depositHeld > 0)
+                    <div class="mt-3 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-4" x-data="{ how: 'refund' }">
+                        <div class="flex flex-wrap items-start justify-between gap-2">
+                            <div>
+                                <p class="text-sm font-bold text-amber-900">RM {{ number_format($depositHeld, 2) }} deposit still held</p>
+                                <p class="text-xs text-amber-800/80 mt-0.5">The customer paid this before the job was cancelled. Record whether it goes back to them or is kept.</p>
+                            </div>
+                        </div>
+                        @if (auth()->user()->canVoidPayments())
+                            <form method="POST" action="{{ route('jobs.deposit.settle', $job) }}" class="mt-3 space-y-3" onsubmit="return confirm('Record this for the deposit?')">
+                                @csrf
+                                <input type="hidden" name="how" :value="how">
+                                <div class="grid grid-cols-2 gap-1 p-1 rounded-xl bg-white/70 text-sm font-semibold max-w-sm">
+                                    <button type="button" @click="how = 'refund'" :class="how === 'refund' ? 'bg-white shadow text-gray-900' : 'text-gray-500'" class="py-1.5 rounded-lg">Refund customer</button>
+                                    <button type="button" @click="how = 'forfeit'" :class="how === 'forfeit' ? 'bg-white shadow text-gray-900' : 'text-gray-500'" class="py-1.5 rounded-lg">Keep (non-refundable)</button>
+                                </div>
+                                <div class="flex flex-wrap items-end gap-2">
+                                    <div><label class="text-xs text-amber-900/70">Amount (RM)</label>
+                                        <input type="number" step="0.01" min="0.01" max="{{ $depositHeld }}" name="amount" value="{{ number_format($depositHeld, 2, '.', '') }}" class="block w-32 text-sm rounded-md border-amber-200"></div>
+                                    <div x-show="how === 'refund'"><label class="text-xs text-amber-900/70">Paid back from</label>
+                                        <select name="bank" class="block text-sm rounded-md border-amber-200">@foreach (config('kretivco.banks') as $k => $b)<option value="{{ $k }}">{{ $b['label'] }}</option>@endforeach</select></div>
+                                    <div><label class="text-xs text-amber-900/70">Date</label>
+                                        <input type="date" name="date" value="{{ now()->toDateString() }}" class="block text-sm rounded-md border-amber-200"></div>
+                                    <button class="text-sm font-semibold px-4 py-2 rounded-xl text-white bg-gradient-to-r from-[#D97706] to-[#F59E0B] hover:brightness-110" x-text="how === 'refund' ? 'Record refund' : 'Keep as income'"></button>
+                                </div>
+                                <p class="text-[11px] text-amber-900/60" x-text="how === 'refund' ? 'Money goes out of the bank; the deposit is cleared.' : 'The deposit becomes income for this department, as the quotation terms allow.'"></p>
+                            </form>
+                        @else
+                            <p class="mt-2 text-xs text-amber-800">BOD or Finance decides whether it is refunded or kept.</p>
+                        @endif
+                    </div>
+                @endif
             @else
                 @php
                     $stages = collect(\App\Models\Job::FLOW)->mapWithKeys(fn ($s) => [$s => $job->statusLabel($s)])->all();

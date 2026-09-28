@@ -1,4 +1,4 @@
-@props(['inbox', 'dark' => false, 'limit' => 12])
+@props(['inbox', 'dark' => false, 'limit' => 12, 'only' => null, 'headings' => true])
 {{-- The notification inbox (App\Services\NotificationCenter): actions first, then updates. --}}
 @php
     $tone = $dark
@@ -8,9 +8,9 @@
     $head = $dark ? 'text-white/40' : 'text-gray-400';
 @endphp
 <div class="space-y-3">
-    @if ($inbox['actions']->isNotEmpty())
+    @if ($only !== 'updates' && $inbox['actions']->isNotEmpty())
         <div class="space-y-1.5">
-            <p class="text-[10px] font-semibold uppercase tracking-wider {{ $head }}">Needs your action</p>
+            @if ($headings)<p class="text-[10px] font-semibold uppercase tracking-wider {{ $head }}">Needs your action</p>@endif
             @foreach ($inbox['actions']->take($limit) as $n)
                 <a href="{{ $n['url'] }}" class="flex items-center gap-2.5 text-sm px-3 py-2 rounded-lg {{ $tone[$n['tone']] }}">
                     <x-icon :name="$n['icon']" class="w-4 h-4 shrink-0 {{ $iconTone[$n['tone']] }}" />
@@ -19,24 +19,27 @@
             @endforeach
         </div>
     @endif
-    @if ($inbox['updates']->isNotEmpty())
+    @if ($only !== 'actions' && $inbox['updates']->isNotEmpty())
         <div class="space-y-1.5">
-            <div class="flex items-center justify-between">
-                <p class="text-[10px] font-semibold uppercase tracking-wider {{ $head }}">Updates</p>
-                <form method="POST" action="{{ route('notifications.read-all') }}">@csrf
-                    <button class="text-[11px] font-semibold {{ $dark ? 'text-white/50 hover:text-white' : 'text-gray-500 hover:text-gray-900' }}">Mark all as read</button>
-                </form>
-            </div>
+            @if ($headings)
+                <div class="flex items-center justify-between">
+                    <p class="text-[10px] font-semibold uppercase tracking-wider {{ $head }}">Updates</p>
+                    <form method="POST" action="{{ route('notifications.read-all') }}">@csrf
+                        <button class="text-[11px] font-semibold {{ $dark ? 'text-white/50 hover:text-white' : 'text-gray-500 hover:text-gray-900' }}">Mark all as read</button>
+                    </form>
+                </div>
+            @endif
             @foreach ($inbox['updates']->take($limit) as $n)
                 <a href="{{ route('notifications.open', $n['key']) }}" class="flex items-center gap-2.5 text-sm px-3 py-2 rounded-lg {{ $tone['blue'] }}">
                     <x-icon :name="$n['icon']" class="w-4 h-4 shrink-0 {{ $iconTone['blue'] }}" />
                     <span class="min-w-0 leading-snug flex-1">{{ $n['text'] }}</span>
-                    <span class="text-[10px] shrink-0 {{ $head }}">{{ $n['at']?->diffForHumans(short: true) }}</span>
+                    <span class="text-[10px] shrink-0 {{ $head }}">{{ $n['at'] && $n['at']->gt(now()->subMinute()) ? 'now' : $n['at']?->diffForHumans(short: true) }}</span>
                 </a>
             @endforeach
         </div>
     @endif
-    @if ($inbox['count'] === 0)
-        <p class="text-sm px-1 py-1 {{ $dark ? 'text-white/40' : 'text-gray-400' }}">You're all caught up.</p>
+    @php $shown = $only === 'actions' ? $inbox['actions']->count() : ($only === 'updates' ? $inbox['updates']->count() : $inbox['count']); @endphp
+    @if ($shown === 0)
+        <p class="text-sm px-1 py-1 {{ $dark ? 'text-white/40' : 'text-gray-400' }}">{{ $only === 'updates' ? 'No new announcements or updates.' : "You're all caught up." }}</p>
     @endif
 </div>

@@ -75,7 +75,9 @@ class NotificationCenter
         }
 
         $read = NotificationRead::where('user_id', $user->id)->whereIn('key', $updates->pluck('key'))->pluck('key')->all();
-        $updates = $updates->reject(fn ($u) => in_array($u['key'], $read, true))->sortByDesc('at')->values();
+        // Company announcements first, then personal updates, newest first in each.
+        $updates = $updates->reject(fn ($u) => in_array($u['key'], $read, true))
+            ->sortBy([fn ($a, $b) => str_starts_with($b['key'], 'announcement:') <=> str_starts_with($a['key'], 'announcement:'), fn ($a, $b) => $b['at'] <=> $a['at']])->values();
 
         return ['actions' => $actions->values(), 'updates' => $updates, 'count' => $actions->count() + $updates->count()];
     }

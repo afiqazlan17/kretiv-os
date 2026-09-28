@@ -132,9 +132,29 @@
 
         {{-- Notifications: everything waiting on this person across Jobs,
              Finance and HR (App\Services\NotificationCenter). --}}
-        <div class="os-card rounded-2xl p-5">
-            <h2 class="font-semibold text-white mb-3">Notifications</h2>
-            <x-notification-list :inbox="\App\Services\NotificationCenter::for($user)" dark :limit="20" />
+        @php $inbox = \App\Services\NotificationCenter::for($user); @endphp
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="os-card rounded-2xl p-5">
+                <div class="flex items-center gap-2 mb-3">
+                    <h2 class="font-semibold text-white">Needs your action</h2>
+                    @if ($inbox['actions']->isNotEmpty())<span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#E91E63] text-white">{{ $inbox['actions']->count() }}</span>@endif
+                </div>
+                <x-notification-list :inbox="$inbox" dark :limit="20" only="actions" :headings="false" />
+            </div>
+            <div class="os-card rounded-2xl p-5">
+                <div class="flex items-center justify-between gap-2 mb-3">
+                    <h2 class="font-semibold text-white">Announcements &amp; updates</h2>
+                    @if ($inbox['updates']->isNotEmpty())
+                        <form method="POST" action="{{ route('notifications.read-all') }}">@csrf
+                            <button class="text-xs font-semibold text-white/50 hover:text-white">Mark all as read</button>
+                        </form>
+                    @endif
+                </div>
+                <x-notification-list :inbox="$inbox" dark :limit="20" only="updates" :headings="false" />
+                @if ($user->canAccess('hr'))
+                    <a href="{{ route('hr.announcements') }}" target="_blank" rel="noopener" class="inline-block mt-3 text-xs underline text-white/40 hover:text-white">All announcements</a>
+                @endif
+            </div>
         </div>
     </div>
 </x-os-layout>

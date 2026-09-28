@@ -149,7 +149,7 @@
             <button type="button" @click="close()" class="text-sm font-semibold px-4 py-2 rounded-xl border border-[#EFE3DE] text-gray-700 hover:bg-[#FFF7F3]">Cancel</button>
             <button type="button" @click="save()" :disabled="busy || loading" class="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl border border-green-500 text-green-700 hover:bg-green-50 disabled:opacity-40"><x-icon name="save" class="w-4 h-4" /> Save</button>
             <button type="button" @click="print()" :disabled="busy || !previewUrl" class="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl border border-blue-500 text-blue-600 hover:bg-blue-50 disabled:opacity-40"><x-icon name="printer" class="w-4 h-4" /> Print</button>
-            <button type="button" @click="whatsapp()" :disabled="loading" class="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl border border-green-500 text-green-700 hover:bg-green-50 disabled:opacity-40"><x-icon name="message-circle" class="w-4 h-4" /> WhatsApp</button>
+            <button type="button" @click="whatsapp()" :disabled="busy || loading" class="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl border border-green-500 text-green-700 hover:bg-green-50 disabled:opacity-40"><x-icon name="message-circle" class="w-4 h-4" /> WhatsApp</button>
             <button type="button" @click="download()" :disabled="busy || loading" class="text-sm font-bold px-4 py-2 rounded-xl text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110 disabled:opacity-40" x-text="busy ? 'Working…' : 'Download PDF'"></button>
         </div>
     </div>
@@ -285,12 +285,33 @@
                 f.onload = () => { f.contentWindow.focus(); f.contentWindow.print(); };
                 document.body.appendChild(f); setTimeout(() => f.remove(), 60000);
             },
-            whatsapp() {
+            /**
+             * Issues the document (same as Download), then shares the actual
+             * PDF: on a phone the share sheet sends the file and message
+             * straight into WhatsApp; elsewhere WhatsApp opens with the
+             * message and a link to the PDF (valid 30 days).
+             */
+            async whatsapp() {
                 let phone = (this.customerPhone || '').replace(/\D/g, '');
                 if (phone.startsWith('0')) phone = '6' + phone;
                 const total = this.type === 'receipt' ? (parseFloat(this.form.amount_paid) || 0) : this.total;
                 const text = `Hi ${this.form.customer_name || ''}, here is your ${this.label.toLowerCase()} ${this.docNumber} for ${this.form.title} (RM ${total.toFixed(2)}). Thank you!`;
-                window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
+
+                this.busy = true; this.error = ''; this.notice = '';
+                const res = await this.call('generate', 'POST', this.payload());
+                if (!res.ok) { this.busy = false; this.error = await this.failure(res); return; }
+                const name = (res.headers.get('Content-Disposition') || '').match(/filename="?([^";]+)"?/)?.[1] || 'document.pdf';
+                const link = res.headers.get('X-Share-Url');
+                const file = new File([await res.blob()], name, { type: 'application/pdf' });
+                this.busy = false; this.pageDirty = true; this.dirty = false;
+
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try { await navigator.share({ files: [file], text }); this.close(); return; }
+                    catch (e) { if (e.name === 'AbortError') return; }
+                }
+                const message = link ? `${text}\n\n${link}` : text;
+                window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+                this.close();
             },
         };
     }

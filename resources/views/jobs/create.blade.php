@@ -5,7 +5,7 @@
 
     <div class="p-5 md:p-7"
          x-data="jobCreateForm(
-             {{ $customers->map(fn ($c) => ['id' => $c->id, 'customer_id' => $c->customer_id, 'label' => $c->customer_type === 'company' ? ($c->company ?: $c->name) : $c->name])->values()->toJson() }},
+             {{ $customers->map(fn ($c) => ['id' => $c->id, 'customer_id' => $c->customer_id, 'label' => $c->displayName()])->values()->toJson() }},
              {{ json_encode(array_keys($departments)) }},
              {{ json_encode(config('kretivco.package_catalog')) }}
          )">
@@ -38,7 +38,10 @@
                                         <span class="font-semibold" x-text="c.customer_id + ' · ' + c.label"></span>
                                     </div>
                                 </template>
-                                <div x-show="filteredCustomers.length === 0" class="px-3 py-2 text-sm text-gray-400">No customers found.</div>
+                                <div x-show="filteredCustomers.length === 0" class="px-3 py-2 text-sm text-gray-400">
+                                    No customers found.
+                                    <button type="button" @click="inlineCustomer.name = customerQuery; showInlineCustomer = true; customerOpen = false" class="ml-1 font-semibold text-[#C2185B] hover:underline" x-show="customerQuery.trim()">Add "<span x-text="customerQuery"></span>" as a new customer</button>
+                                </div>
                             </div>
                         </div>
                         <button type="button" @click="showInlineCustomer = !showInlineCustomer" class="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-[#C2185B] hover:underline" x-show="!showInlineCustomer"><x-icon name="plus" class="w-3.5 h-3.5" /> New Customer</button>
@@ -53,6 +56,8 @@
                                 <input type="text" x-model="inlineCustomer.company" placeholder="Company" class="rounded-md border-gray-300 shadow-sm text-xs h-9">
                                 <input type="text" x-model="inlineCustomer.phone" placeholder="Phone" class="rounded-md border-gray-300 shadow-sm text-xs h-9">
                                 <input type="email" x-model="inlineCustomer.email" placeholder="Email" class="rounded-md border-gray-300 shadow-sm text-xs h-9">
+                                <input type="text" x-model="inlineCustomer.address_line_1" placeholder="Address line 1" class="col-span-2 rounded-md border-gray-300 shadow-sm text-xs h-9">
+                                <input type="text" x-model="inlineCustomer.address_line_2" placeholder="Postcode, city, state" class="col-span-2 rounded-md border-gray-300 shadow-sm text-xs h-9">
                             </div>
                             <select x-model="inlineCustomer.source" class="w-full rounded-md border-gray-300 shadow-sm text-xs h-9 mb-2">
                                 @foreach (config('kretivco.sources') as $key => $label)
@@ -320,7 +325,7 @@
                 customerQuery: '',
                 customerOpen: false,
                 showInlineCustomer: false,
-                inlineCustomer: { name: '', company: '', phone: '', email: '', source: 'referral' },
+                inlineCustomer: { name: '', company: '', phone: '', email: '', address_line_1: '', address_line_2: '', source: 'referral' },
                 inlineSaving: false,
                 inlineError: null,
                 formError: null,
@@ -351,7 +356,7 @@
                     if (pd.editNotes) { pd.editNotes = false; return; }
                     if (!pd.notesLines.length) {
                         try {
-                            const res = await fetch(`{{ route('jobs.quotation-notes') }}?bank=${encodeURIComponent(pd.bank || '')}`, { headers: { Accept: 'application/json' } });
+                            const res = await fetch(`{{ route('jobs.quotation-notes') }}?bank=${encodeURIComponent(pd.bank || '')}&department=${encodeURIComponent(dept)}`, { headers: { Accept: 'application/json' } });
                             if (res.ok) pd.notesLines = (await res.json()).notes;
                         } catch (e) { /* leave blank, staff can still type their own */ }
                     }
@@ -452,11 +457,11 @@
                         this.customers.push({
                             id: customer.id,
                             customer_id: customer.customer_id,
-                            label: customer.customer_type === 'company' ? (customer.company || customer.name) : customer.name,
+                            label: customer.company ? `${customer.name} (${customer.company})` : customer.name,
                         });
                         this.selectCustomer({ id: customer.id });
                         this.showInlineCustomer = false;
-                        this.inlineCustomer = { name: '', company: '', phone: '', email: '', source: 'referral' };
+                        this.inlineCustomer = { name: '', company: '', phone: '', email: '', address_line_1: '', address_line_2: '', source: 'referral' };
                     } catch (e) {
                         this.inlineError = e.message;
                     }

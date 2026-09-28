@@ -94,6 +94,7 @@ class StaffController extends Controller
             'department' => ['nullable', Rule::in(array_keys(Departments::all()))],
             'reports_to_user_id' => ['nullable', 'exists:users,id', Rule::notIn(array_filter([$user?->id]))],
             'title' => ['nullable', 'string', 'max:255'],
+            'short_name' => ['nullable', 'string', 'max:50'],
             'staff_no' => ['nullable', 'string', 'max:50'],
             'ic_number' => ['nullable', 'string', 'max:20'],
             'date_of_birth' => ['nullable', 'date'],
@@ -118,12 +119,12 @@ class StaffController extends Controller
             'ot_eligible' => ['nullable', 'boolean'],
         ]);
 
-        $account = collect($data)->only(['name', 'email', 'role', 'department', 'title'])->all();
+        $account = collect($data)->only(['name', 'short_name', 'email', 'role', 'department', 'title'])->all();
         if ($account['role'] === User::ROLE_BOD) {
             $account['department'] = null;
         }
 
-        $record = collect($data)->except(['name', 'email', 'role', 'department', 'title', 'allowances', 'ot_eligible'])->all();
+        $record = collect($data)->except(['name', 'short_name', 'email', 'role', 'department', 'title', 'allowances', 'ot_eligible'])->all();
         $record['basic_salary'] = (float) ($data['basic_salary'] ?? 0);
         $record['allowances'] = collect($data['allowances'] ?? [])
             ->filter(fn ($amount, $type) => (float) $amount > 0 && array_key_exists($type, config('kretivco.allowance_types')))

@@ -51,6 +51,8 @@
                                 <option value="{{ $key }}" @selected($v('department', $user->department) === $key)>{{ $d['label'] }}</option>
                             @endforeach
                         </select></div>
+                    <div><label class="text-xs text-gray-500">Short name (on quotations and invoices)</label>
+                        <input type="text" name="short_name" value="{{ $v('short_name', $user->short_name) }}" maxlength="50" placeholder="{{ $user->exists ? $user->shortName() : 'e.g. Amirul' }}" class="{{ $field }}"></div>
                     <div><label class="text-xs text-gray-500">Position / title</label>
                         <input type="text" name="title" value="{{ $v('title', $user->title) }}" placeholder="Graphic Designer" class="{{ $field }}"></div>
                     <div><label class="text-xs text-gray-500">Reports to (Board members, for the Organisation Chart)</label>

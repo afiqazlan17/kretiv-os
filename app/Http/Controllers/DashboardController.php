@@ -25,7 +25,7 @@ class DashboardController extends Controller
             ->get();
 
         $notCancelled = $jobs->where('status', '!=', Job::STATUS_CANCELLED);
-        $potential = $notCancelled->where('status', Job::STATUS_POTENTIAL);
+        $potential = $notCancelled->whereIn('status', [Job::STATUS_NEW, Job::STATUS_POTENTIAL]);
         $inProgress = $notCancelled->where('status', Job::STATUS_IN_PROGRESS);
         $completed = $notCancelled->where('status', Job::STATUS_COMPLETED);
         $cancelled = $jobs->where('status', Job::STATUS_CANCELLED);

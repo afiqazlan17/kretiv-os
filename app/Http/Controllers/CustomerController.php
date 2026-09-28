@@ -59,7 +59,7 @@ class CustomerController extends Controller
                 ->sortByDesc('id')->values();
             $counted = $jobs->where('status', '!=', Job::STATUS_CANCELLED);
             $completed = $jobs->where('status', Job::STATUS_COMPLETED);
-            $open = $jobs->whereIn('status', [Job::STATUS_POTENTIAL, Job::STATUS_IN_PROGRESS]);
+            $open = $jobs->whereIn('status', [Job::STATUS_NEW, Job::STATUS_POTENTIAL, Job::STATUS_IN_PROGRESS]);
 
             $customer->job_history = $jobs;
             $customer->stats = [
@@ -141,7 +141,7 @@ class CustomerController extends Controller
         // asked there, so it needs a sensible default rather than a
         // validation failure.
         $validated['source'] ??= 'referral';
-        $validated['customer_type'] ??= 'individual';
+        $validated['customer_type'] ??= ! empty($validated['company']) ? 'company' : 'individual';
 
         return $validated;
     }

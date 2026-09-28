@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Customer;
 use App\Models\Job;
+use App\Models\JobDocument;
 use App\Models\LedgerEntry;
 use Illuminate\Support\Carbon;
 
@@ -22,7 +23,10 @@ class DocumentData
 
     public const INVOICE_DUE_DAYS = 7;
 
-    private const PREFIXES = ['quotation' => 'QT', 'proforma' => 'PI', 'invoice' => 'INV', 'receipt' => 'RC'];
+    private const PREFIXES = ['quotation' => 'QTN', 'proforma' => 'PRF', 'invoice' => 'INV', 'receipt' => 'RCP'];
+
+    /** Department letter at the end of every document number. */
+    private const DEPT_SUFFIX = ['print' => 'P', 'tech' => 'T', 'brand' => 'B', 'event' => 'E'];
 
     private const NO_LABELS = ['quotation' => 'QNo#', 'proforma' => 'Invoice No#', 'invoice' => 'Invoice No#', 'receipt' => 'Receipt No#'];
 
@@ -44,22 +48,35 @@ class DocumentData
     }
 
     /**
-     * Not a persisted counter — derived from the job's own sequence, so
-     * regenerating the same doc type for a job reuses the same number.
+     * Document numbers look like QTN26100007-P: type, year and month of
+     * issue, a running number that never resets (one series per document
+     * type, shared by all departments) and the department letter.
+     * Regenerating a quotation / proforma / invoice for the same job keeps
+     * its first number; every receipt gets a new one.
      */
     public static function number(string $type, Job $job): string
     {
-        $sequence = last(explode('-', $job->job_id)) ?: '001';
-        $number = self::prefix($type).'-'.now()->year.'-'.str_pad($sequence, 3, '0', STR_PAD_LEFT);
-
-        // Each payment gets its own receipt: RC-2026-002-1 (deposit), -2 (balance)...
-        // Counts every receipt ever posted for the job (voided ones too), so a
-        // number is never reused.
-        if ($type === 'receipt' && $job->exists) {
-            $number .= '-'.(LedgerEntry::where('job_id', $job->job_id)->where('type', 'receipt')->count() + 1);
+        if ($type !== 'receipt' && $job->exists) {
+            $existing = JobDocument::where('job_id', $job->id)->where('doc_type', $type)
+                ->where('doc_number', 'like', self::prefix($type).'%')->oldest('id')->value('doc_number');
+            if ($existing && preg_match('/^'.self::prefix($type).'\d{8}-[A-Z]$/', $existing)) {
+                return $existing;
+            }
         }
 
-        return $number;
+        return self::prefix($type).now()->format('ym').str_pad((string) (self::lastSequence($type) + 1), 4, '0', STR_PAD_LEFT)
+            .'-'.(self::DEPT_SUFFIX[$job->department] ?? 'X');
+    }
+
+    /** Highest running number issued so far for a document type (documents and ledger). */
+    private static function lastSequence(string $type): int
+    {
+        $prefix = self::prefix($type);
+        $pattern = '/^'.$prefix.'\d{4}(\d{4})-/';
+        $numbers = JobDocument::where('doc_type', $type)->where('doc_number', 'like', $prefix.'%')->pluck('doc_number')
+            ->merge(LedgerEntry::where('doc_number', 'like', $prefix.'%')->pluck('doc_number'));
+
+        return (int) $numbers->map(fn ($n) => preg_match($pattern, (string) $n, $m) ? (int) $m[1] : 0)->max();
     }
 
     /** Total already received for the job across all its (non-voided) receipts. */
@@ -72,28 +89,21 @@ class DocumentData
      * @param  array<string, mixed>|null  $bank
      * @return array<int, string>
      */
-    public static function defaultNotes(string $type, ?array $bank): array
+    /**
+     * Standard notes for a document type and department (config
+     * document_notes). A receipt that leaves a balance owing uses the
+     * deposit wording.
+     *
+     * @return array<int, string>
+     */
+    public static function defaultNotes(string $type, ?array $bank, ?string $department = null, bool $finalPayment = true): array
     {
-        // Contact details (phone/email) live in the document header and payment
-        // details live in the Payment Detail block + QR in the footer now, so
-        // notes no longer repeat "please make payment to..." / "email us at...".
-        return match ($type) {
-            'quotation' => [
-                "Prices are based on the specifications above. Any change to the design, size, material or quantity after confirmation may change the price, and we'll send a revised quotation. Work starts once you confirm the order in writing.",
-                'For orders below RM2,000, full payment is required before work begins. For orders of RM2,000 and above, an 80% deposit is required before the first draft.',
-                'Production is completed within 14 working days after you approve the final draft.',
-                'Deposits are non-refundable once the booking is confirmed and the first draft has been prepared.',
-            ],
-            'receipt' => [
-                'This receipt confirms we have received your payment for the invoice above.',
-                'Please keep this receipt for your records.',
-                'If anything looks incorrect, please contact us within 7 days of the receipt date.',
-            ],
-            default => [
-                'Please make payment by the due date shown above.',
-                'Late payments may incur a surcharge as stated in the service agreement.',
-            ],
-        };
+        $key = $type === 'receipt' && ! $finalPayment ? 'receipt_deposit' : $type;
+        $set = config("document_notes.{$key}", []);
+        $lines = $set[$department] ?? $set['default'] ?? $set['print'] ?? [];
+        $contact = config('kretivco.brand.email').' or WhatsApp '.config('kretivco.brand.phone');
+
+        return array_map(fn ($l) => str_replace(':contact', $contact, $l), $lines);
     }
 
     /**
@@ -160,7 +170,7 @@ class DocumentData
             'items' => self::itemsFromJob($job),
             'delivery' => (float) ($job->delivery_amount ?? 0),
             'discount' => (float) ($job->discount_amount ?? 0),
-            'notes' => self::customNotes($job, $type) ?? self::defaultNotes($type, self::bank($job)),
+            'notes' => self::customNotes($job, $type) ?? self::defaultNotes($type, self::bank($job), $job->department),
             'payment_method' => self::PAYMENT_METHODS[0],
             'amount_paid' => $invoiceTotal === null ? null : max(0.0, round($invoiceTotal - $paidBefore, 2)),
             'due_date' => now()->addDays(self::INVOICE_DUE_DAYS)->toDateString(),
@@ -226,13 +236,16 @@ class DocumentData
         $discount = (float) $pick('discount');
         $total = round($subtotal + $delivery - $discount, 2);
 
+        $invoiceTotal ??= $total;
+        $receiptPaid = $type === 'receipt' ? (float) ($input['amount_paid'] ?? max(0.0, $invoiceTotal - $paidBefore)) : 0.0;
+        $isFinal = $type !== 'receipt' || $paidBefore + $receiptPaid >= $invoiceTotal - 0.005;
+
         $notes = match (true) {
-            ! empty($input['use_default_notes']) => self::defaultNotes($type, $bank),
+            ! empty($input['use_default_notes']) => self::defaultNotes($type, $bank, $job->department, $isFinal),
             isset($input['notes']) && trim((string) $input['notes']) !== '' => self::noteLines($input['notes']),
+            self::customNotes($job, $type) === null => self::defaultNotes($type, $bank, $job->department, $isFinal),
             default => $defaults['notes'],
         };
-
-        $invoiceTotal ??= $total;
 
         // Extra header line under Date: how long a quotation holds, or when an invoice is due.
         $headerExtra = match ($type) {

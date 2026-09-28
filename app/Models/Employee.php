@@ -19,6 +19,7 @@ class Employee extends Model
         return [
             'date_of_birth' => 'date', 'start_date' => 'date', 'end_date' => 'date',
             'basic_salary' => 'decimal:2', 'allowances' => 'array', 'ot_eligible' => 'boolean',
+            'phone' => \App\Casts\MalaysianPhone::class, 'emergency_phone' => \App\Casts\MalaysianPhone::class,
         ];
     }
 

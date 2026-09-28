@@ -20,26 +20,12 @@
         <table class="grid">
             <thead>
                 <tr>
-                    <th class="c" style="width:24.75pt;">No</th>
-                    <th style="width:422.25pt;">Description</th>
+                    <th class="c" style="width:26pt;">No</th>
+                    <th>Description</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach ($doc['items'] as $i => $item)
-                    <tr>
-                        <td class="c">{{ $i + 1 }}</td>
-                        <td>
-                            <div class="item-name">{{ $item['item'] }}</div>
-                            @if ($item['desc'] && $item['desc'] !== $item['item'])
-                                <div class="item-spec">
-                                    @foreach (preg_split('/\R/', $item['desc']) as $specLine)
-                                        <div>&bull; {{ $specLine }}</div>
-                                    @endforeach
-                                </div>
-                            @endif
-                        </td>
-                    </tr>
-                @endforeach
+                @include('documents.partials.items', ['items' => $doc['items'], 'money' => false])
             </tbody>
         </table>
 
@@ -56,32 +42,15 @@
         <table class="grid">
             <thead>
                 <tr>
-                    <th class="c" style="width:24.75pt;">No</th>
-                    <th style="width:232.75pt;">Description</th>
-                    <th class="c" style="width:34.75pt;">Qty</th>
-                    <th class="c" style="width:59.75pt;">Unit Price</th>
-                    <th class="c" style="width:64.75pt;">Amount</th>
+                    <th class="c" style="width:26pt;">No</th>
+                    <th>Description</th>
+                    <th class="c" style="width:36pt;">Qty</th>
+                    <th class="c" style="width:72pt;">Unit Price</th>
+                    <th class="c" style="width:78pt;">Amount</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach ($doc['items'] as $i => $item)
-                    <tr>
-                        <td class="c">{{ $i + 1 }}</td>
-                        <td>
-                            <div class="item-name">{{ $item['item'] }}</div>
-                            @if ($item['desc'] && $item['desc'] !== $item['item'])
-                                <div class="item-spec">
-                                    @foreach (preg_split('/\R/', $item['desc']) as $specLine)
-                                        <div>&bull; {{ $specLine }}</div>
-                                    @endforeach
-                                </div>
-                            @endif
-                        </td>
-                        <td class="c">{{ rtrim(rtrim(number_format($item['qty'], 2, '.', ''), '0'), '.') }}</td>
-                        <td class="c">RM {{ number_format($item['price'], 2) }}</td>
-                        <td class="rt">RM {{ number_format($item['amount'], 2) }}</td>
-                    </tr>
-                @endforeach
+                @include('documents.partials.items', ['items' => $doc['items'], 'money' => true])
             </tbody>
         </table>
 

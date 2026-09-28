@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Support\CompanyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'role', 'department', 'visible_departments', 'modules', 'active', 'title', 'staff_id', 'must_change_password'])]
+#[Fillable(['name', 'short_name', 'email', 'password', 'role', 'department', 'visible_departments', 'modules', 'active', 'title', 'staff_id', 'must_change_password'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -87,6 +88,18 @@ class User extends Authenticatable
     public function canManageHr(): bool
     {
         return $this->isBod() || $this->isHr();
+    }
+
+    /** The name printed on documents: the short name HR set, else the first given name (skipping bin, Muhammad and the like). */
+    public function shortName(): string
+    {
+        if ($this->short_name) {
+            return $this->short_name;
+        }
+        $first = collect(preg_split('/\s+/', trim($this->name)))
+            ->first(fn ($w) => $w !== '' && ! in_array(strtolower($w), CompanyEmail::SKIP, true));
+
+        return $first ?: $this->name;
     }
 
     public function payslips(): HasMany

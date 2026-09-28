@@ -128,7 +128,7 @@ class LeadController extends Controller
             'department' => $lead->department,
             'job_type' => $validated['job_type'],
             'job_type_category' => $validated['job_type_category'],
-            'status' => Job::STATUS_POTENTIAL,
+            'status' => Job::STATUS_NEW,
             'estimation_value' => $lead->quotation_value,
             'created_by' => $request->user()->id,
         ]);

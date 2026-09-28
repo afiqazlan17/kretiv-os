@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
 // are ignored so "Nur Aisyah binti Ahmad" gives nur@, nur.aisyah@, nur.ahmad@.
 class CompanyEmail
 {
-    private const SKIP = ['bin', 'binti', 'bt', 'bte', 'b', 'a/l', 'a/p', 'al', 'ap', 'anak', 'md', 'mohd', 'muhammad', 'muhd', '@'];
+    public const SKIP = ['bin', 'binti', 'bt', 'bte', 'b', 'a/l', 'a/p', 'al', 'ap', 'anak', 'md', 'mohd', 'muhammad', 'muhd', '@'];
 
     public static function domain(): string
     {

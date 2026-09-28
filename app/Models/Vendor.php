@@ -17,6 +17,7 @@ class Vendor extends Model
     protected function casts(): array
     {
         return [
+            'phone' => \App\Casts\MalaysianPhone::class,
             'created_at' => 'datetime',
         ];
     }

@@ -59,7 +59,7 @@ class KretivOsTest extends TestCase
         $base = ['customer_id' => $customer->id, 'department' => 'print', 'job_type_category' => 'client_project'];
         Job::create($base + ['job_id' => 'KP-2026-001', 'job_type' => 'Business Card', 'status' => Job::STATUS_IN_PROGRESS, 'pic' => 'Amirul Hafiz', 'deadline' => today()]);
         Job::create($base + ['job_id' => 'KP-2026-002', 'job_type' => 'Banner', 'status' => Job::STATUS_IN_PROGRESS, 'pic' => 'Someone Else']);
-        Job::create($base + ['job_id' => 'KP-2026-003', 'job_type' => 'Flyer', 'status' => Job::STATUS_POTENTIAL]);
+        Job::create($base + ['job_id' => 'KP-2026-003', 'job_type' => 'Flyer', 'status' => Job::STATUS_NEW]);
 
         $this->actingAs($staff)->get(route('os.home'))
             ->assertOk()->assertSee('KP-2026-001')->assertSee('deadline today')

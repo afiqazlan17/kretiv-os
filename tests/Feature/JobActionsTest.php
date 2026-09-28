@@ -57,13 +57,17 @@ class JobActionsTest extends TestCase
     {
         $bod = User::factory()->create(['role' => User::ROLE_BOD]);
         $job = $this->job();
+        $job->update(['status' => Job::STATUS_NEW, 'pic' => null]);
 
         $response = $this->actingAs($bod)->post(route('jobs.take-in', $job));
 
         $response->assertRedirect();
         $job->refresh();
         $this->assertSame($bod->name, $job->pic);
-        $this->assertSame(Job::STATUS_IN_PROGRESS, $job->status);
+        $this->assertSame(Job::STATUS_POTENTIAL, $job->status);
+
+        $this->actingAs($bod)->post(route('jobs.confirm', $job))->assertRedirect();
+        $this->assertSame(Job::STATUS_IN_PROGRESS, $job->refresh()->status);
     }
 
     public function test_reassign_changes_pic_without_touching_status(): void

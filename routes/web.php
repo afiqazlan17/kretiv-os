@@ -66,6 +66,9 @@ $onHost('jobs', function () {
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified', 'module:jobs'])->name('dashboard');
 
+    // Signed, expiring link to a generated document, sent to customers on WhatsApp.
+    Route::get('/d/{document}', [DocumentController::class, 'shared'])->middleware('signed')->name('documents.shared');
+
     Route::middleware('auth')->group(function () {
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
         Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -102,6 +105,7 @@ $onHost('jobs', function () {
         Route::delete('/jobs/{job}', [JobController::class, 'destroy'])->name('jobs.destroy');
         Route::put('/jobs/{job}/line-items', [JobController::class, 'updateLineItems'])->name('jobs.line-items.update');
         Route::post('/jobs/{job}/take-in', [JobController::class, 'takeIn'])->name('jobs.take-in');
+        Route::post('/jobs/{job}/confirm', [JobController::class, 'confirm'])->name('jobs.confirm');
         Route::post('/jobs/{job}/close-ticket', [JobController::class, 'closeTicket'])->name('jobs.close-ticket');
         Route::post('/jobs/{job}/complete', [JobController::class, 'complete'])->name('jobs.complete');
         Route::put('/jobs/{job}/reassign', [JobController::class, 'reassign'])->name('jobs.reassign');

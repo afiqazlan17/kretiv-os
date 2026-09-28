@@ -16,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 ])]
 class Job extends Model
 {
+    public const STATUS_NEW = 'new';
+
     public const STATUS_POTENTIAL = 'potential';
 
     public const STATUS_IN_PROGRESS = 'in_progress';

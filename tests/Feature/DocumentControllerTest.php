@@ -93,7 +93,7 @@ class DocumentControllerTest extends TestCase
         Storage::fake('public');
         $bod = User::factory()->create(['role' => User::ROLE_BOD]);
         $job = $this->job();
-        $job->update(['status' => Job::STATUS_POTENTIAL]);
+        $job->update(['status' => Job::STATUS_NEW, 'pic' => null]);
 
         foreach (['quotation', 'proforma', 'invoice', 'receipt'] as $type) {
             $this->generate($bod, $job, $type)->assertStatus(422);
@@ -101,6 +101,11 @@ class DocumentControllerTest extends TestCase
 
         $this->assertSame(0, JobDocument::count());
         $this->actingAs($bod)->getJson(route('jobs.documents.draft', [$job, 'quotation']))->assertStatus(422);
+
+        // Once taken in (Potential) the quotation can go out, but not the invoice yet.
+        $job->update(['status' => Job::STATUS_POTENTIAL, 'pic' => $bod->name]);
+        $this->actingAs($bod)->getJson(route('jobs.documents.draft', [$job, 'quotation']))->assertOk();
+        $this->actingAs($bod)->getJson(route('jobs.documents.draft', [$job, 'invoice']))->assertStatus(422);
     }
 
     public function test_a_receipt_needs_an_existing_invoice(): void
@@ -151,7 +156,7 @@ class DocumentControllerTest extends TestCase
 
         // The second receipt defaults to what's still owed and gets its own number.
         $draft = $this->actingAs($bod)->getJson(route('jobs.documents.draft', [$job, 'receipt']))->json();
-        $this->assertSame("RC-{$year}-001-2", $draft['doc_number']);
+        $this->assertSame('RCP'.now()->format('ym').'0002-P', $draft['doc_number']);
         $this->assertEquals(800, $draft['paid_before']);
         $this->assertEquals(200, $draft['defaults']['amount_paid']);
 
@@ -160,8 +165,8 @@ class DocumentControllerTest extends TestCase
 
         $this->assertSame(2, LedgerEntry::where('type', 'receipt')->where('reversed', false)->count());
         $this->assertEquals(1000, DocumentData::paidSoFar($job));
-        $this->assertDatabaseHas('ledger_entries', ['doc_number' => "RC-{$year}-001-1", 'amount' => 800, 'reversed' => false]);
-        $this->assertDatabaseHas('ledger_entries', ['doc_number' => "RC-{$year}-001-2", 'amount' => 200, 'reversed' => false]);
+        $this->assertDatabaseHas('ledger_entries', ['doc_number' => 'RCP'.now()->format('ym').'0001-P', 'amount' => 800, 'reversed' => false]);
+        $this->assertDatabaseHas('ledger_entries', ['doc_number' => 'RCP'.now()->format('ym').'0002-P', 'amount' => 200, 'reversed' => false]);
 
         $this->generate($bod, $job, 'receipt', ['amount_paid' => 1])->assertStatus(422); // fully paid
     }
@@ -193,12 +198,12 @@ class DocumentControllerTest extends TestCase
 
         $draft = $this->actingAs($bod)->getJson(route('jobs.documents.draft', [$job, 'receipt']))->assertOk()->json();
 
-        $this->assertSame('RC-'.now()->year.'-001-1', $draft['doc_number']);
-        $this->assertSame('INV-'.now()->year.'-001', $draft['invoice_number']);
+        $this->assertSame('RCP'.now()->format('ym').'0001-P', $draft['doc_number']);
+        $this->assertSame('INV'.now()->format('ym').'0001-P', $draft['invoice_number']);
         $this->assertEquals(1000, $draft['invoice_total']);
         $this->assertEquals(1000, $draft['defaults']['amount_paid']);
         $this->assertSame('Banner', $draft['defaults']['title']);
-        $this->assertSame($bod->name, $draft['defaults']['by_staff']);
+        $this->assertSame($bod->shortName(), $draft['defaults']['by_staff']);
     }
 
     public function test_previewing_renders_a_pdf_without_storing_or_posting_anything(): void
@@ -300,27 +305,25 @@ class DocumentControllerTest extends TestCase
         $doc = DocumentData::build($job->refresh(), 'receipt', [], 'RC-1', 'Afiq', 1000, 'INV-2026-001');
 
         $this->assertSame('INV-2026-001', $doc['invoice_number']);
-        $this->assertSame('012-3456789', $doc['customer']['phone']);
+        $this->assertSame('+60123456789', $doc['customer']['phone']);
     }
 
-    public function test_note_wording_differs_by_document_type(): void
+    public function test_note_wording_differs_by_document_type_and_department(): void
     {
         $bank = config('kretivco.bank_details.mbb');
+        $notes = fn (string $type, ?string $dept = null, bool $final = true) => implode("\n", DocumentData::defaultNotes($type, $bank, $dept, $final));
 
-        $quotation = implode("\n", DocumentData::defaultNotes('quotation', $bank));
-        $invoice = implode("\n", DocumentData::defaultNotes('invoice', $bank));
-        $receipt = implode("\n", DocumentData::defaultNotes('receipt', $bank));
-
-        $this->assertStringContainsString('80% deposit', $quotation);
-        $this->assertStringContainsString('Prices are based on the specifications above.', $quotation);
+        $this->assertStringContainsString('80% deposit', $notes('quotation', 'print'));
+        $this->assertStringContainsString('50% deposit before work begins, 30% upon system demo/UAT', $notes('quotation', 'tech'));
+        $this->assertStringContainsString('usage rights are released', $notes('quotation', 'brand'));
+        $this->assertStringContainsString('balance is due 7 days before the event', $notes('quotation', 'event'));
+        $this->assertStringContainsString('Payment is due within 14 days', $notes('invoice', 'print'));
+        $this->assertStringContainsString('Balance payment is due 7 days before the event date.', $notes('invoice', 'event'));
+        $this->assertStringContainsString(config('kretivco.brand.email'), $notes('invoice'));
+        $this->assertStringContainsString('It is not a tax invoice', $notes('proforma'));
+        $this->assertStringContainsString('confirms full payment', $notes('receipt'));
+        $this->assertStringContainsString('confirms deposit received', $notes('receipt', 'print', false));
         $this->assertSame('AFFIN', config('kretivco.bank_details.affin.label'));
-        $this->assertSame('105630012033', config('kretivco.bank_details.affin.acct'));
-        $this->assertStringContainsString('Please make payment by the due date shown above.', $invoice);
-        $this->assertStringContainsString('surcharge as stated in the service agreement', $invoice);
-        $this->assertStringNotContainsString('80% deposit', $invoice);
-        $this->assertSame($invoice, implode("\n", DocumentData::defaultNotes('proforma', $bank)));
-        $this->assertStringContainsString('Please keep this receipt for your records.', $receipt);
-        $this->assertStringNotContainsString('Please make payment to', $receipt);
     }
 
     public function test_a_generated_document_can_be_re_downloaded_from_its_history(): void
@@ -431,7 +434,7 @@ class DocumentControllerTest extends TestCase
         $none = $this->actingAs($bod)->post(route('jobs.documents.preview', [$job, 'quotation']), $payload + ['discount' => 0]);
         $some = $this->actingAs($bod)->post(route('jobs.documents.preview', [$job, 'quotation']), $payload + ['discount' => 10]);
 
-        $this->assertStringNotContainsString('Delivery', $this->pdfText($none->getContent()));
+        $this->assertDoesNotMatchRegularExpression('/^Delivery$/m', $this->pdfText($none->getContent()));
         $this->assertStringNotContainsString('Discount', $this->pdfText($none->getContent()));
         $this->assertStringContainsString('Discount', $this->pdfText($some->getContent()));
     }

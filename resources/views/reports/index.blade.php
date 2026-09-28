@@ -69,7 +69,7 @@
                 <div class="k-card p-5 md:p-6">
                     <div class="flex items-center justify-between mb-4"><h3 class="text-base font-bold text-gray-900">Conversion Funnel</h3><span class="text-xs font-bold rounded-full px-3 py-1 bg-[#ECFDF5] text-[#047857]">{{ $conversionPct }}% converted</span></div>
                     <div class="flex gap-2">
-                        @foreach ([['label' => 'Potential', 'n' => $funnel['potential'], 'color' => '#6366F1'], ['label' => 'In Progress', 'n' => $funnel['in_progress'], 'color' => '#3A86FF'], ['label' => 'Completed', 'n' => $funnel['completed'], 'color' => '#10B981']] as $step)
+                        @foreach ([['label' => 'New', 'n' => $funnel['new'], 'color' => '#F59E0B'], ['label' => 'Potential', 'n' => $funnel['potential'], 'color' => '#6366F1'], ['label' => 'In Progress', 'n' => $funnel['in_progress'], 'color' => '#3A86FF'], ['label' => 'Completed', 'n' => $funnel['completed'], 'color' => '#10B981']] as $step)
                             <div class="flex-1 text-center rounded-2xl p-3.5" style="background-color: {{ $step['color'] }}10; border-color: {{ $step['color'] }}40">
                                 <div class="text-xs font-medium uppercase" style="color: {{ $step['color'] }}">{{ $step['label'] }}</div>
                                 <div class="text-xl font-bold text-gray-800 mt-1">{{ $step['n'] }}</div>

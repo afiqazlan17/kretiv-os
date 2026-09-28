@@ -54,7 +54,7 @@ class JobCreationTest extends TestCase
         $this->assertSame(1, Job::count());
         $this->assertNull($job->project_id);
         $this->assertSame('print', $job->department);
-        $this->assertSame(Job::STATUS_POTENTIAL, $job->status);
+        $this->assertSame(Job::STATUS_NEW, $job->status);
     }
 
     public function test_creation_summary_is_the_first_log_entry_and_the_details_card_is_gone(): void

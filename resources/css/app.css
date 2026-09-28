@@ -287,3 +287,8 @@ a.k-card:hover, .k-card--hover:hover {
 .guest-password-toggle:hover {
     color: rgba(255, 255, 255, 0.9);
 }
+
+/* The drifting glows sit partly off-screen; clip them so phones can't
+   scroll the page sideways into empty space. */
+html, body { overflow-x: clip; }
+.os-stage { overflow-x: clip; }

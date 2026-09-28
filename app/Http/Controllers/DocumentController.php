@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -42,8 +43,8 @@ class DocumentController extends Controller
             'invoice_total' => $invoice ? (float) $invoice->amount : null,
             'paid_before' => $paidBefore,
             'payment_methods' => DocumentData::PAYMENT_METHODS,
-            'defaults' => DocumentData::defaults($job, $type, $request->user()->name, $invoice ? (float) $invoice->amount : null, $paidBefore),
-            'standard_notes' => DocumentData::defaultNotes($type, DocumentData::bank($job)),
+            'defaults' => DocumentData::defaults($job, $type, $request->user()->shortName(), $invoice ? (float) $invoice->amount : null, $paidBefore),
+            'standard_notes' => DocumentData::defaultNotes($type, DocumentData::bank($job), $job->department),
             'notes_custom' => DocumentData::customNotes($job, $type) !== null,
         ]);
     }
@@ -72,11 +73,11 @@ class DocumentController extends Controller
     {
         $this->authorize('create', Job::class);
 
-        $data = $request->validate(['bank' => ['nullable', Rule::in(['mbb', 'affin'])]]);
+        $data = $request->validate(['bank' => ['nullable', Rule::in(['mbb', 'affin'])], 'department' => ['nullable', 'string']]);
 
         $bank = ! empty($data['bank']) ? config("kretivco.bank_details.{$data['bank']}") : null;
 
-        return response()->json(['notes' => DocumentData::defaultNotes('quotation', $bank)]);
+        return response()->json(['notes' => DocumentData::defaultNotes('quotation', $bank, $data['department'] ?? null)]);
     }
 
     public function previewNewJob(Request $request): Response
@@ -116,8 +117,8 @@ class DocumentController extends Controller
                 'discount' => $data['discount'] ?? 0,
                 'notes' => $data['notes'] ?? null,
             ], fn ($v) => $v !== null),
-            'QT-'.now()->year.'-XXX',
-            $request->user()->name,
+            'QTN'.now()->format('ym').'XXXX',
+            $request->user()->shortName(),
         );
 
         return response(Pdf::loadView('documents.pdf', ['doc' => $doc])->output(), 200, [
@@ -193,11 +194,24 @@ class DocumentController extends Controller
         $path = "{$job->job_id}/document/".time()."_{$filename}";
         Storage::disk('public')->put($path, $bytes);
 
-        $this->archiveDocument($type, $job, $docNumber, $path, $filename, $request);
+        $archived = $this->archiveDocument($type, $job, $docNumber, $path, $filename, $request);
 
         return response($bytes, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            // For the WhatsApp button: a link the customer can open without logging in.
+            'X-Share-Url' => URL::temporarySignedRoute('documents.shared', now()->addDays(30), ['document' => $archived->id]),
+        ]);
+    }
+
+    /** A customer opening a document link sent on WhatsApp (signed, expires after 30 days). */
+    public function shared(JobDocument $document): Response
+    {
+        abort_unless(Storage::disk('public')->exists($document->storage_path), 404);
+
+        return response(Storage::disk('public')->get($document->storage_path), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$document->filename.'"',
         ]);
     }
 
@@ -259,7 +273,7 @@ class DocumentController extends Controller
             'amounts' => $amounts,
             'docNumber' => $docNumber,
             'customer' => $job->customer,
-            'generatedBy' => $request->user()->name,
+            'generatedBy' => $request->user()->shortName(),
         ]);
 
         $filename = "{$docNumber}_{$job->job_id}.pdf";
@@ -325,10 +339,11 @@ class DocumentController extends Controller
         abort_unless(in_array($type, DocumentData::TYPES, true), 404);
         abort_unless(request()->user()?->canIssueDocument($type), 403, 'Your role cannot issue a '.DocumentData::label($type).'.');
 
-        abort_unless(
-            in_array($job->status, [Job::STATUS_IN_PROGRESS, Job::STATUS_COMPLETED], true),
+        abort_if($job->status === Job::STATUS_NEW, 422, 'Take In the job first before generating documents.');
+        abort_if(
+            $job->status === Job::STATUS_POTENTIAL && ! in_array($type, ['quotation', 'proforma'], true),
             422,
-            'Job not yet claimed — use "Take In Job" first before generating documents.'
+            'Mark the job as Customer Confirmed before issuing an invoice or receipt.'
         );
 
         abort_if(
@@ -370,7 +385,7 @@ class DocumentController extends Controller
             $type,
             $data,
             DocumentData::number($type, $job),
-            $request->user()->name,
+            $request->user()->shortName(),
             $invoice ? (float) $invoice->amount : null,
             $invoice?->doc_number,
             $type === 'receipt' ? DocumentData::paidSoFar($job) : 0.0,
@@ -397,9 +412,9 @@ class DocumentController extends Controller
         $job->update(['document_notes' => $saved ?: null]);
     }
 
-    private function archiveDocument(string $type, Job $job, string $docNumber, string $path, string $filename, Request $request, string $suffix = ''): void
+    private function archiveDocument(string $type, Job $job, string $docNumber, string $path, string $filename, Request $request, string $suffix = ''): JobDocument
     {
-        JobDocument::create([
+        $document = JobDocument::create([
             'job_id' => $job->id,
             'doc_type' => $type,
             'doc_number' => $docNumber,
@@ -418,5 +433,7 @@ class DocumentController extends Controller
             'action' => 'document_generated',
             'detail' => "generated {$label} ({$docNumber}){$suffix}",
         ]);
+
+        return $document;
     }
 }

@@ -31,7 +31,7 @@ class OsController extends Controller
                 ->orderByRaw('deadline is null')
                 ->orderBy('deadline')
                 ->get();
-            $queueCount = (clone $visible)->where('status', Job::STATUS_POTENTIAL)->whereNull('pic')->count();
+            $queueCount = (clone $visible)->where('status', Job::STATUS_NEW)->count();
         }
 
         $today = now()->startOfDay();

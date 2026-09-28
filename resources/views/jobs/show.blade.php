@@ -10,8 +10,10 @@
                         Action <x-icon name="chevron-down" class="w-4 h-4" />
                     </button>
                     <div x-show="open" x-cloak x-transition @click="open = false" class="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-[#F5E7E1] p-1.5 z-20 text-sm text-gray-700">
-                        @if ($job->status === 'potential' && ! $job->pic)
+                        @if ($job->status === 'new')
                             <button type="submit" form="takein-form" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1]"><x-icon name="user-plus" class="w-4 h-4 text-gray-400" /> Take In Job</button>
+                        @elseif ($job->status === 'potential')
+                            <button type="submit" form="confirm-form" onclick="return confirm('Customer confirmed? The job moves to In Progress.')" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1] text-green-600"><x-icon name="circle-check" class="w-4 h-4" /> Customer Confirmed</button>
                         @endif
                         <button type="button" @click="$store.jobActions.panel = 'reassign'" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1]"><x-icon name="repeat" class="w-4 h-4 text-gray-400" /> Change Current Responsible</button>
                         <button type="button" @click="$store.jobActions.panel = 'edit'" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1]"><x-icon name="pencil" class="w-4 h-4 text-gray-400" /> Edit Job Details</button>
@@ -128,6 +130,7 @@
             @else
                 @php
                     $stages = [
+                        'new' => 'New',
                         'potential' => 'Potential',
                         'in_progress' => 'In Progress',
                         'completed' => 'Completed',
@@ -135,6 +138,7 @@
                     $stageKeys = array_keys($stages);
                     $currentIdx = array_search($job->status, $stageKeys, true);
                     $canForwardTo = match ($job->status) {
+                        'new' => 'potential',
                         'potential' => 'in_progress',
                         'in_progress' => 'completed',
                         default => null,
@@ -153,7 +157,7 @@
                                 <div class="absolute top-4 h-0.5 {{ $i <= $currentIdx ? 'bg-green-400' : 'bg-gray-200' }}" style="right: 50%; width: 100%;"></div>
                             @endif
                             @if ($clickableForward)
-                                <button type="{{ $key === 'in_progress' ? 'submit' : 'button' }}" @if ($key === 'in_progress') form="takein-form" @else @click="$store.jobActions.panel = 'complete'" @endif
+                                <button type="{{ $key === 'completed' ? 'button' : 'submit' }}" @if ($key === 'potential') form="takein-form" @elseif ($key === 'in_progress') form="confirm-form" onclick="return confirm('Customer confirmed? The job moves to In Progress.')" @else @click="$store.jobActions.panel = 'complete'" @endif
                                         class="relative z-10 w-8 h-8 rounded-full border-2 border-[#F48FB1] bg-white text-[#C2185B] text-xs font-bold flex items-center justify-center hover:bg-[#FFF0F5]" title="Advance to {{ $stages[$key] }}">{{ $i + 1 }}</button>
                             @elseif ($clickableBack)
                                 <button type="button" @click="$store.jobActions.panel = 'rollback'"
@@ -185,6 +189,7 @@
         {{-- Action panels — toggled by the header's Action dropdown or the stepper --}}
         @can('update', $job)
         <form id="takein-form" method="POST" action="{{ route('jobs.take-in', $job) }}" class="hidden">@csrf</form>
+        <form id="confirm-form" method="POST" action="{{ route('jobs.confirm', $job) }}" class="hidden">@csrf</form>
         <div x-show="$store.jobActions.panel" x-cloak class="bg-white shadow-sm sm:rounded-lg p-6 border-2 border-pink-100">
             <div x-show="$store.jobActions.panel === 'reassign'">
                 <h3 class="text-sm font-semibold text-gray-700 mb-3">Change Current Responsible</h3>
@@ -409,7 +414,7 @@
                     @endif
                     @can('update', $job)
                     @php
-                        $docsLocked = ! in_array($job->status, [\App\Models\Job::STATUS_IN_PROGRESS, \App\Models\Job::STATUS_COMPLETED], true);
+                        $docsLocked = ! in_array($job->status, [\App\Models\Job::STATUS_POTENTIAL, \App\Models\Job::STATUS_IN_PROGRESS, \App\Models\Job::STATUS_COMPLETED], true);
                         $docButtons = [
                             'quotation' => ['Quotation', '#6366F1', 'file-text'],
                             // 'proforma' => ['Proforma Invoice', '#3A86FF', 'files'], // hidden for now, not deleted
@@ -420,9 +425,9 @@
                     <div class="flex flex-wrap gap-2 mb-2">
                         @foreach ($docButtons as $docType => [$docLabel, $docColor, $docIcon])
                             @continue(! auth()->user()->canIssueDocument($docType))
-                            @php $docDisabled = $docsLocked || ($docType === 'receipt' && ! $hasInvoice); @endphp
+                            @php $docDisabled = $docsLocked || ($docType === 'receipt' && ! $hasInvoice) || (in_array($docType, ['invoice', 'receipt'], true) && $job->status === 'potential'); @endphp
                             <button type="button"
-                                    @if ($docDisabled) disabled title="{{ $docsLocked ? 'Take In Job first before generating documents.' : 'Generate an Invoice for this job first. A Receipt only records payment against an existing invoice.' }}" @else @click="$dispatch('open-document', { type: '{{ $docType }}' })" @endif
+                                    @if ($docDisabled) disabled title="{{ $docsLocked ? 'Take In Job first before generating documents.' : ($job->status === 'potential' ? 'Mark the job as Customer Confirmed before invoicing.' : 'Generate an Invoice for this job first. A Receipt only records payment against an existing invoice.') }}" @else @click="$dispatch('open-document', { type: '{{ $docType }}' })" @endif
                                     class="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg text-white {{ $docDisabled ? 'opacity-40 cursor-not-allowed' : 'hover:brightness-110' }}"
                                     style="background: {{ $docColor }}"><x-icon :name="$docIcon" class="w-4 h-4" /> {{ $docLabel }}</button>
                         @endforeach
@@ -431,7 +436,7 @@
                         <div class="flex flex-wrap items-center gap-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 mb-3">
                             <x-icon name="triangle-alert" class="w-4 h-4 shrink-0" />
                             <span class="flex-1 min-w-[180px]">This job hasn't been claimed yet. Take it in before generating documents.</span>
-                            @if ($job->status === 'potential')
+                            @if ($job->status === 'new')
                                 <button type="submit" form="takein-form" class="inline-flex items-center gap-1 font-semibold px-3 py-1.5 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110"><x-icon name="user-plus" class="w-3.5 h-3.5" /> Take In Job</button>
                             @endif
                         </div>

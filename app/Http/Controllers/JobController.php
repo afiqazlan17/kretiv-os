@@ -43,6 +43,9 @@ class JobController extends Controller
         Job::STATUS_IN_PROGRESS => Job::STATUS_POTENTIAL,
     ];
 
+    /** Statuses still open (not completed or cancelled). */
+    public const OPEN_STATUSES = [Job::STATUS_NEW, Job::STATUS_POTENTIAL, Job::STATUS_IN_PROGRESS];
+
     public function index(Request $request): View
     {
         $this->authorize('viewAny', Job::class);
@@ -131,7 +134,7 @@ class JobController extends Controller
             'view' => $view,
             'sortCol' => $sortCol,
             'sortDir' => $sortDir,
-            'pipelineValue' => $jobs->whereIn('status', [Job::STATUS_POTENTIAL, Job::STATUS_IN_PROGRESS])->sum('estimation_value'),
+            'pipelineValue' => $jobs->whereIn('status', self::OPEN_STATUSES)->sum('estimation_value'),
         ]);
     }
 
@@ -265,7 +268,7 @@ class JobController extends Controller
                 'discount_amount' => $fields['discount_amount'] ?? null,
                 'line_items' => $resolved['line_items'],
                 'document_notes' => ($quotationNotes = DocumentData::noteLines($fields['quotation_notes'] ?? null)) ? ['quotation' => $quotationNotes] : null,
-                'status' => Job::STATUS_POTENTIAL,
+                'status' => Job::STATUS_NEW,
                 'created_by' => $request->user()->id,
             ]);
 
@@ -449,14 +452,15 @@ class JobController extends Controller
         return back()->with('success', "{$job->job_id} line items updated.");
     }
 
-    /** Claims the job — sets PIC and moves potential -> in_progress. */
+    /** Claims the job: sets the PIC and moves New -> Potential, so the quotation can go out. */
     public function takeIn(Request $request, Job $job): RedirectResponse
     {
         $this->authorize('update', $job);
+        abort_unless($job->status === Job::STATUS_NEW, 422, 'This job has already been taken in.');
 
         $pic = $request->user()->name;
 
-        $job->update(['pic' => $pic, 'status' => Job::STATUS_IN_PROGRESS]);
+        $job->update(['pic' => $pic, 'status' => Job::STATUS_POTENTIAL]);
 
         ActivityLog::create([
             'job_id' => $job->id,
@@ -465,12 +469,28 @@ class JobController extends Controller
             'user_name' => $request->user()->name,
             'action' => 'status_change',
             'field_changed' => 'status',
-            'old_value' => Job::STATUS_POTENTIAL,
-            'new_value' => Job::STATUS_IN_PROGRESS,
+            'old_value' => Job::STATUS_NEW,
+            'new_value' => Job::STATUS_POTENTIAL,
             'note' => "Taken in by {$pic}.",
         ]);
 
-        return back()->with('success', "{$job->job_id} taken in.");
+        return back()->with('success', "{$job->job_id} taken in. You can send the quotation now.");
+    }
+
+    /** The customer said yes: Potential -> In Progress. */
+    public function confirm(Request $request, Job $job): RedirectResponse
+    {
+        $this->authorize('update', $job);
+        abort_unless($job->status === Job::STATUS_POTENTIAL, 422, 'Only a Potential job can be confirmed.');
+
+        $job->update(['status' => Job::STATUS_IN_PROGRESS]);
+        ActivityLog::create([
+            'job_id' => $job->id, 'job_code' => $job->job_id, 'user_id' => $request->user()->id, 'user_name' => $request->user()->name,
+            'action' => 'status_change', 'field_changed' => 'status',
+            'old_value' => Job::STATUS_POTENTIAL, 'new_value' => Job::STATUS_IN_PROGRESS, 'note' => 'Customer confirmed.',
+        ]);
+
+        return back()->with('success', "{$job->job_id} confirmed and now In Progress.");
     }
 
     /** Close Ticket — from Potential or In Progress, mandatory reason, snapshots the stage it closed at. */

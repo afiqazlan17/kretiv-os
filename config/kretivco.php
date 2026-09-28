@@ -211,17 +211,16 @@ return [
         'affin' => ['label' => 'AFFIN', 'code' => 'AFFIN', 'color' => '#E53935'],
     ],
 
-    // A job stays "potential" while it's still a quotation (nothing
-    // confirmed yet). Once the customer confirms, staff claim it ("Take In
-    // Job") — that single action sets the PIC and moves it straight to
-    // "in_progress". It stays there for the whole time the work is
-    // actually happening, and moves to "completed" when staff close the
-    // ticket.
+    // New: an enquiry in the queue, nobody on it yet. Take In sets the PIC
+    // and makes it Potential, where the quotation / proforma can be issued
+    // while the customer decides. Once the customer confirms it moves to
+    // In Progress for the actual work, then Completed when closed.
     // Each status carries an icon alongside its color so a status badge
     // never depends on color alone to be told apart — Potential (indigo)
     // and In Progress (blue) sit close enough in hue that color-only
     // badges were hard to distinguish at a glance.
     'job_statuses' => [
+        'new' => ['label' => 'New', 'color' => '#F59E0B', 'icon' => '✦'],
         'potential' => ['label' => 'Potential', 'color' => '#6366F1', 'icon' => '🎯'],
         'in_progress' => ['label' => 'In Progress', 'color' => '#3A86FF', 'icon' => '⚡'],
         'completed' => ['label' => 'Completed', 'color' => '#6B7280', 'icon' => '✓'],

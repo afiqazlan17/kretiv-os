@@ -15,9 +15,16 @@ class Customer extends Model
 {
     public $timestamps = false;
 
+    /** How the customer shows in pickers: "Aeffry", or "Aeffry (Raise Offshore Sdn. Bhd.)" for a company contact. */
+    public function displayName(): string
+    {
+        return $this->company ? "{$this->name} ({$this->company})" : (string) $this->name;
+    }
+
     protected function casts(): array
     {
         return [
+            'phone' => \App\Casts\MalaysianPhone::class,
             'created_at' => 'datetime',
         ];
     }

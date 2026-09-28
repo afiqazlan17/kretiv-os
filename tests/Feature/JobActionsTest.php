@@ -319,4 +319,18 @@ class JobActionsTest extends TestCase
         $this->assertEquals(300, LedgerService::balanceFor($entries, 'revenue_print'));
         $this->assertEquals(300, LedgerService::balanceFor($entries, 'bank_mbb'));   // 500 in, 200 back
     }
+
+    public function test_timeline_is_read_only_and_issuing_the_do_marks_it_delivered(): void
+    {
+        Storage::fake('public');
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $job = $this->job(['status' => Job::STATUS_IN_PROGRESS, 'pic' => $bod->name, 'line_items' => [['item' => 'Banner', 'qty' => 1, 'price' => 100]]]);
+
+        $page = $this->actingAs($bod)->get(route('jobs.show', $job))->assertOk();
+        $page->assertSee('Next step:')->assertSee('Move back to Confirmed');
+        $page->assertDontSee('title="Advance to', false);
+
+        $this->actingAs($bod)->postJson(route('jobs.documents.generate', [$job, 'delivery']), ['title' => 'Banner'])->assertOk();
+        $this->assertSame(Job::STATUS_DELIVERED, $job->refresh()->status);
+    }
 }

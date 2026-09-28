@@ -31,6 +31,9 @@
                         @if (! in_array($job->status, ['completed', 'cancelled']))
                             <button type="button" @click="$store.jobActions.panel = 'complete'" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1] text-green-600"><x-icon name="circle-check" class="w-4 h-4" /> Close Job</button>
                         @endif
+                        @if ($rollbackTo = \App\Http\Controllers\JobController::ROLLBACK_MAP[$job->status] ?? null)
+                            <button type="button" @click="$store.jobActions.panel = 'rollback'" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1] text-gray-500"><x-icon name="chevron-left" class="w-4 h-4" /> Move back to {{ $job->statusLabel($rollbackTo) }}</button>
+                        @endif
                         @if (! in_array($job->status, ['completed', 'cancelled']))
                             <div class="border-t border-[#F5ECE8] my-1.5"></div>
                             <button type="button" @click="$store.jobActions.panel = 'cancel'" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1] text-red-600"><x-icon name="circle-x" class="w-4 h-4" /> Cancel Job</button>
@@ -179,46 +182,50 @@
                     $stages = collect(\App\Models\Job::FLOW)->mapWithKeys(fn ($s) => [$s => $job->statusLabel($s)])->all();
                     $stageKeys = array_keys($stages);
                     $currentIdx = array_search($job->status, $stageKeys, true);
-                    $canForwardTo = match ($job->status) {
-                        'new' => 'potential',
-                        'delivered' => 'completed',
-                        default => \App\Http\Controllers\JobController::ADVANCE_MAP[$job->status] ?? null,
+                    // The timeline only shows where the job is. It moves when staff do the
+                    // real thing (take it in, record a deposit, issue the DO...), or use
+                    // the action in the Next step line / Action menu.
+                    $doLabel = \App\Support\DocumentData::label('delivery', $job->department);
+                    $next = match ($job->status) {
+                        'new' => ['Take in this job to start the quotation.', 'Take In Job', 'takein-form', null],
+                        'potential' => ['Moves to Confirmed when the customer pays a deposit (issue a Receipt), sends their PO, or you mark it confirmed.', 'Customer Confirmed', 'advance-form', 'Customer confirmed the job?'],
+                        'confirmed' => ['Moves to '.$job->statusLabel('in_progress').' when the customer approves the artwork, or when you start the work.', 'Start '.$job->statusLabel('in_progress'), 'advance-form', 'Start the work? The job moves to '.$job->statusLabel('in_progress').'.'],
+                        'in_progress' => ['Moves to '.$job->statusLabel('delivered').' when you issue the '.$doLabel.', or mark it done.', 'Mark as '.$job->statusLabel('delivered'), 'advance-form', 'Mark as '.$job->statusLabel('delivered').'?'],
+                        'delivered' => ['Close the job once everything is paid and handed over.', 'Close Job', null, null],
+                        default => null,
                     };
-                    $forwardAsk = [
-                        'confirmed' => 'Customer confirmed the job?',
-                        'in_progress' => 'Start the work? The job moves to '.$job->statusLabel('in_progress').'.',
-                        'delivered' => 'Mark as '.$job->statusLabel('delivered').'?',
-                    ];
-                    $canRollbackTo = \App\Http\Controllers\JobController::ROLLBACK_MAP[$job->status] ?? null;
                 @endphp
                 <div class="flex items-center">
                     @foreach ($stageKeys as $i => $key)
-                        @php
-                            $state = $i < $currentIdx ? 'done' : ($i === $currentIdx ? 'current' : 'upcoming');
-                            $clickableForward = $key === $canForwardTo;
-                            $clickableBack = $key === $canRollbackTo;
-                        @endphp
+                        @php $state = $i < $currentIdx ? 'done' : ($i === $currentIdx ? 'current' : 'upcoming'); @endphp
                         <div class="flex-1 flex flex-col items-center relative">
                             @if ($i > 0)
                                 <div class="absolute top-4 h-0.5 {{ $i <= $currentIdx ? 'bg-green-400' : 'bg-gray-200' }}" style="right: 50%; width: 100%;"></div>
                             @endif
-                            @if ($clickableForward)
-                                <button type="{{ $key === 'completed' ? 'button' : 'submit' }}" @if ($key === 'potential') form="takein-form" @elseif ($key === 'completed') @click="$store.jobActions.panel = 'complete'" @else form="advance-form" onclick="return confirm({{ Js::from($forwardAsk[$key] ?? 'Move forward?') }})" @endif
-                                        class="relative z-10 w-8 h-8 rounded-full border-2 border-[#F48FB1] bg-white text-[#C2185B] text-xs font-bold flex items-center justify-center hover:bg-[#FFF0F5]" title="Advance to {{ $stages[$key] }}">{{ $i + 1 }}</button>
-                            @elseif ($clickableBack)
-                                <button type="button" @click="$store.jobActions.panel = 'rollback'"
-                                        class="relative z-10 w-8 h-8 rounded-full border-2 border-gray-300 bg-white text-gray-500 text-xs font-bold flex items-center justify-center hover:bg-gray-50" title="Roll back to {{ $stages[$key] }}">{{ $i + 1 }}</button>
-                            @elseif ($state === 'done')
+                            @if ($state === 'done')
                                 <div class="relative z-10 w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center"><x-icon name="check" class="w-4 h-4" :stroke="3" /></div>
                             @elseif ($state === 'current')
-                                <div class="relative z-10 w-8 h-8 rounded-full text-white flex items-center justify-center text-xs font-bold shadow" style="background: {{ config('kretivco.job_statuses.'.$key.'.color') }}">{{ $i + 1 }}</div>
+                                <div class="relative z-10 w-8 h-8 rounded-full text-white flex items-center justify-center text-xs font-bold shadow ring-4 ring-offset-0" style="background: {{ config('kretivco.job_statuses.'.$key.'.color') }}; --tw-ring-color: {{ config('kretivco.job_statuses.'.$key.'.color') }}33">{{ $i + 1 }}</div>
                             @else
                                 <div class="relative z-10 w-8 h-8 rounded-full border-2 border-gray-200 bg-white text-gray-400 flex items-center justify-center text-xs font-bold">{{ $i + 1 }}</div>
                             @endif
-                            <span class="mt-2 text-xs font-medium {{ $state === 'upcoming' ? 'text-gray-400' : 'text-gray-700' }}">{{ $stages[$key] }}</span>
+                            <span class="mt-2 text-xs font-medium text-center {{ $state === 'upcoming' ? 'text-gray-400' : 'text-gray-700' }}">{{ $stages[$key] }}</span>
                         </div>
                     @endforeach
                 </div>
+                @if ($next)
+                    <div class="mt-5 flex flex-wrap items-center gap-3 rounded-xl bg-[#FFF9F6] border border-[#F5ECE8] px-4 py-3">
+                        <x-icon name="arrow-right" class="w-4 h-4 text-[#C2185B] shrink-0" />
+                        <p class="flex-1 min-w-[14rem] text-sm text-gray-600"><span class="font-semibold text-gray-900">Next step:</span> {{ $next[0] }}</p>
+                        @can('update', $job)
+                            @if ($next[2])
+                                <button type="submit" form="{{ $next[2] }}" @if ($next[3]) onclick="return confirm({{ Js::from($next[3]) }})" @endif class="shrink-0 text-xs font-semibold px-3.5 py-2 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110">{{ $next[1] }}</button>
+                            @else
+                                <button type="button" @click="$store.jobActions.panel = 'complete'" class="shrink-0 text-xs font-semibold px-3.5 py-2 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110">{{ $next[1] }}</button>
+                            @endif
+                        @endcan
+                    </div>
+                @endif
             @endif
         </div>
 

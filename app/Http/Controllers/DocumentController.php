@@ -197,6 +197,10 @@ class DocumentController extends Controller
             $job->confirmBecause('payment received ('.$docNumber.')');
         }
 
+        if ($type === 'delivery') {
+            $job->moveBecause(Job::STATUS_IN_PROGRESS, Job::STATUS_DELIVERED, DocumentData::label('delivery', $job->department)." {$docNumber} issued");
+        }
+
         $this->rememberNotes($request, $job, $type);
 
         $bytes = Pdf::loadView('documents.pdf', ['doc' => $doc])->output();

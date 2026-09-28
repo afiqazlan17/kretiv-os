@@ -43,14 +43,20 @@ class Job extends Model
      */
     public function confirmBecause(string $reason): void
     {
-        if ($this->status !== self::STATUS_POTENTIAL) {
+        $this->moveBecause(self::STATUS_POTENTIAL, self::STATUS_CONFIRMED, $reason);
+    }
+
+    /** Moves the job from one stage to the next when a real action shows it (logged as System). */
+    public function moveBecause(string $from, string $to, string $reason): void
+    {
+        if ($this->status !== $from) {
             return;
         }
-        $this->update(['status' => self::STATUS_CONFIRMED]);
+        $this->update(['status' => $to]);
         ActivityLog::create([
             'job_id' => $this->id, 'job_code' => $this->job_id, 'user_id' => auth()->id(), 'user_name' => 'System',
             'action' => 'status_change', 'field_changed' => 'status',
-            'old_value' => self::STATUS_POTENTIAL, 'new_value' => self::STATUS_CONFIRMED, 'note' => "Confirmed automatically: {$reason}.",
+            'old_value' => $from, 'new_value' => $to, 'note' => "Moved to {$this->statusLabel($to)} automatically: {$reason}.",
         ]);
     }
 

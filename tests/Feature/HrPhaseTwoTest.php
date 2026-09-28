@@ -157,4 +157,21 @@ class HrPhaseTwoTest extends TestCase
         $this->assertSame('approved', $claim->refresh()->status);
         $this->actingAs($staff)->get(route('hr.claims'))->assertSee('Approved, to be paid');
     }
+
+    public function test_leave_calendar_shows_the_team_and_flags_overlaps(): void
+    {
+        $head = User::factory()->create(['role' => User::ROLE_DEPT_HEAD, 'department' => 'print']);
+        $a = $this->staff();
+        $b = $this->staff();
+        $tech = $this->staff('tech');
+        LeaveRequest::create(['user_id' => $a->id, 'type' => 'annual', 'start_date' => '2026-11-03', 'end_date' => '2026-11-04', 'days' => 2, 'status' => 'approved']);
+        LeaveRequest::create(['user_id' => $b->id, 'type' => 'sick', 'start_date' => '2026-11-04', 'end_date' => '2026-11-04', 'days' => 1, 'status' => 'pending']);
+        LeaveRequest::create(['user_id' => $tech->id, 'type' => 'annual', 'start_date' => '2026-11-04', 'end_date' => '2026-11-04', 'days' => 1, 'status' => 'approved']);
+
+        $page = $this->actingAs($head)->get(route('hr.leave.calendar', ['month' => '2026-11']))->assertOk();
+        $day = $page->viewData('days')->first(fn ($d) => $d['date']->toDateString() === '2026-11-04');
+        $this->assertCount(2, $day['leaves']);   // own team only, not tech
+        $this->actingAs($head)->get(route('hr.leave.team'))->assertSee('Also away then from the same team');
+        $this->actingAs($a)->get(route('hr.leave.calendar'))->assertForbidden();
+    }
 }

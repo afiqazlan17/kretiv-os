@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Hr;
 
 use App\Http\Controllers\Controller;
 use App\Models\LeaveRequest;
+use App\Models\PublicHoliday;
 use App\Services\AttendanceService;
 use App\Services\LeaveService;
+use Carbon\CarbonPeriod;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -95,6 +97,30 @@ class LeaveController extends Controller
             'upcoming' => LeaveRequest::with('user')->where('status', 'approved')->where('end_date', '>=', today()->toDateString())
                 ->orderBy('start_date')->limit(50)->get()->filter($visible)->values(),
         ]);
+    }
+
+    /** Month calendar of the team's leave (approved and waiting), with public holidays. */
+    public function calendar(Request $request): View
+    {
+        $viewer = $request->user();
+        abort_unless(AttendanceService::canViewTeam($viewer), 403);
+
+        $month = Carbon::parse($request->query('month', now()->format('Y-m')).'-01');
+        [$start, $end] = [$month->copy()->startOfMonth(), $month->copy()->endOfMonth()];
+
+        $leaves = LeaveRequest::with('user')->whereIn('status', ['approved', 'pending'])
+            ->where('start_date', '<=', $end->toDateString())->where('end_date', '>=', $start->toDateString())->get()
+            ->filter(fn (LeaveRequest $l) => $l->user && ($l->user_id === $viewer->id || AttendanceService::canManageAttendanceOf($viewer, $l->user)));
+        $holidays = PublicHoliday::whereBetween('date', [$start->toDateString(), $end->toDateString()])->get()
+            ->keyBy(fn ($h) => $h->date->toDateString());
+
+        $days = collect(CarbonPeriod::create($start, $end))->map(fn ($d) => [
+            'date' => $d->copy(),
+            'holiday' => $holidays->get($d->toDateString())?->name,
+            'leaves' => $leaves->filter(fn ($l) => $d->between($l->start_date, $l->end_date) && ! $d->isWeekend())->values(),
+        ]);
+
+        return view('hr.leave.calendar', ['month' => $month, 'days' => $days, 'onLeaveToday' => $leaves->where('status', 'approved')->filter(fn ($l) => today()->between($l->start_date, $l->end_date))->count()]);
     }
 
     public function decide(Request $request, LeaveRequest $leave): RedirectResponse

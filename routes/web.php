@@ -225,6 +225,7 @@ $hrRoutes = function () {
         Route::post('/leave/{leave}/cancel', [LeaveController::class, 'cancel'])->name('hr.leave.cancel');
         Route::get('/leave/{leave}/attachment', [LeaveController::class, 'attachment'])->name('hr.leave.attachment');
         Route::get('/team/leave', [LeaveController::class, 'team'])->name('hr.leave.team');
+        Route::get('/team/leave/calendar', [LeaveController::class, 'calendar'])->name('hr.leave.calendar');
         Route::post('/team/leave/{leave}', [LeaveController::class, 'decide'])->name('hr.leave.decide');
         Route::get('/claims', [MyClaimController::class, 'mine'])->name('hr.claims');
         Route::post('/claims', [MyClaimController::class, 'store'])->name('hr.claims.store');

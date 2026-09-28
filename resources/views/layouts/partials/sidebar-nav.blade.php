@@ -94,6 +94,7 @@
                 $pendingLeave = \App\Models\LeaveRequest::with('user')->where('status', 'pending')->get()
                     ->filter(fn ($l) => \App\Services\AttendanceService::isApproverFor($user, $l->user))->count();
                 $hrNav[] = ['label' => 'Leave', 'url' => route('hr.leave.team'), 'icon' => 'calendar', 'active' => request()->routeIs('hr.leave.team'), 'badge' => $pendingLeave];
+                $hrNav[] = ['label' => 'Leave Calendar', 'url' => route('hr.leave.calendar'), 'icon' => 'calendar', 'active' => request()->routeIs('hr.leave.calendar')];
                 if ($user->isDeptHead() || $user->isBod()) {
                     $claimsToCheck = \App\Models\Claim::with('user')->where('status', 'submitted')->get()
                         ->filter(fn ($c) => $c->user && \App\Services\AttendanceService::isApproverFor($user, $c->user))->count();

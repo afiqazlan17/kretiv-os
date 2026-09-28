@@ -9,7 +9,10 @@
             <div class="rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3">{{ session('success') }}</div>
         @endif
 
-        <h3 class="text-sm font-semibold text-gray-500">Waiting for approval</h3>
+        <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-gray-500">Waiting for approval</h3>
+            <a href="{{ route('hr.leave.calendar') }}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#6D28D9] hover:underline"><x-icon name="calendar" class="w-3.5 h-3.5" /> Open the leave calendar</a>
+        </div>
         @forelse ($pending as $l)
             @php $bal = \App\Services\LeaveService::balance($l->user, $l->type, $l->start_date->year); @endphp
             <div class="k-card p-5">
@@ -19,6 +22,14 @@
                         <p class="text-sm text-gray-600">{{ $l->period() }} · {{ $fmt($l->days) }} day{{ $l->days == 1 ? '' : 's' }}</p>
                         @if ($l->reason)<p class="text-xs text-gray-500 mt-0.5">{{ $l->reason }}</p>@endif
                         @if ($bal['available'] !== null)<p class="text-xs text-gray-400 mt-0.5">{{ $fmt($bal['available'] + $l->days) }} days left before this one</p>@endif
+                        @php
+                            $overlap = \App\Models\LeaveRequest::with('user')->whereIn('status', ['approved', 'pending'])->where('id', '!=', $l->id)
+                                ->where('start_date', '<=', $l->end_date->toDateString())->where('end_date', '>=', $l->start_date->toDateString())->get()
+                                ->filter(fn ($o) => $o->user && $o->user->department === $l->user->department);
+                        @endphp
+                        @if ($overlap->isNotEmpty())
+                            <p class="text-xs text-amber-700 mt-1 inline-flex items-center gap-1"><x-icon name="triangle-alert" class="w-3.5 h-3.5" /> Also away then from the same team: {{ $overlap->map(fn ($o) => $o->user->shortName())->unique()->join(', ') }}</p>
+                        @endif
                     </div>
                     @if ($l->attachment_path)
                         <a href="{{ route('hr.leave.attachment', $l) }}" target="_blank" class="text-xs font-semibold text-[#6D28D9] inline-flex items-center gap-1"><x-icon name="paperclip" class="w-3.5 h-3.5" /> MC</a>

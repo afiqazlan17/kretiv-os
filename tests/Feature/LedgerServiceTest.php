@@ -70,14 +70,29 @@ class LedgerServiceTest extends TestCase
         $this->assertSame(3, LedgerEntry::where('job_id', 'KP-2026-001')->count());
     }
 
-    public function test_receipt_entry_debits_the_job_bank_and_credits_ar(): void
+    public function test_receipt_after_the_invoice_credits_ar_and_before_it_is_a_customer_deposit(): void
     {
         $job = $this->makeJob(['bank' => 'affin', 'final_value' => 800]);
-        $entry = $this->service->postReceiptEntry($job, 'RCT-001', 'Afiq');
+        $deposit = $this->service->postReceiptEntry($job, 'RCT-001', 'Afiq', 300);
+        $this->assertSame('bank_affin', $deposit->debit_account);
+        $this->assertSame('customer_deposits', $deposit->credit_account);
 
-        $this->assertSame('bank_affin', $entry->debit_account);
-        $this->assertSame('ar', $entry->credit_account);
-        $this->assertSame(800.0, (float) $entry->amount);
+        $entries = fn () => LedgerEntry::where('job_id', $job->job_id)->get();
+        $this->assertEquals(0, LedgerService::balanceFor($entries(), 'ar'));        // no receivable yet
+        $this->assertEquals(300, LedgerService::balanceFor($entries(), 'customer_deposits')); // held
+
+        $this->service->postInvoiceEntry($job, 'INV-001', 'Afiq', 1000);
+        $this->assertEquals(700, LedgerService::balanceFor($entries(), 'ar'));      // 1000 less the deposit
+        $this->assertEquals(0, LedgerService::balanceFor($entries(), 'customer_deposits'));
+
+        $balance = $this->service->postReceiptEntry($job, 'RCT-002', 'Afiq', 700);
+        $this->assertSame('ar', $balance->credit_account);
+        $this->assertEquals(0, LedgerService::balanceFor($entries(), 'ar'));
+
+        // Voiding the deposit puts it back on what the customer owes.
+        $this->service->voidReceipt($deposit, 'Afiq');
+        $this->assertEquals(300, LedgerService::balanceFor($entries(), 'ar'));
+        $this->assertEquals(0, LedgerService::balanceFor($entries(), 'customer_deposits'));
     }
 
     public function test_reverse_job_ledger_entries_reverses_every_unreversed_entry(): void

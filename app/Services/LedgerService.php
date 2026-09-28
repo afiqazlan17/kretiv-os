@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Job;
 use App\Models\LedgerEntry;
 use Illuminate\Support\Collection;
 
@@ -217,12 +218,14 @@ class LedgerService
         }
 
         if ($decision === 'unchanged') {
+            $this->syncDeposits($job, $userName);
+
             return LedgerEntry::where('job_id', $job->job_id)->where('type', 'invoice')->where('reversed', false)->first();
         }
 
         $this->reverseEntries(fn ($e) => $e->job_id === $job->job_id && $e->type === 'invoice', $userName);
 
-        return $this->addEntry([
+        return $this->afterPosting($job, $userName, $this->addEntry([
             'date' => now(),
             'type' => 'invoice',
             'description' => "Invoice {$docNumber}: {$job->customer?->name}",
@@ -234,7 +237,7 @@ class LedgerService
             'amount' => $amount,
             'bank' => null,
             'created_by' => $userName ?: 'System',
-        ]);
+        ]));
     }
 
     // Receipt issued: payment received, clears what was owed. Same
@@ -261,8 +264,11 @@ class LedgerService
         if ($existing) {
             $this->reverseEntries(fn ($e) => $e->id === $existing->id, $userName);
         }
+        // Paid before there's an invoice: it's a deposit we hold, not money
+        // against a receivable (see syncDeposits).
+        $hasInvoice = LedgerEntry::where('job_id', $job->job_id)->where('type', 'invoice')->where('reversed', false)->exists();
 
-        return $this->addEntry([
+        return $this->afterPosting($job, $userName, $this->addEntry([
             'date' => now(),
             'type' => 'receipt',
             'description' => "Receipt {$docNumber}: {$job->customer?->name}",
@@ -270,11 +276,11 @@ class LedgerService
             'job_id' => $job->job_id,
             'doc_number' => $docNumber,
             'debit_account' => self::bankAccount($bank),
-            'credit_account' => 'ar',
+            'credit_account' => $hasInvoice ? 'ar' : 'customer_deposits',
             'amount' => $amount,
             'bank' => $bank,
             'created_by' => $userName ?: 'System',
-        ]);
+        ]));
     }
 
     // Credit note against the invoice: takes the amount off revenue and off
@@ -304,6 +310,51 @@ class LedgerService
     public function voidReceipt(LedgerEntry $entry, string $userName): void
     {
         $this->reverseEntries(fn ($e) => $e->id === $entry->id, $userName);
+        if ($entry->job_id && ($job = Job::where('job_id', $entry->job_id)->first())) {
+            $this->syncDeposits($job, $userName);
+        }
+    }
+
+    private function afterPosting($job, string $userName, LedgerEntry $entry): LedgerEntry
+    {
+        $this->syncDeposits($job, $userName);
+
+        return $entry;
+    }
+
+    /**
+     * Customer deposits: money received before the invoice is held in
+     * 'customer_deposits' (a liability), not taken off receivables. Once the
+     * job has an invoice, everything held is applied to it (Dr deposits,
+     * Cr AR). Re-run after any invoice, receipt or void so the applied
+     * amount always equals what's held, and none while there's no invoice.
+     */
+    public function syncDeposits($job, string $userName): void
+    {
+        $entries = LedgerEntry::where('job_id', $job->job_id)->where('reversed', false)->get();
+        $held = (float) $entries->where('type', 'receipt')->where('credit_account', 'customer_deposits')->sum('amount');
+        $hasInvoice = $entries->where('type', 'invoice')->isNotEmpty();
+        $target = $hasInvoice ? round($held, 2) : 0.0;
+        $applied = round((float) $entries->where('type', 'deposit_applied')->sum('amount'), 2);
+
+        if (abs($applied - $target) < 0.005) {
+            return;
+        }
+        $this->reverseEntries(fn ($e) => $e->job_id === $job->job_id && $e->type === 'deposit_applied', $userName);
+        if ($target > 0) {
+            $this->addEntry([
+                'date' => now(),
+                'type' => 'deposit_applied',
+                'description' => "Deposit applied to invoice: {$job->customer?->name}",
+                'department' => $job->department,
+                'job_id' => $job->job_id,
+                'debit_account' => 'customer_deposits',
+                'credit_account' => 'ar',
+                'amount' => $target,
+                'bank' => null,
+                'created_by' => $userName ?: 'System',
+            ]);
+        }
     }
 
     // Plain-language expense entry — department set = cost of service for

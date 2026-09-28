@@ -85,7 +85,7 @@ class FinanceReports
         $fixed = LedgerService::balanceFor($this->entries, 'fixed_assets');
         $assets = $receivable + $banks->sum() + $fixed;
 
-        $loans = $this->accountKeys()->filter(fn ($k) => str_starts_with($k, 'loan_') || str_starts_with($k, 'payable_'))
+        $loans = $this->accountKeys()->filter(fn ($k) => str_starts_with($k, 'loan_') || str_starts_with($k, 'payable_') || $k === 'customer_deposits')
             ->mapWithKeys(fn ($k) => [$k => LedgerService::balanceFor($this->entries, $k)]);
         $liabilities = $loans->sum();
 

@@ -34,6 +34,9 @@ class ChartOfAccounts
         if ($key === 'equity_drawings') {
             return ['code' => 'EQ-DRAWINGS', 'name' => 'Owner Drawings', 'type' => self::EQUITY];
         }
+        if ($key === 'customer_deposits') {
+            return ['code' => 'LI-DEPOSITS', 'name' => 'Customer Deposits (received before invoice)', 'type' => self::LIABILITY];
+        }
         if ($key === 'payable_statutory') {
             return ['code' => 'LI-STATUTORY', 'name' => 'Statutory Payable (EPF, SOCSO, EIS, PCB)', 'type' => self::LIABILITY];
         }

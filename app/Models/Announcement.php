@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Audited;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -10,6 +11,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable(['type', 'ref_no', 'title', 'body', 'audience', 'requires_ack', 'pinned', 'attachment_path', 'attachment_name', 'published_by'])]
 class Announcement extends Model
 {
+    use Audited;
+
+    protected string $auditModule = 'hr';
+
     public const TYPES = ['memo' => 'Memo', 'announcement' => 'Announcement'];
 
     protected function casts(): array

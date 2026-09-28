@@ -49,6 +49,7 @@
         'menu' => '<path d="M4 6h16" /> <path d="M4 12h16" /> <path d="M4 18h16" />',
         'sparkles' => '<path d="M9.94 14.06 8 20l-1.94-5.94L0 12l6.06-1.94L8 4l1.94 6.06L16 12Z" transform="translate(2 0) scale(0.9)" /> <path d="M19 2v4" /> <path d="M21 4h-4" /> <path d="M20 15v3" /> <path d="M21.5 16.5h-3" />',
         'copy' => '<rect width="14" height="14" x="8" y="8" rx="2" ry="2" /> <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />',
+        'history' => '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /> <path d="M3 3v5h5" /> <path d="M12 7v5l4 2" />',
         'chevron-left' => '<path d="m15 18-6-6 6-6" />',
         'clock' => '<circle cx="12" cy="12" r="10" /> <path d="M12 6v6l4 2" />',
         'timer' => '<path d="M10 2h4" /> <path d="M12 14l3-3" /> <circle cx="12" cy="14" r="8" />',

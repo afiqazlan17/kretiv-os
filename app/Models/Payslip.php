@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Audited;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,6 +11,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'epf_employee', 'epf_employer', 'socso_employee', 'socso_employer', 'eis_employee', 'eis_employer', 'pcb', 'net', 'unpaid_days', 'unpaid_deduction'])]
 class Payslip extends Model
 {
+    use Audited;
+
+    protected string $auditModule = 'hr';
+
+    public function auditName(): string
+    {
+        return 'payslip of '.($this->snapshot['name'] ?? '#'.$this->user_id);
+    }
+
     /** Amounts HR may adjust on a draft run (statutory tables have edge cases; PCB is always manual). */
     public const ADJUSTABLE = ['epf_employee', 'epf_employer', 'socso_employee', 'socso_employer', 'eis_employee', 'eis_employer', 'pcb'];
 

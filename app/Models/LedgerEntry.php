@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Audited;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +13,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 ])]
 class LedgerEntry extends Model
 {
+    use Audited;
+
+    protected string $auditModule = 'finance';
+
+    public function auditName(): string
+    {
+        return trim(str_replace('_', ' ', (string) $this->type).' '.($this->doc_number ?? '').' RM '.number_format((float) $this->amount, 2).' '.($this->description ?? ''));
+    }
+
     public $timestamps = false;
 
     protected function casts(): array

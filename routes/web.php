@@ -4,6 +4,7 @@ use App\Http\Controllers\AccountantPackController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BankImportController;
 use App\Http\Controllers\ClaimController;
 use App\Http\Controllers\CollectionsController;
@@ -181,6 +182,7 @@ $financeRoutes = function () {
         Route::post('/recurring/{recurring}/record', [RecurringExpenseController::class, 'record'])->name('finance.recurring.record');
         Route::post('/recurring/{recurring}/toggle', [RecurringExpenseController::class, 'toggle'])->name('finance.recurring.toggle');
         Route::delete('/recurring/{recurring}', [RecurringExpenseController::class, 'destroy'])->name('finance.recurring.destroy');
+        Route::get('/audit-log', [AuditLogController::class, 'finance'])->name('finance.audit');
         Route::get('/claims', [ClaimController::class, 'index'])->name('finance.claims');
         Route::post('/claims', [ClaimController::class, 'store'])->name('finance.claims.store');
         Route::post('/claims/{claim}/approve', [ClaimController::class, 'approve'])->name('finance.claims.approve');
@@ -257,6 +259,7 @@ $hrRoutes = function () {
         Route::get('/ea-forms', [EaFormController::class, 'index'])->name('hr.ea');
         Route::post('/ea-forms/release', [EaFormController::class, 'release'])->name('hr.ea.release');
         Route::get('/ea-forms/{user}/{year}', [EaFormController::class, 'pdf'])->whereNumber('year')->name('hr.ea.pdf');
+        Route::get('/audit-log', [AuditLogController::class, 'hr'])->name('hr.audit');
         Route::get('/holidays', [HolidayController::class, 'index'])->name('hr.holidays');
         Route::post('/holidays', [HolidayController::class, 'store'])->name('hr.holidays.store');
         Route::delete('/holidays/{holiday}', [HolidayController::class, 'destroy'])->name('hr.holidays.destroy');

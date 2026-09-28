@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Audited;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
 #[Fillable(['name', 'category', 'purchase_date', 'cost', 'bank', 'receipt_path', 'receipt_name', 'ledger_entry_id', 'disposed_on', 'notes'])]
 class Asset extends Model
 {
+    use Audited;
+
+    protected string $auditModule = 'finance';
+
     protected function casts(): array
     {
         return ['purchase_date' => 'date', 'disposed_on' => 'date', 'cost' => 'decimal:2'];

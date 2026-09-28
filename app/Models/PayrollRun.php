@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Audited;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -10,6 +11,15 @@ use Illuminate\Support\Carbon;
 #[Fillable(['period', 'pay_date', 'status', 'bank', 'finalized_by', 'finalized_at', 'statutory_paid_at'])]
 class PayrollRun extends Model
 {
+    use Audited;
+
+    protected string $auditModule = 'hr';
+
+    public function auditName(): string
+    {
+        return 'payroll '.$this->period.' ('.$this->status.')';
+    }
+
     protected function casts(): array
     {
         return ['pay_date' => 'date', 'finalized_at' => 'datetime', 'statutory_paid_at' => 'datetime'];

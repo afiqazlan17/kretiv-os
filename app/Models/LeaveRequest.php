@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Audited;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,6 +11,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'status', 'decided_by', 'decided_at', 'decision_note'])]
 class LeaveRequest extends Model
 {
+    use Audited;
+
+    protected string $auditModule = 'hr';
+
+    public function auditName(): string
+    {
+        return ($this->user?->name ?? '#'.$this->user_id).', '.$this->type.' '.$this->start_date?->format('d M Y').' ('.$this->status.')';
+    }
+
     public const STATUSES = ['pending' => 'Waiting approval', 'approved' => 'Approved', 'rejected' => 'Not approved', 'cancelled' => 'Cancelled'];
 
     protected function casts(): array

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Audited;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,6 +11,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'status', 'decided_by', 'decided_at', 'reject_reason', 'paid_bank', 'ledger_entry_id', 'verified_by', 'verified_at'])]
 class Claim extends Model
 {
+    use Audited;
+
+    protected string $auditModule = 'finance';
+
+    public function auditName(): string
+    {
+        return trim(($this->claimant_name ?? '').': '.($this->description ?? '').' RM '.number_format((float) $this->amount, 2));
+    }
+
     public const STATUSES = ['submitted' => 'With Dept Head', 'pending' => 'Pending', 'approved' => 'Approved', 'rejected' => 'Rejected', 'paid' => 'Paid'];
 
     public const CATEGORIES = ['fuel' => 'Fuel / Mileage', 'parking' => 'Parking & Toll', 'meals' => 'Meals', 'supplies' => 'Supplies & Materials', 'transport' => 'Transport', 'other' => 'Other'];

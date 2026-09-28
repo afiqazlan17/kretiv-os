@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Casts\MalaysianPhone;
+use App\Models\Concerns\Audited;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,6 +14,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'employment_type', 'start_date', 'end_date', 'basic_salary', 'allowances', 'ot_eligible', 'reports_to_user_id'])]
 class Employee extends Model
 {
+    use Audited;
+
+    protected string $auditModule = 'hr';
+
+    public function auditName(): string
+    {
+        return 'staff record of '.($this->user?->name ?? '#'.$this->user_id);
+    }
+
     public const EMPLOYMENT_TYPES = ['permanent' => 'Permanent', 'contract' => 'Contract', 'intern' => 'Internship', 'part_time' => 'Part-time'];
 
     protected function casts(): array

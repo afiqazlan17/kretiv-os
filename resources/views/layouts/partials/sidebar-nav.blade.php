@@ -106,6 +106,7 @@
                 $hrNav[] = ['label' => 'Staff', 'url' => route('hr.staff.index'), 'icon' => 'users', 'active' => request()->routeIs('hr.staff.index', 'hr.staff.show')];
                 $hrNav[] = ['label' => 'Payroll', 'url' => route('hr.payroll'), 'icon' => 'banknote', 'active' => request()->routeIs('hr.payroll*')];
                 $hrNav[] = ['label' => 'EA Forms', 'url' => route('hr.ea'), 'icon' => 'file-text', 'active' => request()->routeIs('hr.ea*')];
+                $hrNav[] = ['label' => 'Audit Log', 'url' => route('hr.audit'), 'icon' => 'history', 'active' => request()->routeIs('hr.audit')];
                 $hrNav[] = ['label' => 'New Joiner', 'url' => route('hr.staff.create'), 'icon' => 'user-plus', 'active' => request()->routeIs('hr.staff.create')];
                 $hrNav[] = ['label' => 'Profile Requests', 'url' => route('hr.requests'), 'icon' => 'inbox', 'active' => request()->routeIs('hr.requests'), 'badge' => \App\Models\ProfileChangeRequest::where('status', 'pending')->where('user_id', '!=', $user->id)->count()];
             }
@@ -139,6 +140,7 @@
                 $financeNav[] = ['label' => 'Tax Summary', 'url' => route('finance.tax'), 'icon' => 'scale', 'active' => request()->routeIs('finance.tax')];
                 $financeNav[] = ['label' => 'Bank Import', 'url' => route('finance.bank-import'), 'icon' => 'landmark', 'active' => request()->routeIs('finance.bank-import')];
                 $financeNav[] = ['label' => 'Accountant Pack', 'url' => route('finance.accountant'), 'icon' => 'download', 'active' => request()->routeIs('finance.accountant')];
+                $financeNav[] = ['label' => 'Audit Log', 'url' => route('finance.audit'), 'icon' => 'history', 'active' => request()->routeIs('finance.audit')];
             }
             $reportsStart = count($financeNav);
             foreach ($financeSubmenu as $key => [$label]) {

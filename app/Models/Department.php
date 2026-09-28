@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Audited;
 use App\Support\Departments;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
@@ -10,6 +11,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['key', 'head_user_id', 'head_interim', 'services', 'products'])]
 class Department extends Model
 {
+    use Audited;
+
+    protected string $auditModule = 'hr';
+
+    public function auditName(): string
+    {
+        return $this->key;
+    }
+
     protected function casts(): array
     {
         return ['head_interim' => 'boolean', 'services' => 'array', 'products' => 'array'];

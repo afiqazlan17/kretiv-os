@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Audited;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,6 +10,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['user_id', 'changes', 'reason', 'status', 'reviewed_by', 'reviewed_at', 'review_note'])]
 class ProfileChangeRequest extends Model
 {
+    use Audited;
+
+    protected string $auditModule = 'hr';
+
+    public function auditName(): string
+    {
+        return 'profile change for '.($this->user?->name ?? '#'.$this->user_id).' ('.$this->status.')';
+    }
+
     /** What staff may ask to change, with labels for the review screen. */
     public const FIELDS = [
         'phone' => 'Phone', 'personal_email' => 'Personal email', 'address' => 'Home address',

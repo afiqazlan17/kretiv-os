@@ -564,17 +564,28 @@
                     </div>
 
                     @can('update', $job)
-                    <form method="POST" action="{{ route('jobs.vendor-costs.store', $job) }}" x-show="showVendorForm" x-cloak class="mb-4 p-3 rounded-xl bg-[#FFF9F6] border border-[#F5ECE8] flex flex-wrap items-end gap-2">
+                    <form method="POST" action="{{ route('jobs.vendor-costs.store', $job) }}" x-show="showVendorForm" x-cloak x-data="{ pick: '' }" class="mb-4 p-3 rounded-xl bg-[#FFF9F6] border border-[#F5ECE8] flex flex-wrap items-end gap-2">
                         @csrf
                         <div>
                             <label class="text-xs text-gray-500">Vendor *</label>
-                            <select name="vendor_id" required class="block rounded-md border-gray-300 shadow-sm text-sm">
+                            <select name="vendor_id" x-model="pick" :required="pick !== '__new'" class="block rounded-md border-gray-300 shadow-sm text-sm">
                                 <option value="">Select a vendor</option>
                                 @foreach ($vendors as $vendor)
                                     <option value="{{ $vendor->id }}">{{ $vendor->vendor_id }} · {{ $vendor->name }}</option>
                                 @endforeach
+                                <option value="__new">+ New vendor (e.g. Lalamove)</option>
                             </select>
                         </div>
+                        <template x-if="pick === '__new'">
+                            <div class="flex flex-wrap items-end gap-2">
+                                <div><label class="text-xs text-gray-500">Vendor name *</label>
+                                    <input type="text" name="new_vendor_name" required placeholder="Lalamove" class="block rounded-md border-gray-300 shadow-sm text-sm w-40"></div>
+                                <div><label class="text-xs text-gray-500">Type</label>
+                                    <select name="new_vendor_category" class="block rounded-md border-gray-300 shadow-sm text-sm">
+                                        @foreach (config('kretivco.vendor_categories') as $k => $l)<option value="{{ $k }}" @selected($k === 'delivery')>{{ $l }}</option>@endforeach
+                                    </select></div>
+                            </div>
+                        </template>
                         <div>
                             <label class="text-xs text-gray-500">Estimated Cost (RM)</label>
                             <input type="number" step="0.01" min="0" name="estimated_cost" class="block rounded-md border-gray-300 shadow-sm text-sm w-32">
@@ -585,7 +596,7 @@
                         </div>
                         <div class="flex-1 min-w-[160px]">
                             <label class="text-xs text-gray-500">Notes</label>
-                            <input type="text" name="notes" placeholder="e.g. includes delivery" class="block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                            <input type="text" name="notes" placeholder="e.g. SY to office" class="block w-full rounded-md border-gray-300 shadow-sm text-sm">
                         </div>
                         <button type="submit" class="text-xs font-semibold px-4 py-2 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110">Save</button>
                     </form>
@@ -593,6 +604,7 @@
 
                     @if ($vendorCosts->isEmpty())
                         <p class="text-sm text-gray-400 italic">No vendor cost recorded yet, leave blank if this job is done in-house.</p>
+                        <p class="text-xs text-gray-400 mt-1">Delivery by Lalamove, Grab or a courier? Add it as its own line with the courier as the vendor.</p>
                     @else
                         <div class="space-y-2">
                             @foreach ($vendorCosts as $item)
@@ -649,13 +661,11 @@
 
                                     @can('update', $job)
                                     <div class="flex flex-wrap items-center gap-2 mt-2">
-                                        @if (($item['status'] ?? 'unpaid') === 'unpaid')
-                                            <button type="button" @click="editingId = (editingId === '{{ $item['id'] }}' ? null : '{{ $item['id'] }}')" class="text-xs font-semibold px-2.5 py-1 rounded-lg border border-[#EFE3DE] text-gray-600 hover:bg-[#FFF7F3]">Edit</button>
-                                        @endif
+                                        <button type="button" @click="editingId = (editingId === '{{ $item['id'] }}' ? null : '{{ $item['id'] }}')" class="text-xs font-semibold px-2.5 py-1 rounded-lg border border-[#EFE3DE] text-gray-600 hover:bg-[#FFF7F3]">Edit</button>
                                         @if (($item['status'] ?? 'unpaid') === 'unpaid' && (float) ($item['actual_cost'] ?? 0) > 0)
                                             <button type="button" @click="payingId = (payingId === '{{ $item['id'] }}' ? null : '{{ $item['id'] }}')" class="text-xs font-semibold px-2.5 py-1 rounded-lg border border-green-200 text-green-700 hover:bg-green-50">Mark as Paid</button>
                                         @endif
-                                        <form method="POST" action="{{ route('jobs.vendor-costs.destroy', [$job, $item['id']]) }}" onsubmit="return confirm('Remove this vendor cost entry?')">
+                                        <form method="POST" action="{{ route('jobs.vendor-costs.destroy', [$job, $item['id']]) }}" onsubmit="return confirm('{{ ($item['status'] ?? 'unpaid') === 'paid' ? 'Remove this paid vendor cost? Its payment will be reversed in the ledger.' : 'Remove this vendor cost entry?' }}')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="text-xs font-semibold px-2.5 py-1 rounded-lg border border-red-200 text-red-600 hover:bg-red-50">Remove</button>
@@ -664,7 +674,14 @@
                                     <form method="POST" action="{{ route('jobs.vendor-costs.update', [$job, $item['id']]) }}" x-show="editingId === '{{ $item['id'] }}'" x-cloak class="flex flex-wrap items-end gap-2 mt-2 p-2.5 rounded-xl bg-[#FFF9F6]">
                                         @csrf
                                         @method('PUT')
-                                        <input type="hidden" name="vendor_id" value="{{ $item['vendor_id'] }}">
+                                        <div>
+                                            <label class="text-xs text-gray-500">Vendor</label>
+                                            <select name="vendor_id" class="block rounded-md border-gray-300 shadow-sm text-sm">
+                                                @foreach ($vendors as $vendor)
+                                                    <option value="{{ $vendor->id }}" @selected((int) $vendor->id === (int) $item['vendor_id'])>{{ $vendor->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
                                         <div>
                                             <label class="text-xs text-gray-500">Estimated Cost (RM)</label>
                                             <input type="number" step="0.01" min="0" name="estimated_cost" value="{{ $item['estimated_cost'] }}" class="block rounded-md border-gray-300 shadow-sm text-sm w-32">
@@ -678,6 +695,9 @@
                                             <input type="text" name="notes" value="{{ $item['notes'] }}" class="block w-full rounded-md border-gray-300 shadow-sm text-sm">
                                         </div>
                                         <button type="submit" class="text-xs font-semibold px-4 py-2 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110">Save</button>
+                                        @if (($item['status'] ?? 'unpaid') === 'paid')
+                                            <p class="w-full text-[11px] text-gray-400">Already paid: changing the amount updates the expense in the Finance ledger.</p>
+                                        @endif
                                     </form>
                                     <form method="POST" action="{{ route('jobs.vendor-costs.mark-paid', [$job, $item['id']]) }}" x-show="payingId === '{{ $item['id'] }}'" x-cloak class="flex flex-wrap items-end gap-2 mt-2 p-2.5 rounded-xl bg-[#FFF9F6]">
                                         @csrf

@@ -37,7 +37,7 @@ class VendorController extends Controller
 
         $vendor = Vendor::create([
             ...$validated,
-            'vendor_id' => $this->nextVendorId(),
+            'vendor_id' => self::nextVendorId(),
             'created_by' => $request->user()->id,
         ]);
 
@@ -72,7 +72,7 @@ class VendorController extends Controller
     }
 
     /** KVE-001, KVE-002, ... — matches the old app's genVendorId(). */
-    private function nextVendorId(): string
+    public static function nextVendorId(): string
     {
         $count = Vendor::count();
 

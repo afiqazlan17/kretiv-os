@@ -75,14 +75,14 @@ $onHost('jobs', function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified', 'module:jobs'])->name('dashboard');
 
     // Signed, expiring link to a generated document, sent to customers on WhatsApp.
-    Route::get('/d/{document}', [DocumentController::class, 'shared'])->middleware('signed')->name('documents.shared');
-    Route::get('/soa/{customer}', [StatementController::class, 'shared'])->middleware('signed')->name('statement.shared');
+    Route::get('/d/{document}', [DocumentController::class, 'shared'])->middleware(['signed', 'throttle:60,1'])->name('documents.shared');
+    Route::get('/soa/{customer}', [StatementController::class, 'shared'])->middleware(['signed', 'throttle:60,1'])->name('statement.shared');
 
     // Customer artwork approval: the link itself is the key (no login).
-    Route::get('/approval/{token}', [ApprovalController::class, 'show'])->name('approval.show');
-    Route::get('/approval/{token}/file/{attachmentId}', [ApprovalController::class, 'file'])->name('approval.file');
+    Route::get('/approval/{token}', [ApprovalController::class, 'show'])->middleware('throttle:60,1')->name('approval.show');
+    Route::get('/approval/{token}/file/{attachmentId}', [ApprovalController::class, 'file'])->middleware('throttle:60,1')->name('approval.file');
     Route::post('/approval/{token}', [ApprovalController::class, 'respond'])->middleware('throttle:10,1')->name('approval.respond');
-    Route::get('/approval/{token}/record', [ApprovalController::class, 'record'])->name('approval.record');
+    Route::get('/approval/{token}/record', [ApprovalController::class, 'record'])->middleware('throttle:60,1')->name('approval.record');
 
     Route::middleware('auth')->group(function () {
         Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

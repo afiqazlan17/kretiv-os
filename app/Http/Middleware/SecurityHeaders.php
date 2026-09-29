@@ -7,11 +7,13 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Uploaded files are opened in the browser only when they're plain PDFs or
- * pictures. Anything else (an SVG or HTML page that could carry a script)
- * is sent as a download, and browsers are told not to guess file types.
+ * Security headers on every response: HTTPS only (HSTS, this host only),
+ * no framing by other sites, no full URLs (with tokens) leaked to other
+ * sites, and no camera, mic or location. Uploaded files are opened in the
+ * browser only when they're plain PDFs or pictures; anything else (an SVG
+ * or HTML page that could carry a script) is sent as a download.
  */
-class SafeFileResponses
+class SecurityHeaders
 {
     private const INLINE_OK = ['application/pdf', 'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'text/plain', 'text/csv'];
 
@@ -19,6 +21,12 @@ class SafeFileResponses
     {
         $response = $next($request);
         $response->headers->set('X-Content-Type-Options', 'nosniff');
+        $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
+        $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
+        $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+        if ($request->isSecure()) {
+            $response->headers->set('Strict-Transport-Security', 'max-age=31536000');
+        }
 
         $disposition = (string) $response->headers->get('Content-Disposition');
         $type = strtolower(trim(explode(';', (string) $response->headers->get('Content-Type'))[0]));

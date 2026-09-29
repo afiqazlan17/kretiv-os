@@ -56,4 +56,19 @@ class UploadSecurityTest extends TestCase
 
         $this->assertStringStartsWith('inline', $this->actingAs($bod)->get(route('jobs.attachments.show', [$job, $pdf['id']]))->headers->get('Content-Disposition'));
     }
+
+    public function test_pages_carry_security_headers_and_password_resets_are_rate_limited(): void
+    {
+        $page = $this->get('https://localhost/login');
+        $page->assertHeader('Strict-Transport-Security', 'max-age=31536000')
+            ->assertHeader('X-Frame-Options', 'SAMEORIGIN')
+            ->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        $this->assertStringContainsString('geolocation=()', $page->headers->get('Permissions-Policy'));
+        $this->assertFalse($this->get('http://localhost/login')->headers->has('Strict-Transport-Security'));
+
+        foreach (range(1, 5) as $i) {
+            $this->post('/forgot-password', ['email' => 'nobody@example.com'])->assertStatus(302);
+        }
+        $this->post('/forgot-password', ['email' => 'nobody@example.com'])->assertStatus(429);
+    }
 }

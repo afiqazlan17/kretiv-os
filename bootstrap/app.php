@@ -2,7 +2,7 @@
 
 use App\Http\Middleware\EnsureModuleAccess;
 use App\Http\Middleware\ForcePasswordChange;
-use App\Http\Middleware\SafeFileResponses;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -17,7 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias(['module' => EnsureModuleAccess::class]);
         $middleware->appendToGroup('web', ForcePasswordChange::class);
-        $middleware->appendToGroup('web', SafeFileResponses::class);
+        $middleware->appendToGroup('web', SecurityHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

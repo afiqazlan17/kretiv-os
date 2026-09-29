@@ -4,7 +4,7 @@
     "description": "Kretivco Mediaworks — job, finance and HR workspace",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#100904",
+    "background_color": "#FFF5F1",
     "theme_color": "#100904",
     "icons": [
         { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },

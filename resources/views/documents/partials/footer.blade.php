@@ -1,7 +1,12 @@
 <div class="note-title">Note:</div>
 <table class="notes-t">
-    @foreach ($notes as $i => $note)
-        <tr><td style="width:14pt;">{{ $i + 1 }}.</td><td>{{ $note }}</td></tr>
+    @php $n = 0; @endphp
+    @foreach ($notes as $note)
+        @if (\App\Support\DocumentData::isNoteHeading($note))
+            <tr><td colspan="2" class="note-head">{{ $note }}</td></tr>
+        @else
+            <tr><td style="width:{{ count($notes) > 9 ? 18 : 14 }}pt;">{{ ++$n }}.</td><td>{{ $note }}</td></tr>
+        @endif
     @endforeach
 </table>
 

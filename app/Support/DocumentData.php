@@ -7,6 +7,7 @@ use App\Models\Job;
 use App\Models\JobDocument;
 use App\Models\LedgerEntry;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 // Single source of truth for what a Quotation/Proforma/Invoice/Receipt
 // contains: the defaults shown in the preview modal, the per-type note
@@ -335,6 +336,203 @@ class DocumentData
             'deposit_paid' => $type === 'invoice' ? $paidBefore : 0.0,
             'is_final' => $isFinal,
         ];
+    }
+
+    /** Documents that can cover a whole project (one PDF for the customer, split per job in the books). */
+    public const PROJECT_TYPES = ['quotation', 'proforma', 'invoice', 'receipt'];
+
+    /**
+     * The jobs a project document covers: this job plus its project siblings
+     * that are live and at a stage that allows the document (not yet taken in,
+     * cancelled or archived jobs are left out, and an invoice needs the job
+     * confirmed). Empty when there's nothing to combine.
+     *
+     * @return Collection<int, Job>
+     */
+    public static function projectJobs(Job $job, string $type): Collection
+    {
+        if (! $job->project_id || ! in_array($type, self::PROJECT_TYPES, true)) {
+            return collect();
+        }
+
+        $jobs = Job::with('customer')->where('project_id', $job->project_id)->where('archived', false)
+            ->whereNotIn('status', [Job::STATUS_NEW, Job::STATUS_CANCELLED])
+            ->when($type === 'invoice', fn ($q) => $q->where('status', '!=', Job::STATUS_POTENTIAL))
+            ->orderBy('id')->get();
+
+        return $jobs->count() >= 2 && $jobs->contains('id', $job->id) ? $jobs : collect();
+    }
+
+    /** Project jobs a project document leaves out, with the reason (shown in the modal). */
+    public static function projectLeftOut(Job $job, Collection $included): array
+    {
+        if (! $job->project_id) {
+            return [];
+        }
+
+        return Job::where('project_id', $job->project_id)->where('archived', false)
+            ->whereNotIn('id', $included->pluck('id'))->orderBy('id')->get()
+            ->map(fn (Job $j) => $j->job_id.' ('.match ($j->status) {
+                Job::STATUS_NEW => 'not taken in yet',
+                Job::STATUS_CANCELLED => 'cancelled',
+                Job::STATUS_POTENTIAL => 'not confirmed yet',
+                default => $j->statusLabel(),
+            }.')')->all();
+    }
+
+    /**
+     * Number for a project document: the usual running number with every
+     * department's letter, e.g. QTN26100012-PB. Regenerating a quotation /
+     * proforma / invoice for the same set of jobs keeps its first number.
+     */
+    public static function projectNumber(string $type, Collection $jobs): string
+    {
+        $prefix = self::prefix($type);
+        $letters = collect(self::DEPT_SUFFIX)->only($jobs->pluck('department')->unique()->all())->implode('');
+        $letters = strlen($letters) >= 2 ? $letters : ($letters.'C');
+
+        if ($type !== 'receipt') {
+            $existing = JobDocument::whereIn('job_id', $jobs->pluck('id'))->where('doc_type', $type)
+                ->where('doc_number', 'like', $prefix.'%-'.$letters)->oldest('id')->value('doc_number');
+            if ($existing && preg_match('/^'.$prefix.'\d{8}-'.$letters.'$/', $existing)) {
+                return $existing;
+            }
+        }
+
+        return $prefix.now()->format('ym').str_pad((string) (self::lastSequence($prefix) + 1), 4, '0', STR_PAD_LEFT).'-'.$letters;
+    }
+
+    /**
+     * Notes for a document covering several jobs: each job's own notes (its
+     * edited wording, else its department's standard notes), with lines they
+     * all share printed once under "General" and the rest under each
+     * department's name. Wording edited on the project document itself wins.
+     *
+     * @return array<int, string>
+     */
+    public static function mergedNotes(string $type, Collection $jobs, ?array $bank, bool $finalPayment = true, bool $useSaved = true): array
+    {
+        if ($useSaved && $saved = self::customNotes($jobs->first(), 'project_'.$type)) {
+            return $saved;
+        }
+
+        $lists = $jobs->mapWithKeys(fn (Job $j) => [
+            $j->id => self::customNotes($j, $type) ?? self::defaultNotes($type, $bank, $j->department, $finalPayment),
+        ]);
+        $common = array_values(array_filter($lists->first(), fn ($l) => $lists->every(fn ($list) => in_array($l, $list, true))));
+
+        $sections = [];
+        foreach ($jobs as $j) {
+            $name = config("kretivco.departments.{$j->department}.label", ucfirst((string) $j->department));
+            foreach (array_diff($lists[$j->id], $common) as $line) {
+                if (! in_array($line, $sections[$name] ?? [], true)) {
+                    $sections[$name][] = $line;
+                }
+            }
+        }
+        if ($sections === []) {
+            return $common;
+        }
+
+        $notes = [];
+        foreach ($sections as $name => $lines) {
+            array_push($notes, $name.':', ...$lines);
+        }
+
+        return $common === [] ? $notes : [...$notes, 'General:', ...$common];
+    }
+
+    /** A notes line that is a heading ("KretivPrint:"), not a numbered note. */
+    public static function isNoteHeading(string $line): bool
+    {
+        return (bool) preg_match('/^[^\s][^.]{0,38}:$/u', trim($line));
+    }
+
+    /**
+     * What a project payment or credit is measured against, per job and in
+     * total. See DocumentController::basis() for the single-job version.
+     *
+     * @return array{0: float, 1: ?string, 2: float, 3: array<int, array{basis: float, paid: float}>}
+     */
+    public static function projectBasis(Collection $jobs): array
+    {
+        $per = [];
+        $numbers = [];
+        foreach ($jobs as $j) {
+            $invoice = LedgerEntry::where('job_id', $j->job_id)->where('type', 'invoice')->where('reversed', false)->latest('id')->first();
+            if ($invoice) {
+                $numbers[] = $invoice->doc_number;
+            }
+            $per[$j->id] = [
+                'basis' => $invoice ? round((float) $invoice->amount - self::creditedSoFar($j), 2) : self::jobTotal($j),
+                'paid' => self::paidSoFar($j),
+            ];
+        }
+        $invoiceNumber = $numbers !== [] && count($numbers) === $jobs->count() ? implode(', ', array_unique($numbers)) : null;
+
+        return [round(array_sum(array_column($per, 'basis')), 2), $invoiceNumber, round(array_sum(array_column($per, 'paid')), 2), $per];
+    }
+
+    /**
+     * Splits a project payment across its jobs in proportion to what each
+     * still owes (the last one takes the rounding), so each department's
+     * books stay right.
+     *
+     * @param  array<int, array{basis: float, paid: float}>  $per
+     * @return array<int, float>
+     */
+    public static function allocate(float $amount, array $per): array
+    {
+        $owed = array_filter(array_map(fn ($p) => max(0.0, round($p['basis'] - $p['paid'], 2)), $per), fn ($o) => $o > 0);
+        $total = array_sum($owed);
+        $split = [];
+        $left = round($amount, 2);
+        $last = array_key_last($owed);
+        foreach ($owed as $id => $o) {
+            $share = $id === $last ? $left : round($amount * $o / $total, 2);
+            $split[$id] = $share;
+            $left = round($left - $share, 2);
+        }
+
+        return array_filter($split, fn ($v) => $v > 0);
+    }
+
+    /**
+     * One document for several jobs of a project: the items grouped per
+     * job, the jobs' own delivery and discount, and the merged notes.
+     *
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    public static function buildProject(Job $job, Collection $jobs, string $type, array $input, string $docNumber, string $userName): array
+    {
+        [$basis, $invoiceNumber, $paidBefore] = $type === 'receipt' ? self::projectBasis($jobs) : [null, null, 0.0];
+        if ($type === 'invoice') {
+            $paidBefore = round((float) $jobs->sum(fn (Job $j) => self::paidSoFar($j)), 2);
+        }
+
+        $sections = $jobs->map(fn (Job $j) => [
+            'label' => config("kretivco.departments.{$j->department}.label", $j->department).': '.$j->job_type,
+            'items' => self::normalizeItems(self::itemsFromJob($j)),
+        ])->values()->all();
+
+        $input = array_merge($input, [
+            'items' => array_merge(...array_column($sections, 'items')),
+            'delivery' => (float) $jobs->sum('delivery_amount'),
+            'discount' => (float) $jobs->sum('discount_amount'),
+        ]);
+        $useDefault = ! empty($input['use_default_notes']);
+        $notesText = $useDefault ? '' : trim((string) ($input['notes'] ?? ''));
+        unset($input['notes']);
+        $input['use_default_notes'] = true;
+
+        $doc = self::build($job, $type, $input, $docNumber, $userName, $basis, $invoiceNumber, $paidBefore);
+        $doc['sections'] = $sections;
+        $doc['notes'] = $notesText !== '' ? self::noteLines($notesText) : self::mergedNotes($type, $jobs, self::bank($job), $doc['is_final'], ! $useDefault);
+        $doc['doc_title'] = $type === 'receipt' ? $doc['doc_title'] : strtoupper(self::label($type));
+        $doc['project_jobs'] = $jobs->pluck('job_id')->all();
+
+        return $doc;
     }
 
     /**

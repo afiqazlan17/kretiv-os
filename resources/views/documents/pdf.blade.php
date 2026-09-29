@@ -43,7 +43,7 @@
                 </tr>
             </thead>
             <tbody>
-                @include('documents.partials.items', ['items' => $doc['items'], 'money' => false])
+                @include('documents.partials.sections', ['cols' => 1, 'money' => false])
             </tbody>
         </table>
 
@@ -68,7 +68,7 @@
                 </tr>
             </thead>
             <tbody>
-                @include('documents.partials.items', ['items' => $doc['items'], 'money' => true])
+                @include('documents.partials.sections', ['cols' => 4, 'money' => true])
             </tbody>
         </table>
 

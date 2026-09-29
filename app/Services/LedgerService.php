@@ -242,7 +242,7 @@ class LedgerService
 
     // Receipt issued: payment received, clears what was owed. Same
     // supersede rule as invoices.
-    public function postReceiptEntry($job, string $docNumber, string $userName, $amountOverride = null): ?LedgerEntry
+    public function postReceiptEntry($job, string $docNumber, string $userName, $amountOverride = null, ?string $bank = null): ?LedgerEntry
     {
         $amount = $this->computeReceiptAmount($job, $amountOverride);
 
@@ -260,7 +260,8 @@ class LedgerService
             return $existing;
         }
 
-        $bank = $job->bank ?: 'mbb';
+        // A project payment lands in the one account its receipt shows.
+        $bank = $bank ?: ($job->bank ?: 'mbb');
         if ($existing) {
             $this->reverseEntries(fn ($e) => $e->id === $existing->id, $userName);
         }

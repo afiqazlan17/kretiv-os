@@ -53,7 +53,19 @@ class StatementController extends Controller
             $charge = in_array($e->type, ['invoice', 'deposit_refund'], true) ? (float) $e->amount : 0.0;
             $paid = in_array($e->type, ['receipt', 'credit_note'], true) ? (float) $e->amount : 0.0;
             $balance += $charge - $paid;
+            // A project document is posted once per job under one number: one line for the customer.
+            $last = array_key_last($rows);
+            if ($last !== null && $e->doc_number && $rows[$last]['ref'] === $e->doc_number && $rows[$last]['type'] === $e->type) {
+                $rows[$last]['job'] .= ', '.$e->job_id;
+                $rows[$last]['what'] .= ' + '.($jobs[$e->job_id]->job_type ?? '');
+                $rows[$last]['charge'] += $charge;
+                $rows[$last]['paid'] += $paid;
+                $rows[$last]['balance'] = round($balance, 2);
+
+                continue;
+            }
             $rows[] = [
+                'type' => $e->type,
                 'date' => $e->date,
                 'ref' => $e->doc_number ?: '-',
                 'job' => $e->job_id,

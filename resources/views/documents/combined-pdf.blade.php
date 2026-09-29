@@ -12,7 +12,7 @@
         $delivery = $showBreakdown ? (float) $jobs->sum('delivery_amount') : 0;
         $discount = $showBreakdown ? (float) $jobs->sum('discount_amount') : 0;
         $total = $showBreakdown ? $subtotal + $delivery - $discount : $subtotal;
-        $notes = \App\Support\DocumentData::defaultNotes($type, \App\Support\DocumentData::bank($jobs->first()), $jobs->first()->department);
+        $notes = \App\Support\DocumentData::mergedNotes($type, $jobs, \App\Support\DocumentData::bank($jobs->first()), true, false);
     @endphp
 
     @include('documents.partials.header')

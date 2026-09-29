@@ -11,7 +11,7 @@
      class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-2 sm:p-6">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[92vh] flex flex-col overflow-hidden">
         <div class="flex items-center justify-between px-5 py-3.5 border-b border-[#F5ECE8]">
-            <h2 class="text-base font-bold text-gray-900" x-text="`Preview ${label} · ${jobCode}`"></h2>
+            <h2 class="text-base font-bold text-gray-900" x-text="`Preview ${label} · ${scope === 'project' ? 'Whole Project' : jobCode}`"></h2>
             <button type="button" @click="close()" class="text-gray-400 hover:text-gray-700" aria-label="Close"><x-icon name="x" class="w-5 h-5" /></button>
         </div>
 
@@ -30,6 +30,21 @@
                 <p x-show="loading" class="text-gray-400 text-xs">Loading…</p>
                 <template x-if="!loading">
                     <div class="space-y-3">
+                        <template x-if="project">
+                            <div class="rounded-xl border border-[#EFE3DE] bg-[#FFF9F6] p-3 space-y-2">
+                                <p class="text-xs font-semibold text-gray-600">This job is part of a project. Send the customer one document for all of it?</p>
+                                <div class="grid grid-cols-2 gap-1 rounded-lg bg-[#F3EAE6] p-1">
+                                    <button type="button" @click="setScope('project')" class="text-xs font-semibold px-2 py-1.5 rounded-md" :class="scope === 'project' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'">Whole project</button>
+                                    <button type="button" @click="setScope('job')" class="text-xs font-semibold px-2 py-1.5 rounded-md" :class="scope === 'job' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'">This job only</button>
+                                </div>
+                                <ul x-show="scope === 'project'" class="text-xs text-gray-600 space-y-0.5">
+                                    <template x-for="j in project.jobs" :key="j.job_id">
+                                        <li class="flex justify-between gap-2"><span class="truncate" x-text="`${j.job_id} · ${j.department} · ${j.title}`"></span><span class="shrink-0" x-text="'RM ' + Number(j.total).toFixed(2)"></span></li>
+                                    </template>
+                                </ul>
+                                <p x-show="scope === 'project' && project.left_out.length" class="text-[11px] text-gray-400" x-text="'Not included: ' + project.left_out.join(', ')"></p>
+                            </div>
+                        </template>
                         <div><label class="text-xs font-semibold text-gray-500">Customer Name</label>
                             <input type="text" x-model="form.customer_name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></div>
                         <div><label class="text-xs font-semibold text-gray-500">Company</label>
@@ -45,7 +60,8 @@
                         <div><label class="text-xs font-semibold text-gray-500">By (Staff)</label>
                             <input type="text" x-model="form.by_staff" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></div>
 
-                        <div x-show="type !== 'credit_note'">
+                        <p x-show="scope === 'project'" class="rounded-lg bg-[#F7F1EE] px-3 py-2 text-xs text-gray-500">Items, delivery and discount come from each job. To change them, edit that job, or switch to This job only.</p>
+                        <div x-show="type !== 'credit_note' && scope !== 'project'">
                             <div class="flex items-center justify-between">
                                 <label class="text-xs font-semibold text-gray-500">Item</label>
                                 <button type="button" @click="addItem()" class="inline-flex items-center gap-1 text-xs font-bold text-[#C2185B] hover:underline"><x-icon name="plus" class="w-3.5 h-3.5" /> Add</button>
@@ -70,7 +86,7 @@
                             </div>
                         </div>
 
-                        <template x-if="!['receipt', 'delivery', 'credit_note'].includes(type)">
+                        <template x-if="!['receipt', 'delivery', 'credit_note'].includes(type) && scope !== 'project'">
                             <div class="grid grid-cols-2 gap-2">
                                 <div><label class="text-xs font-semibold text-gray-500">Delivery (RM)</label>
                                     <input type="number" min="0" step="0.01" x-model="form.delivery" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></div>
@@ -167,7 +183,7 @@
             <p x-show="error" x-text="error" class="mr-auto text-xs text-red-600"></p>
             <p x-show="notice && !error" x-text="notice" class="mr-auto text-xs text-green-600"></p>
             <button type="button" @click="close()" class="text-sm font-semibold px-4 py-2 rounded-xl border border-[#EFE3DE] text-gray-700 hover:bg-[#FFF7F3]">Cancel</button>
-            <button type="button" @click="save()" :disabled="busy || loading" class="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl border border-green-500 text-green-700 hover:bg-green-50 disabled:opacity-40"><x-icon name="save" class="w-4 h-4" /> Save</button>
+            <button type="button" x-show="scope !== 'project'" @click="save()" :disabled="busy || loading" class="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl border border-green-500 text-green-700 hover:bg-green-50 disabled:opacity-40"><x-icon name="save" class="w-4 h-4" /> Save</button>
             <button type="button" @click="print()" :disabled="busy || !previewUrl" class="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl border border-blue-500 text-blue-600 hover:bg-blue-50 disabled:opacity-40"><x-icon name="printer" class="w-4 h-4" /> Print</button>
             <button type="button" @click="whatsapp()" :disabled="busy || loading" class="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl border border-green-500 text-green-700 hover:bg-green-50 disabled:opacity-40"><x-icon name="message-circle" class="w-4 h-4" /> WhatsApp</button>
             <button type="button" @click="download()" :disabled="busy || loading" class="text-sm font-bold px-4 py-2 rounded-xl text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110 disabled:opacity-40" x-text="busy ? 'Working…' : 'Download PDF'"></button>
@@ -181,13 +197,13 @@
         const blank = () => ({ customer_name: '', company: '', phone: '', address_line_1: '', address_line_2: '', title: '', by_staff: '', due_date: '',
             items: [], delivery: 0, discount: 0, payment_method: 'Bank Transfer', amount_paid: null, credit_reason: 'discount', credit_reason_text: '', credit_amount: null });
         return {
-            jobCode: cfg.jobCode, urls: cfg.urls, mobileTab: 'form',
+            jobCode: cfg.jobCode, urls: cfg.urls, mobileTab: 'form', scope: 'project', project: null, projectTotal: 0,
             open: false, type: 'quotation', label: 'Quotation', loading: false, busy: false, previewing: false,
             error: '', notice: '', form: blank(), paymentMethods: [], creditReasons: {}, invoiceNumber: null, invoiceTotal: null, paidBefore: 0, customerPhone: '', docNumber: '',
             editNotes: false, notesText: '', defaultNotes: [], previewUrl: null, frameSrc: ['', ''], active: 0, pending: null, dirty: false, timer: null, seq: 0, pageDirty: false,
             pager: window.createPdfPager(),
 
-            url(action) { return this.urls[action].replace('__TYPE__', this.type); },
+            url(action) { return this.urls[action].replace('__TYPE__', this.type) + (this.scope === 'project' ? '?scope=project' : ''); },
             token() { return document.querySelector('meta[name="csrf-token"]').content; },
             async call(action, method, body) {
                 return fetch(this.url(action), {
@@ -211,12 +227,20 @@
                     document.body.style.overflow = isOpen ? 'hidden' : '';
                 });
             },
-            async openFor(type) {
-                this.type = type; this.open = true; this.loading = true; this.error = ''; this.notice = ''; this.editNotes = false; this.mobileTab = 'form';
+            // A job in a project opens on the whole-project document; the server falls back to this job alone when there's nothing to combine.
+            openFor(type) { this.type = type; this.scope = 'project'; this.open = true; this.mobileTab = 'form'; this.load(); },
+            setScope(scope) {
+                if (scope === this.scope) return;
+                if (this.dirty && !confirm('Discard your unsaved changes?')) return;
+                this.scope = scope; this.load();
+            },
+            async load() {
+                this.loading = true; this.error = ''; this.notice = ''; this.editNotes = false;
                 this.resetFrames(); this.form = blank(); this.dirty = false;
                 const res = await this.call('draft', 'GET');
                 if (!res.ok) { this.error = await this.failure(res); this.loading = false; return; }
                 const d = await res.json();
+                this.scope = d.scope; this.project = d.project; this.projectTotal = d.project_total || 0;
                 this.label = d.label; this.docNumber = d.doc_number; this.customerPhone = d.customer_phone || '';
                 this.invoiceNumber = d.invoice_number; this.invoiceTotal = d.invoice_total; this.paidBefore = d.paid_before || 0; this.paymentMethods = d.payment_methods; this.creditReasons = d.credit_reasons || {};
                 // Standard wording for "Use default"; the job's own saved notes (if any) open in edit mode.
@@ -258,6 +282,7 @@
             },
             get total() {
                 if (this.type === 'credit_note') return parseFloat(this.form.credit_amount) || 0;
+                if (this.scope === 'project') return this.projectTotal;
                 const sub = this.form.items.reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.price) || 0), 0);
                 return sub + (parseFloat(this.form.delivery) || 0) - (parseFloat(this.form.discount) || 0);
             },

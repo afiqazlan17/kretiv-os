@@ -13,6 +13,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
@@ -32,9 +33,25 @@ class DocumentController extends Controller
         $this->authorize('update', $job);
         $this->ensureAllowed($job, $type);
 
+        $projectJobs = DocumentData::projectJobs($job, $type);
+        $project = $projectJobs->isEmpty() ? null : [
+            'jobs' => $projectJobs->map(fn (Job $j) => [
+                'job_id' => $j->job_id,
+                'department' => config("kretivco.departments.{$j->department}.label", $j->department),
+                'title' => $j->job_type,
+                'total' => DocumentData::jobTotal($j),
+            ])->values(),
+            'left_out' => DocumentData::projectLeftOut($job, $projectJobs),
+        ];
+        if ($project && $request->input('scope') === 'project') {
+            return response()->json($this->projectDraft($request, $job, $projectJobs, $type) + ['project' => $project]);
+        }
+
         [$basis, $invoiceNumber, $paidBefore] = $this->basis($job, $type);
 
         return response()->json([
+            'scope' => 'job',
+            'project' => $project,
             'doc_number' => DocumentData::number($type, $job),
             'label' => DocumentData::label($type, $job->department),
             'customer_phone' => $job->customer?->phone,
@@ -54,7 +71,7 @@ class DocumentController extends Controller
         $this->authorize('update', $job);
         $this->ensureAllowed($job, $type);
 
-        $doc = $this->buildDoc($request, $job, $type);
+        $doc = $this->buildDoc($request, $job, $type, $this->projectScope($request, $job, $type));
 
         return response(Pdf::loadView('documents.pdf', ['doc' => $doc])->output(), 200, [
             'Content-Type' => 'application/pdf',
@@ -151,7 +168,7 @@ class DocumentController extends Controller
             'discount_amount' => $doc['discount'] ?: null,
             'estimation_value' => $doc['total'],
         ]);
-        $this->rememberNotes($request, $job, $type);
+        $this->rememberNotes($request, collect([$job]), $type);
 
         if ((float) $oldValue !== (float) $doc['total']) {
             ActivityLog::create([
@@ -174,7 +191,11 @@ class DocumentController extends Controller
         $this->authorize('update', $job);
         $this->ensureAllowed($job, $type);
 
-        $doc = $this->buildDoc($request, $job, $type);
+        $projectJobs = $this->projectScope($request, $job, $type);
+        $doc = $this->buildDoc($request, $job, $type, $projectJobs);
+        if ($projectJobs) {
+            return $this->generateProject($request, $job, $projectJobs, $type, $doc, $ledger);
+        }
         $docNumber = $doc['doc_number'];
         $userName = $request->user()->name;
 
@@ -201,7 +222,7 @@ class DocumentController extends Controller
             $job->moveBecause(Job::STATUS_IN_PROGRESS, Job::STATUS_DELIVERED, DocumentData::label('delivery', $job->department)." {$docNumber} issued");
         }
 
-        $this->rememberNotes($request, $job, $type);
+        $this->rememberNotes($request, collect([$job]), $type);
 
         $bytes = Pdf::loadView('documents.pdf', ['doc' => $doc])->output();
         $filename = "{$docNumber}.pdf";
@@ -216,6 +237,108 @@ class DocumentController extends Controller
             // For the WhatsApp button: a link the customer can open without logging in.
             'X-Share-Url' => URL::temporarySignedRoute('documents.shared', now()->addDays(30), ['document' => $archived->id]),
         ]);
+    }
+
+    /**
+     * One document for the whole project: a single PDF for the customer,
+     * while the books still get one entry per job (an invoice per job at its
+     * own total, a payment split by what each job owes), all under the same
+     * document number. Every job lists the document in its history.
+     *
+     * @param  Collection<int, Job>  $jobs
+     * @param  array<string, mixed>  $doc
+     */
+    private function generateProject(Request $request, Job $job, Collection $jobs, string $type, array $doc, LedgerService $ledger): Response
+    {
+        $docNumber = $doc['doc_number'];
+        $userName = $request->user()->name;
+
+        if ($type === 'invoice') {
+            $posted = $jobs->filter(fn (Job $j) => $ledger->postInvoiceEntry($j, $docNumber, $userName, DocumentData::jobTotal($j)));
+            abort_if($posted->isEmpty(), 422, 'Nothing to post — the invoice total is empty.');
+        }
+
+        if ($type === 'receipt') {
+            [$basis, , $paid, $per] = DocumentData::projectBasis($jobs);
+            $owed = round($basis - $paid, 2);
+            abort_if($owed <= 0, 422, 'This project is already fully paid.');
+            abort_if($doc['amount_paid'] <= 0, 422, 'Enter the amount paid.');
+            abort_if($doc['amount_paid'] > $owed + 0.005, 422, 'Amount paid is more than the balance still owed (RM '.number_format($owed, 2).').');
+            foreach (DocumentData::allocate($doc['amount_paid'], $per) as $id => $amount) {
+                $j = $jobs->firstWhere('id', $id);
+                $ledger->postReceiptEntry($j, $docNumber, $userName, $amount, $job->bank);
+                $j->confirmBecause('payment received ('.$docNumber.')');
+            }
+        }
+
+        $this->rememberNotes($request, $jobs, 'project_'.$type);
+
+        $bytes = Pdf::loadView('documents.pdf', ['doc' => $doc])->output();
+        $filename = "{$docNumber}.pdf";
+        $path = "{$job->job_id}/document/".time()."_{$filename}";
+        Storage::disk('public')->put($path, $bytes);
+
+        $archived = null;
+        foreach ($jobs as $j) {
+            $others = $jobs->where('id', '!=', $j->id)->pluck('job_id')->join(', ');
+            $document = $this->archiveDocument($type, $j, $docNumber, $path, $filename, $request, " (one document for the project, with {$others})");
+            $archived = $j->is($job) ? $document : $archived;
+        }
+
+        return response($bytes, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'X-Share-Url' => URL::temporarySignedRoute('documents.shared', now()->addDays(30), ['document' => $archived->id]),
+        ]);
+    }
+
+    /**
+     * What the modal opens with for a project document.
+     *
+     * @param  Collection<int, Job>  $jobs
+     * @return array<string, mixed>
+     */
+    private function projectDraft(Request $request, Job $job, Collection $jobs, string $type): array
+    {
+        $number = DocumentData::projectNumber($type, $jobs);
+        $title = $jobs->pluck('job_type')->filter()->unique()->join(' + ');
+        $doc = DocumentData::buildProject($job, $jobs, $type, ['title' => $title], $number, $request->user()->shortName());
+        $defaults = DocumentData::defaults($job, $type, $request->user()->shortName(), $type === 'receipt' ? $doc['invoice_total'] : null, $doc['paid_before']);
+
+        return [
+            'scope' => 'project',
+            'doc_number' => $number,
+            'label' => DocumentData::label($type),
+            'customer_phone' => $job->customer?->phone,
+            'invoice_number' => $doc['invoice_number'],
+            'invoice_total' => $type === 'receipt' ? $doc['invoice_total'] : null,
+            'paid_before' => $doc['paid_before'],
+            'credit_reasons' => DocumentData::CREDIT_REASONS,
+            'payment_methods' => DocumentData::PAYMENT_METHODS,
+            'project_total' => $doc['total'],
+            'defaults' => array_merge($defaults, ['title' => $title, 'items' => [], 'delivery' => 0, 'discount' => 0, 'notes' => $doc['notes']]),
+            'standard_notes' => DocumentData::mergedNotes($type, $jobs, DocumentData::bank($job), $doc['is_final'], false),
+            'notes_custom' => DocumentData::customNotes($jobs->first(), 'project_'.$type) !== null,
+        ];
+    }
+
+    /**
+     * The jobs a project document covers, when the modal asked for one
+     * (scope=project) and this job has project siblings to include.
+     *
+     * @return Collection<int, Job>|null
+     */
+    private function projectScope(Request $request, Job $job, string $type): ?Collection
+    {
+        if ($request->input('scope') !== 'project') {
+            return null;
+        }
+        $jobs = DocumentData::projectJobs($job, $type);
+        foreach ($jobs as $j) {
+            $this->authorize('update', $j);
+        }
+
+        return $jobs->isEmpty() ? null : $jobs;
     }
 
     /** A customer opening a document link sent on WhatsApp (signed, expires after 30 days). */
@@ -318,7 +441,9 @@ class DocumentController extends Controller
         abort_unless($request->user()->canVoidPayments(), 403);
         abort_unless($entry->job_id === $job->job_id && $entry->type === 'receipt' && ! $entry->reversed, 404);
 
-        $ledger->voidReceipt($entry, $request->user()->name);
+        // A project payment is one receipt split over its jobs: void all of it.
+        LedgerEntry::where('type', 'receipt')->where('doc_number', $entry->doc_number)->where('reversed', false)->get()
+            ->each(fn (LedgerEntry $e) => $ledger->voidReceipt($e, $request->user()->name));
 
         ActivityLog::create([
             'job_id' => $job->id,
@@ -390,8 +515,11 @@ class DocumentController extends Controller
         return [DocumentData::jobTotal($job), null, $paid];
     }
 
-    /** @return array<string, mixed> */
-    private function buildDoc(Request $request, Job $job, string $type): array
+    /**
+     * @param  Collection<int, Job>|null  $projectJobs
+     * @return array<string, mixed>
+     */
+    private function buildDoc(Request $request, Job $job, string $type, ?Collection $projectJobs = null): array
     {
         $data = $request->validate([
             'customer_name' => ['nullable', 'string', 'max:255'],
@@ -418,6 +546,10 @@ class DocumentController extends Controller
             'credit_amount' => ['nullable', 'numeric', 'min:0'],
         ]);
 
+        if ($projectJobs) {
+            return DocumentData::buildProject($job, $projectJobs, $type, $data, DocumentData::projectNumber($type, $projectJobs), $request->user()->shortName());
+        }
+
         [$basis, $invoiceNumber, $paidBefore] = $this->basis($job, $type);
 
         return DocumentData::build(
@@ -437,19 +569,22 @@ class DocumentController extends Controller
      * were edited reopens (and regenerates) with the same wording instead of
      * falling back to the standard notes. "Use default" clears it again.
      */
-    private function rememberNotes(Request $request, Job $job, string $type): void
+    private function rememberNotes(Request $request, Collection $jobs, string $key): void
     {
-        $saved = $job->document_notes ?? [];
-
-        if ($request->boolean('use_default_notes')) {
-            unset($saved[$type]);
-        } elseif (($lines = DocumentData::noteLines($request->input('notes'))) !== []) {
-            $saved[$type] = $lines;
-        } else {
+        $lines = DocumentData::noteLines($request->input('notes'));
+        if (! $request->boolean('use_default_notes') && $lines === []) {
             return;
         }
 
-        $job->update(['document_notes' => $saved ?: null]);
+        foreach ($jobs as $job) {
+            $saved = $job->document_notes ?? [];
+            if ($request->boolean('use_default_notes')) {
+                unset($saved[$key]);
+            } else {
+                $saved[$key] = $lines;
+            }
+            $job->update(['document_notes' => $saved ?: null]);
+        }
     }
 
     private function archiveDocument(string $type, Job $job, string $docNumber, string $path, string $filename, Request $request, string $suffix = ''): JobDocument

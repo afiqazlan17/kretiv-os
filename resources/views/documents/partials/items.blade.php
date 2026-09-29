@@ -17,7 +17,7 @@
         $empty = $money ? '<td></td><td></td><td></td>' : ($qtyOnly ? '<td></td>' : '');
     @endphp
     <tr class="first {{ $count === 0 ? 'last' : '' }}">
-        <td class="c">{{ $i + 1 }}</td>
+        <td class="c">{{ ($start ?? 0) + $i + 1 }}</td>
         <td><div class="item-name">{{ $item['item'] }}</div></td>
         @if ($money && (float) $item['price'] == 0.0)
             {{-- A RM 0 line is scope detail (what's included), not something charged: leave the figures blank. --}}

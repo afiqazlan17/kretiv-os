@@ -28,6 +28,8 @@
     table.grid tr.more td { border-top: none; border-bottom: none; padding-top: 0; padding-bottom: 1.5pt; }
     table.grid tr.last td { border-bottom: 0.5pt solid #000000; padding-bottom: 5.97pt; }
     table.grid tr.first.last td { border-bottom: 0.5pt solid #000000; }
+    table.grid tr.sec td { background: #e9e9e9; font-weight: bold; }
+    table.notes-t td.note-head { font-weight: bold; padding-top: 3pt; }
     .spec-line { padding-left: 17pt; color: #333333; }
     .spec-line .dot { display: inline-block; width: 9pt; margin-left: -9pt; }
     .spec-head { padding-left: 8pt; color: #141414; font-weight: bold; margin-top: 2pt; }

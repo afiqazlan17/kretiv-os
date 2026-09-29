@@ -47,8 +47,7 @@
         </div>
 
         <div class="flex items-center justify-end mt-4">
-            {{-- Password emails aren't set up on this server, so resets go through BOD (Settings > Reset Password). --}}
-            <span class="text-sm text-gray-600">Forgot your password? Ask BOD to reset it.</span>
+            <a href="{{ route('password.request') }}" class="text-sm text-gray-600 underline hover:text-gray-900">Forgot your password?</a>
 
             <x-primary-button class="ms-3">
                 {{ __('Log in') }}

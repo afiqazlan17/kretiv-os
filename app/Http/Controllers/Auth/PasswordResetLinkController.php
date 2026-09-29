@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
@@ -27,19 +28,16 @@ class PasswordResetLinkController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'email' => ['required', 'email'],
-        ]);
+            'email' => ['required', 'email', 'ends_with:@kretiv.co'],
+        ], ['email.ends_with' => 'Use your @kretiv.co email.']);
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
+        // Only active staff get a link, and the reply is the same either way so
+        // nobody can use this form to find out which emails have accounts.
+        $user = User::where('email', $request->input('email'))->where('active', true)->first();
+        if ($user) {
+            Password::sendResetLink(['email' => $user->email]);
+        }
 
-        return $status == Password::RESET_LINK_SENT
-                    ? back()->with('status', __($status))
-                    : back()->withInput($request->only('email'))
-                        ->withErrors(['email' => __($status)]);
+        return back()->with('status', 'If that email belongs to an active KretivOS account, a reset link is on its way. Check your inbox and spam folder.');
     }
 }

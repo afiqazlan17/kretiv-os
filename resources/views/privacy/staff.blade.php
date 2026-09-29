@@ -50,6 +50,7 @@
 @endphp
 <x-os-layout>
     <div class="max-w-3xl mx-auto pt-4 space-y-4" x-data="{ lang: 'en' }">
+        <a href="{{ route('os.home') }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-white/70 hover:text-white"><x-icon name="chevron-left" class="w-4 h-4" /> Back to KretivOS</a>
         @if (session('success'))
             <div class="rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3">{{ session('success') }}</div>
         @endif

@@ -39,4 +39,27 @@ class PrivacyNoticeTest extends TestCase
 
         $this->actingAs($bod)->get(route('privacy.staff'))->assertSee('Acknowledgements')->assertSee('Aina')->assertSee('Not yet');
     }
+
+    public function test_acknowledging_on_the_notice_page_returns_to_the_launcher(): void
+    {
+        $staff = User::factory()->create(['role' => User::ROLE_STAFF]);
+
+        $this->actingAs($staff)->from(route('privacy.staff'))->post(route('privacy.acknowledge'))->assertRedirect(route('os.home'));
+        $this->actingAs($staff)->from(route('dashboard'))->post(route('privacy.acknowledge'))->assertRedirect(route('dashboard'));
+    }
+
+    public function test_reset_links_go_only_to_active_kretiv_co_accounts_with_one_reply_for_all(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+        $active = User::factory()->create(['email' => 'aina@kretiv.co']);
+        $gone = User::factory()->create(['email' => 'old@kretiv.co', 'active' => false]);
+
+        $this->post('/forgot-password', ['email' => 'someone@gmail.com'])->assertSessionHasErrors('email');
+        $this->post('/forgot-password', ['email' => 'old@kretiv.co'])->assertSessionHas('status');
+        $this->post('/forgot-password', ['email' => 'nobody@kretiv.co'])->assertSessionHas('status');
+        $this->post('/forgot-password', ['email' => 'aina@kretiv.co'])->assertSessionHas('status');
+
+        \Illuminate\Support\Facades\Notification::assertSentTo($active, \Illuminate\Auth\Notifications\ResetPassword::class);
+        \Illuminate\Support\Facades\Notification::assertNotSentTo($gone, \Illuminate\Auth\Notifications\ResetPassword::class);
+    }
 }

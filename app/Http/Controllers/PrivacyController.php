@@ -35,6 +35,9 @@ class PrivacyController extends Controller
             ['ip' => $request->ip(), 'user_agent' => Str::limit((string) $request->userAgent(), 490, ''), 'acknowledged_at' => now()],
         );
 
-        return back()->with('success', 'Thank you. Your acknowledgement is recorded.');
+        // From the notice page itself, carry on to the launcher; from the pop-up, stay where they were.
+        $fromNotice = url()->previous() === route('privacy.staff');
+
+        return ($fromNotice ? redirect()->route('os.home') : back())->with('success', 'Thank you. Your acknowledgement is recorded.');
     }
 }

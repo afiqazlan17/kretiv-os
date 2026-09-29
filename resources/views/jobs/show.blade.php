@@ -225,7 +225,9 @@
                         'potential' => $quoteExpiredOn
                             ? ['The quotation expired on '.$quoteExpiredOn->format('j M').'. Re-issue it with a new validity date, or follow up the customer.', 'Re-issue Quotation', 'reissue', null]
                             : ['Moves to Confirmed when you record the customer\'s deposit, they send their PO, or you mark it confirmed.', 'Customer Confirmed', 'advance-form', 'Customer confirmed the job?'],
-                        'confirmed' => ['Moves to '.$job->statusLabel('in_progress').' when the customer approves the artwork, or when you start the work.', 'Start '.$job->statusLabel('in_progress'), 'advance-form', 'Start the work? The job moves to '.$job->statusLabel('in_progress').'.'],
+                        'confirmed' => $job->hasApprovedArtwork()
+                            ? ['The customer already approved the artwork. Start '.$job->statusLabel('in_progress').'.', 'Start '.$job->statusLabel('in_progress'), 'advance-form', 'Start the work? The job moves to '.$job->statusLabel('in_progress').'.']
+                            : ['Moves to '.$job->statusLabel('in_progress').' when the customer approves the artwork, or when you start the work.', 'Start '.$job->statusLabel('in_progress'), 'advance-form', 'Start the work? The job moves to '.$job->statusLabel('in_progress').'.'],
                         'in_progress' => ['Moves to '.$job->statusLabel('delivered').' when you issue the '.$doLabel.', or mark it done.', 'Mark as '.$job->statusLabel('delivered'), 'advance-form', 'Mark as '.$job->statusLabel('delivered').'?'],
                         'delivered' => $money['owed'] > 0
                             ? ['Delivered. Waiting for the balance of RM '.number_format($money['owed'], 2).'. Record it when the customer pays, then close the job.', 'Close Job', null, null]

@@ -15,6 +15,18 @@ class JobObserver
 {
     private const DIFFED_FIELDS = ['job_type', 'pic', 'estimation_value', 'deadline', 'start_date', 'notes'];
 
+    /**
+     * A job that becomes Confirmed after the customer already approved its
+     * artwork (approved while still at Quotation) goes straight on to the
+     * work stage, as it would have if the approval came after confirming.
+     */
+    public function updated(Job $job): void
+    {
+        if ($job->wasChanged('status') && $job->status === Job::STATUS_CONFIRMED && $job->hasApprovedArtwork()) {
+            $job->moveBecause(Job::STATUS_CONFIRMED, Job::STATUS_IN_PROGRESS, 'the customer had already approved the artwork');
+        }
+    }
+
     public function updating(Job $job): void
     {
         if ($job->isDirty('status') || $job->isDirty('archived')) {

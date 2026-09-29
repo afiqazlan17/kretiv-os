@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Approval;
 use App\Models\Customer;
 use App\Models\Job;
 use App\Models\JobDocument;
@@ -116,5 +117,23 @@ class InSystemAutomationTest extends TestCase
         $this->actingAs($bod)->get(route('jobs.show', $job))->assertSee('value="900.00"', false)->assertSee('RM 900.00 is still unpaid');
 
         $this->actingAs($bod)->post(route('jobs.rollback', $job), [])->assertSessionHasErrors('reason');
+    }
+
+    public function test_artwork_approved_at_quotation_moves_the_job_on_once_it_is_confirmed(): void
+    {
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $c = Customer::create(['customer_id' => 'C001', 'name' => 'Glambooth']);
+        $job = $this->job($c, 'KP-1', ['status' => Job::STATUS_POTENTIAL]);
+        Approval::create(['job_id' => $job->id, 'token' => 't1', 'design' => 1, 'version' => 1, 'item_name' => 'Banner', 'attachment_ids' => [], 'sent_by' => 'Amirul', 'status' => 'approved']);
+
+        $this->actingAs($bod)->post(route('jobs.advance', $job))->assertRedirect();
+        $this->assertSame(Job::STATUS_IN_PROGRESS, $job->refresh()->status);
+
+        // A newer version still waiting for the customer: stays at Confirmed.
+        $other = $this->job($c, 'KP-2', ['status' => Job::STATUS_POTENTIAL]);
+        Approval::create(['job_id' => $other->id, 'token' => 't2', 'design' => 1, 'version' => 1, 'item_name' => 'Banner', 'attachment_ids' => [], 'sent_by' => 'Amirul', 'status' => 'approved']);
+        Approval::create(['job_id' => $other->id, 'token' => 't3', 'design' => 1, 'version' => 2, 'item_name' => 'Banner', 'attachment_ids' => [], 'sent_by' => 'Amirul']);
+        $this->actingAs($bod)->post(route('jobs.advance', $other));
+        $this->assertSame(Job::STATUS_CONFIRMED, $other->refresh()->status);
     }
 }

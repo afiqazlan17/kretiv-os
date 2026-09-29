@@ -41,6 +41,15 @@ class Job extends Model
      * A clear sign the customer has said yes (a payment or their PO) moves a
      * job still at Quotation to Confirmed, logged as done by the system.
      */
+    /** The customer approved artwork, and no newer version is still waiting or sent back. */
+    public function hasApprovedArtwork(): bool
+    {
+        $approved = Approval::where('job_id', $this->id)->where('status', 'approved')->max('id');
+
+        return $approved !== null
+            && ! Approval::where('job_id', $this->id)->where('id', '>', $approved)->whereIn('status', ['sent', 'changes_requested'])->exists();
+    }
+
     public function confirmBecause(string $reason): void
     {
         $this->moveBecause(self::STATUS_POTENTIAL, self::STATUS_CONFIRMED, $reason);

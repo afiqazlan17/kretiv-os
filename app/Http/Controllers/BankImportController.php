@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Job;
 use App\Models\LedgerEntry;
+use App\Support\DocumentData;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,6 +27,9 @@ class BankImportController extends Controller
 
         $import = session('bank_import');
         $result = $import ? $this->match($import['bank'], collect($import['rows'])) : null;
+        if ($result) {
+            $result['suggestions'] = $this->suggestJobs($result['unmatched']);
+        }
 
         return view('finance.bank-import', ['import' => $import, 'result' => $result]);
     }
@@ -163,6 +168,50 @@ class BankImportController extends Controller
             // In the ledger for these dates but not on the statement: typo'd amount, wrong bank, or not cleared yet.
             'missing' => $inRange->reject(fn (LedgerEntry $e) => in_array($e->id, $used, true))->values(),
         ];
+    }
+
+    /**
+     * For money in that isn't in the ledger yet: the jobs it most likely pays
+     * for, by the customer's name in the bank description and by the amount
+     * being exactly what the job still owes. Up to 3 per line, best first.
+     *
+     * @return array<int, Collection<int, array{job: Job, owed: float, why: string}>>
+     */
+    private function suggestJobs(Collection $unmatched): array
+    {
+        $jobs = Job::with('customer')->where('archived', false)->whereNotIn('status', [Job::STATUS_NEW, Job::STATUS_CANCELLED])->get();
+        $entries = LedgerEntry::whereIn('job_id', $jobs->pluck('job_id'))->where('reversed', false)
+            ->whereIn('type', ['invoice', 'receipt', 'credit_note'])->get()->groupBy('job_id');
+        $open = $jobs->map(function (Job $job) use ($entries) {
+            $group = $entries->get($job->job_id, collect());
+            $invoice = $group->where('type', 'invoice')->sortByDesc('id')->first();
+            $basis = $invoice ? (float) $invoice->amount - (float) $group->where('type', 'credit_note')->sum('amount') : DocumentData::jobTotal($job);
+            $owed = round($basis - (float) $group->where('type', 'receipt')->sum('amount'), 2);
+
+            return ['job' => $job, 'owed' => $owed];
+        })->filter(fn ($o) => $o['owed'] > 0.005);
+
+        // Words from the customer's name and company, without the ones every company has.
+        $common = ['SDN', 'BHD', 'BERHAD', 'ENTERPRISE', 'TRADING', 'RESOURCES', 'SERVICES', 'SOLUTIONS', 'GROUP', 'MALAYSIA', 'PLT', 'BIN', 'BINTI', 'THE', 'AND'];
+        $words = fn (Job $job) => collect(preg_split('/[^A-Z0-9]+/', strtoupper(($job->customer?->name ?? '').' '.($job->customer?->company ?? ''))))
+            ->filter(fn ($w) => strlen($w) >= 4 && ! in_array($w, $common, true))->unique();
+
+        $suggestions = [];
+        foreach ($unmatched as $i => $line) {
+            if ($line['amount'] <= 0) {
+                continue;
+            }
+            $text = strtoupper((string) $line['description']);
+            $suggestions[$i] = $open->map(function ($o) use ($line, $text, $words) {
+                $named = $words($o['job'])->contains(fn ($w) => str_contains($text, $w));
+                $exact = abs($o['owed'] - $line['amount']) < 0.01;
+                $fits = $line['amount'] <= $o['owed'] + 0.005;
+
+                return $o + ['score' => ($named ? 2 : 0) + ($exact ? 2 : 0) + ($fits ? 1 : 0), 'why' => collect([$named ? 'name matches' : null, $exact ? 'same amount as the balance' : null])->filter()->join(', ')];
+            })->filter(fn ($o) => $o['score'] >= 3)->sortByDesc('score')->take(3)->values();
+        }
+
+        return $suggestions;
     }
 
     private function authorizeCompany(Request $request): void

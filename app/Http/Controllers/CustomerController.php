@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\Job;
+use App\Support\PaymentHistory;
+use App\Support\Phone;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -81,6 +83,7 @@ class CustomerController extends Controller
             'search' => $search ?? '',
             'source' => $source ?? '',
             'totalRevenue' => $customers->sum(fn (Customer $c) => $c->stats['revenue']),
+            'slowPayers' => PaymentHistory::summaries($customers->pluck('id')->all())->where('slow', true),
         ]);
     }
 
@@ -89,6 +92,21 @@ class CustomerController extends Controller
         $this->authorize('create', Customer::class);
 
         $validated = $this->validated($request);
+
+        // Same phone or email as an existing customer: most likely the same
+        // person keyed in twice, which splits their statement and history.
+        if (! $request->boolean('confirm_duplicate') && ($existing = $this->duplicateOf($validated))) {
+            $message = "{$existing->customer_id} {$existing->name}".($existing->company ? " ({$existing->company})" : '')
+                .' already has this phone or email. Use that customer, or save again to create a new one anyway.';
+            if ($request->wantsJson()) {
+                return response()->json(['message' => $message, 'existing' => [
+                    'id' => $existing->id, 'customer_id' => $existing->customer_id,
+                    'label' => $existing->company ? "{$existing->name} ({$existing->company})" : $existing->name,
+                ]], 409);
+            }
+
+            return back()->withInput()->withErrors(['duplicate' => $message])->with('confirm_duplicate', true);
+        }
 
         $customer = Customer::create([
             ...$validated,
@@ -118,6 +136,21 @@ class CustomerController extends Controller
     /**
      * @return array<string, mixed>
      */
+    /** An existing customer with the same phone (normalised) or email. */
+    private function duplicateOf(array $data): ?Customer
+    {
+        $phone = Phone::normalize($data['phone'] ?? null);
+        $email = strtolower(trim((string) ($data['email'] ?? '')));
+        if (! $phone && $email === '') {
+            return null;
+        }
+
+        return Customer::query()
+            ->where(fn ($q) => $q->when($phone, fn ($q) => $q->orWhere('phone', $phone))
+                ->when($email !== '', fn ($q) => $q->orWhereRaw('LOWER(email) = ?', [$email])))
+            ->first();
+    }
+
     private function validated(Request $request): array
     {
         $validated = $request->validate([

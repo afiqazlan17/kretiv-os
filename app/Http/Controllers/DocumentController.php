@@ -203,7 +203,7 @@ class DocumentController extends Controller
         $userName = $request->user()->name;
 
         if ($type === 'invoice') {
-            abort_unless($ledger->postInvoiceEntry($job, $docNumber, $userName, $doc['total']), 422, 'Nothing to post — the invoice total is empty.');
+            abort_unless($ledger->postInvoiceEntry($job, $docNumber, $userName, $doc['total']), 422, 'Nothing to post. The invoice total is empty.');
         }
 
         if ($type === 'credit_note') {
@@ -258,7 +258,7 @@ class DocumentController extends Controller
 
         if ($type === 'invoice') {
             $posted = $jobs->filter(fn (Job $j) => $ledger->postInvoiceEntry($j, $docNumber, $userName, DocumentData::jobTotal($j)));
-            abort_if($posted->isEmpty(), 422, 'Nothing to post — the invoice total is empty.');
+            abort_if($posted->isEmpty(), 422, 'Nothing to post. The invoice total is empty.');
         }
 
         if ($type === 'receipt') {
@@ -389,7 +389,7 @@ class DocumentController extends Controller
             $this->authorize('update', $j);
         }
 
-        abort_if($jobs->pluck('status')->unique()->count() > 1, 422, "Job statuses don't match — align the statuses first before combining.");
+        abort_if($jobs->pluck('status')->unique()->count() > 1, 422, 'The jobs are at different stages. Move them to the same stage first, then bill them together.');
 
         $type = $validated['doc_type'];
         abort_unless($request->user()->canIssueDocument($type), 403);

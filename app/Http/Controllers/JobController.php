@@ -13,6 +13,7 @@ use App\Rules\SafeUpload;
 use App\Services\LedgerService;
 use App\Support\DocumentData;
 use App\Support\NoteSanitizer;
+use App\Support\PaymentHistory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,7 +32,7 @@ class JobController extends Controller
         'mine' => ['title' => 'My Jobs', 'sub' => 'Jobs under your responsibility', 'empty' => 'Nothing under your name right now. Take in a job from New Jobs.'],
         'queue' => ['title' => 'New Jobs', 'sub' => 'New jobs waiting for someone to take them in', 'empty' => 'No new jobs waiting. Every job has someone on it.'],
         'all' => ['title' => 'All Jobs', 'sub' => 'Every job, most recently changed first', 'empty' => 'No jobs match this filter.'],
-        'aging' => ['title' => 'Aging Jobs', 'sub' => 'Open jobs untouched for the longest', 'empty' => 'No open jobs.'],
+        'aging' => ['title' => 'Untouched Jobs', 'sub' => 'Open jobs untouched for the longest', 'empty' => 'No open jobs.'],
     ];
 
     /**
@@ -159,6 +160,7 @@ class JobController extends Controller
 
         return view('jobs.create', [
             'customers' => Customer::orderBy('name')->get(),
+            'slowPayers' => PaymentHistory::summaries()->where('slow', true)->map(fn ($s) => $s['text']),
             'departments' => $this->availableDepartments($request),
         ]);
     }
@@ -410,6 +412,7 @@ class JobController extends Controller
             'job' => $job,
             'documents' => $documents,
             'payments' => $payments,
+            'payHistory' => PaymentHistory::for($job->customer_id),
             'money' => [
                 'basis' => $basis, 'paid' => $paidSoFar, 'owed' => max(0.0, round($basis - $paidSoFar, 2)),
                 'fully_paid' => $paidSoFar > 0 && $basis - $paidSoFar <= 0.005,
@@ -431,7 +434,7 @@ class JobController extends Controller
             'siblings' => $job->project_id
                 ? Job::where('project_id', $job->project_id)->where('id', '!=', $job->id)->get()
                 : collect(),
-            // "Combine with Other Job" candidates — same customer, any
+            // "Bill Together with Another Job" candidates — same customer, any
             // department/project, not archived. Separate concept from the
             // project_id sibling grouping above (see DocumentController::combine()).
             'combineCandidates' => $job->customer_id
@@ -800,7 +803,7 @@ class JobController extends Controller
         $target = self::ROLLBACK_MAP[$job->status] ?? null;
         abort_if($target === null, 422, "{$job->job_id} cannot be rolled back from its current status.");
 
-        $validated = $request->validate(['reason' => ['nullable', 'string', 'max:255']]);
+        $validated = $request->validate(['reason' => ['required', 'string', 'max:255']]);
         $from = $job->status;
 
         $job->update(['status' => $target]);

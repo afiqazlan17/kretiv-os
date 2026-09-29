@@ -107,7 +107,10 @@
                     </div>
                     <div class="sm:col-span-2">
                         <x-input-error :messages="$errors->all()" class="mt-1" />
-                        <x-primary-button type="submit">Save customer</x-primary-button>
+                        @if (session('confirm_duplicate'))
+                            <input type="hidden" name="confirm_duplicate" value="1">
+                        @endif
+                        <x-primary-button type="submit">{{ session('confirm_duplicate') ? 'Save as a new customer anyway' : 'Save customer' }}</x-primary-button>
                     </div>
                 </form>
             </div>
@@ -137,6 +140,9 @@
                                             <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-[#FFF0F5] text-[#C2185B] text-xs font-bold shrink-0">{{ strtoupper(substr($customer->name, 0, 1)) }}</span>
                                             <div class="min-w-0">
                                                 <div class="font-semibold text-gray-800 truncate">{{ $customer->name }}</div>
+                                                @if ($slow = $slowPayers[$customer->id] ?? null)
+                                                    <span class="inline-block mt-0.5 text-[10px] font-semibold rounded-full px-2 py-0.5 bg-amber-100 text-amber-800" title="{{ $slow['text'] }}">Slow payer</span>
+                                                @endif
                                                 <div class="text-xs text-gray-400 truncate"><span class="font-mono">{{ $customer->customer_id }}</span>{{ $customer->company ? ' · '.$customer->company : '' }}</div>
                                             </div>
                                         </div>

@@ -53,10 +53,19 @@
                                     <span class="font-bold whitespace-nowrap {{ $line['amount'] > 0 ? 'text-green-600' : 'text-red-600' }}">{{ $line['amount'] > 0 ? '+' : '-' }}RM {{ number_format(abs($line['amount']), 2) }}</span>
                                     @if ($line['amount'] < 0)
                                         <button type="button" @click="open = !open" class="text-xs font-semibold px-3 py-1.5 rounded-lg text-white bg-[#047857] hover:brightness-110">Record expense</button>
-                                    @else
+                                    @elseif (($result['suggestions'][$loop->index] ?? collect())->isEmpty())
                                         <a href="{{ route('finance.collections') }}" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#E7EFEA] text-[#047857] hover:bg-[#F0FDF4]">Find invoice</a>
                                     @endif
                                 </div>
+                                @foreach ($result['suggestions'][$loop->index] ?? [] as $s)
+                                    <div class="mt-2 flex flex-wrap items-center gap-2 rounded-xl bg-[#F7FDF9] border border-[#DCFCE7] px-3 py-2 text-xs">
+                                        <span class="font-semibold text-gray-800">{{ $s['job']->job_id }}</span>
+                                        <span class="text-gray-600">{{ $s['job']->customer?->displayName() }} · {{ $s['job']->job_type }}</span>
+                                        <span class="text-gray-500">owes RM {{ number_format($s['owed'], 2) }}</span>
+                                        <span class="text-[#047857]">({{ $s['why'] ?: 'amount fits the balance' }})</span>
+                                        <a href="{{ route('jobs.show', ['job' => $s['job'], 'pay' => $line['amount'], 'paid_on' => $line['date'], 'bank' => $import['bank']]) }}" class="ml-auto font-semibold px-3 py-1.5 rounded-lg text-white bg-[#047857] hover:brightness-110">Record Payment</a>
+                                    </div>
+                                @endforeach
                                 @if ($line['amount'] < 0)
                                     <form method="POST" action="{{ route('finance.expense.store') }}" x-show="open" x-cloak class="mt-2 flex flex-wrap items-end gap-2 p-3 rounded-xl bg-[#F7FDF9] border border-[#DCFCE7]">
                                         @csrf

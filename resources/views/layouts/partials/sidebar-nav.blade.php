@@ -62,7 +62,7 @@
             ['key' => 'mine', 'label' => 'My Jobs', 'icon' => 'user-check'],
             ['key' => 'queue', 'label' => 'New Jobs', 'icon' => 'list-todo', 'badge' => $newJobCount],
             ['key' => 'all', 'label' => 'All Jobs', 'icon' => 'clipboard-list'],
-            ['key' => 'aging', 'label' => 'Aging Jobs', 'icon' => 'hourglass'],
+            ['key' => 'aging', 'label' => 'Untouched Jobs', 'icon' => 'hourglass'],
         ];
         $activeJobView = request()->routeIs('jobs.index') ? (request()->query('view', 'mine')) : null;
         $financeSubmenu = ['finance.index' => ['Overview', '']] + collect(\App\Http\Controllers\FinanceReportController::REPORTS)

@@ -5,7 +5,7 @@
 
     <div class="p-5 md:p-7"
          x-data="jobCreateForm(
-             {{ $customers->map(fn ($c) => ['id' => $c->id, 'customer_id' => $c->customer_id, 'label' => $c->displayName()])->values()->toJson() }},
+             {{ $customers->map(fn ($c) => ['id' => $c->id, 'customer_id' => $c->customer_id, 'label' => $c->displayName(), 'slow' => $slowPayers[$c->id] ?? null])->values()->toJson() }},
              {{ json_encode(array_keys($departments)) }},
              {{ json_encode(config('kretivco.package_catalog')) }}
          )">
@@ -44,6 +44,10 @@
                                 </div>
                             </div>
                         </div>
+                        <p x-show="selectedCustomer && selectedCustomer.slow" x-cloak class="mt-2 flex items-start gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
+                            <span>This customer usually pays late (<span x-text="selectedCustomer?.slow"></span>). Ask for a deposit before starting the work.</span>
+                        </p>
                         <button type="button" @click="showInlineCustomer = !showInlineCustomer" class="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-[#C2185B] hover:underline" x-show="!showInlineCustomer"><x-icon name="plus" class="w-3.5 h-3.5" /> New Customer</button>
 
                         <div x-show="showInlineCustomer" x-cloak class="mt-2 p-3.5 bg-[#FFF9F6] rounded-xl border border-[#F5ECE8]">
@@ -65,6 +69,9 @@
                                 @endforeach
                             </select>
                             <div x-show="inlineError" x-cloak class="text-xs text-red-600 mb-2" x-text="inlineError"></div>
+                            <div x-show="inlineExisting" x-cloak class="flex flex-wrap gap-2 mb-2">
+                                <button type="button" @click="selectCustomer(inlineExisting); showInlineCustomer = false; inlineExisting = null; inlineError = null" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#C2185B] text-[#C2185B] hover:bg-[#FFF0F5]" x-text="inlineExisting ? `Use ${inlineExisting.customer_id} ${inlineExisting.label}` : ''"></button>
+                            </div>
                             <button type="button" @click="saveInlineCustomer()" :disabled="inlineSaving || !inlineCustomer.name.trim()"
                                     class="text-xs font-semibold px-3.5 py-1.5 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110 disabled:opacity-40">
                                 <span x-text="inlineSaving ? 'Saving...' : 'Save Customer'"></span>
@@ -332,6 +339,7 @@
                 inlineCustomer: { name: '', company: '', phone: '', email: '', address_line_1: '', address_line_2: '', source: 'referral' },
                 inlineSaving: false,
                 inlineError: null,
+                inlineExisting: null,
                 formError: null,
                 init() {
                     ['depts', 'perDept', 'customerId', 'previewDept'].forEach(k => this.$watch(k, () => this.schedulePreview()));
@@ -454,9 +462,15 @@
                                 'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                             },
-                            body: JSON.stringify(this.inlineCustomer),
+                            body: JSON.stringify({ ...this.inlineCustomer, confirm_duplicate: !!this.inlineExisting }),
                         });
+                        if (res.status === 409) {
+                            const d = await res.json();
+                            this.inlineExisting = d.existing;
+                            throw new Error(d.message);
+                        }
                         if (!res.ok) throw new Error('Failed to save customer.');
+                        this.inlineExisting = null;
                         const customer = await res.json();
                         this.customers.push({
                             id: customer.id,

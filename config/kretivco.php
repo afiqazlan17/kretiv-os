@@ -240,8 +240,8 @@ return [
     // waiting on customer confirmation). Visible flag + reason only, no
     // automatic SLA timer.
     'hold_statuses' => [
-        'pending' => ['label' => 'Pending', 'color' => '#F59E0B'],
-        'suspended' => ['label' => 'Suspended', 'color' => '#EF4444'],
+        'pending' => ['label' => 'Waiting on Customer', 'color' => '#F59E0B'],
+        'suspended' => ['label' => 'On Hold', 'color' => '#EF4444'],
     ],
 
     'cancel_reasons' => [

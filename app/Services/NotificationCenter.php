@@ -8,7 +8,9 @@ use App\Models\AnnouncementRead;
 use App\Models\Approval;
 use App\Models\Attendance;
 use App\Models\Claim;
+use App\Models\Employee;
 use App\Models\Job;
+use App\Models\JobDocument;
 use App\Models\LeaveRequest;
 use App\Models\LedgerEntry;
 use App\Models\NotificationRead;
@@ -18,6 +20,7 @@ use App\Models\ProfileChangeRequest;
 use App\Models\RecurringExpense;
 use App\Models\User;
 use App\Support\DocumentData;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 // One inbox across Jobs, Finance and HR, worked out live from the data:
@@ -32,6 +35,8 @@ class NotificationCenter
 
     /** A quotation with no movement for this long is flagged for a follow-up. */
     public const QUOTE_FOLLOW_UP_DAYS = 7;
+
+    public const QUOTE_GIVE_UP_DAYS = 60;
 
     /**
      * Worked out once per request (the bell, the menu badge and the home
@@ -102,7 +107,15 @@ class NotificationCenter
             $actions->push($this->item('triangle-alert', 'red', "{$j->job_id} {$j->job_type}: ".($late ? 'overdue since '.$j->deadline->format('j M') : 'deadline today'), route('jobs.show', $j)));
         }
 
-        $stale = $mine->where('status', Job::STATUS_POTENTIAL)->filter(fn (Job $j) => $j->updated_at && $j->updated_at->lt(now()->subDays(self::QUOTE_FOLLOW_UP_DAYS)));
+        // Quotations: follow up a week after the last touch; once the quotation is
+        // 60 days old with no answer, suggest closing it so the pipeline stays honest.
+        $quotedAt = JobDocument::whereIn('job_id', $mine->where('status', Job::STATUS_POTENTIAL)->pluck('id'))
+            ->where('doc_type', 'quotation')->selectRaw('job_id, MAX(generated_at) as at')->groupBy('job_id')->pluck('at', 'job_id');
+        $dead = $mine->filter(fn (Job $j) => isset($quotedAt[$j->id]) && Carbon::parse($quotedAt[$j->id])->lt(now()->subDays(self::QUOTE_GIVE_UP_DAYS)));
+        foreach ($dead as $j) {
+            $actions->push($this->item('archive', 'amber', "{$j->job_id} {$j->job_type}: quotation sent over ".self::QUOTE_GIVE_UP_DAYS.' days ago with no answer. Follow up once more, or cancel it (No response)', route('jobs.show', $j)));
+        }
+        $stale = $mine->where('status', Job::STATUS_POTENTIAL)->diffKeys($dead)->filter(fn (Job $j) => $j->updated_at && $j->updated_at->lt(now()->subDays(self::QUOTE_FOLLOW_UP_DAYS)));
         if ($stale->isNotEmpty()) {
             $actions->push($this->item('message-circle', 'amber', $stale->count().' '.str('quotation')->plural($stale->count()).' with no reply for '.self::QUOTE_FOLLOW_UP_DAYS.' days: follow up the customer', $stale->count() === 1 ? route('jobs.show', $stale->first()) : route('jobs.index', ['view' => 'mine', 'status' => Job::STATUS_POTENTIAL])));
         }
@@ -181,6 +194,20 @@ class NotificationCenter
             $period = now()->format('Y-m');
             if (now()->day >= config('kretivco.payroll.pay_day') - 5 && ! PayrollRun::where('period', $period)->where('status', 'finalized')->exists()) {
                 $actions->push($this->item('banknote', 'red', 'Payroll for '.now()->format('F').' is not finalised yet (pay day is the '.config('kretivco.payroll.pay_day').'th)', route('hr.payroll')));
+            }
+
+            // EPF, SOCSO, EIS and PCB for last month's payroll are due by the 15th (late payment is fined).
+            $last = PayrollRun::where('period', now()->subMonthNoOverflow()->format('Y-m'))->where('status', 'finalized')->whereNull('statutory_paid_at')->first();
+            if ($last && now()->day >= 10) {
+                $late = now()->day > 15;
+                $actions->push($this->item('landmark', $late ? 'red' : 'amber', 'EPF, SOCSO, EIS and PCB for '.$last->month()->format('F').($late ? ' are overdue (due on the 15th). Pay and record them now' : ' are due by the 15th. Pay and record them'), route('hr.payroll')));
+            }
+
+            // Contracts and internships ending in the next 30 days: renew, extend or plan the handover.
+            foreach (Employee::with('user')->whereNotNull('end_date')->whereBetween('end_date', [today(), today()->addDays(30)])->get() as $e) {
+                if ($e->user?->active) {
+                    $actions->push($this->item('calendar-clock', 'amber', "{$e->user->name}'s contract ends on {$e->end_date->format('j M')}: renew, extend or plan the handover", route('hr.staff.show', $e->user)));
+                }
             }
         }
 

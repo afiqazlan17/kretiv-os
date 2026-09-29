@@ -3,6 +3,11 @@
     $canPay = auth()->user()->can('update', $job) && auth()->user()->canIssueDocument('receipt')
         && ! in_array($job->status, [\App\Models\Job::STATUS_NEW, \App\Models\Job::STATUS_CANCELLED], true)
         && ($money['owed'] > 0 || ($payProject['owed'] ?? 0) > 0);
+    // A quotation holds for 14 days from the day it was issued (latest version).
+    $quotedAt = $documents->where('doc_type', 'quotation')->max('generated_at');
+    $quoteExpiredOn = $job->status === 'potential' && $quotedAt
+        ? \Illuminate\Support\Carbon::parse($quotedAt)->addDays(\App\Support\DocumentData::QUOTATION_VALID_DAYS) : null;
+    $quoteExpiredOn = $quoteExpiredOn?->isPast() ? $quoteExpiredOn : null;
 @endphp
 <x-app-layout>
     <x-slot name="header">
@@ -29,8 +34,8 @@
                         <button type="button" @click="$store.jobActions.panel = 'edit'" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1]"><x-icon name="pencil" class="w-4 h-4 text-gray-400" /> Edit Job Details</button>
                         <button type="submit" form="duplicate-form" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1]"><x-icon name="copy" class="w-4 h-4 text-gray-400" /> Duplicate Job (repeat order)</button>
                         @if (! $job->hold_status)
-                            <button type="button" @click="$store.jobActions.panel = 'hold-pending'" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1] text-amber-600"><x-icon name="circle-pause" class="w-4 h-4" /> Pending Job</button>
-                            <button type="button" @click="$store.jobActions.panel = 'hold-suspended'" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1] text-red-600"><x-icon name="octagon-x" class="w-4 h-4" /> Suspend Job</button>
+                            <button type="button" @click="$store.jobActions.panel = 'hold-pending'" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1] text-amber-600"><x-icon name="circle-pause" class="w-4 h-4" /> Waiting on Customer</button>
+                            <button type="button" @click="$store.jobActions.panel = 'hold-suspended'" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1] text-red-600"><x-icon name="octagon-x" class="w-4 h-4" /> Put On Hold</button>
                         @else
                             <form method="POST" action="{{ route('jobs.resume', $job) }}">
                                 @csrf
@@ -120,6 +125,12 @@
                         <a href="https://wa.me/{{ $waPhone }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1 bg-[#25D366] text-white hover:brightness-105">
                             <x-icon name="message-circle" class="w-3.5 h-3.5" /> WhatsApp customer
                         </a>
+                    @endif
+                    @if ($payHistory['slow'] ?? false)
+                        <span class="inline-flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1 bg-amber-100 text-amber-800" title="{{ $payHistory['text'] }}"><x-icon name="triangle-alert" class="w-3.5 h-3.5" /> Slow payer: {{ $payHistory['text'] }}</span>
+                    @endif
+                    @if ($quoteExpiredOn)
+                        <span class="inline-flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1 bg-amber-100 text-amber-800"><x-icon name="hourglass" class="w-3.5 h-3.5" /> Quotation expired</span>
                     @endif
                     @if ($money['fully_paid'])
                         <span class="inline-flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1 bg-[#ECFDF5] text-[#047857]"><x-icon name="circle-check" class="w-3.5 h-3.5" /> Fully paid</span>
@@ -211,7 +222,9 @@
                     $doLabel = \App\Support\DocumentData::label('delivery', $job->department);
                     $next = match ($job->status) {
                         'new' => ['Take in this job to start the quotation.', 'Take In Job', 'takein-form', null],
-                        'potential' => ['Moves to Confirmed when you record the customer\'s deposit, they send their PO, or you mark it confirmed.', 'Customer Confirmed', 'advance-form', 'Customer confirmed the job?'],
+                        'potential' => $quoteExpiredOn
+                            ? ['The quotation expired on '.$quoteExpiredOn->format('j M').'. Re-issue it with a new validity date, or follow up the customer.', 'Re-issue Quotation', 'reissue', null]
+                            : ['Moves to Confirmed when you record the customer\'s deposit, they send their PO, or you mark it confirmed.', 'Customer Confirmed', 'advance-form', 'Customer confirmed the job?'],
                         'confirmed' => ['Moves to '.$job->statusLabel('in_progress').' when the customer approves the artwork, or when you start the work.', 'Start '.$job->statusLabel('in_progress'), 'advance-form', 'Start the work? The job moves to '.$job->statusLabel('in_progress').'.'],
                         'in_progress' => ['Moves to '.$job->statusLabel('delivered').' when you issue the '.$doLabel.', or mark it done.', 'Mark as '.$job->statusLabel('delivered'), 'advance-form', 'Mark as '.$job->statusLabel('delivered').'?'],
                         'delivered' => $money['owed'] > 0
@@ -246,7 +259,9 @@
                             @if ($canPay)
                                 <button type="button" @click="$store.jobActions.panel = 'payment'" class="shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg border border-[#E85D04] text-[#E85D04] hover:bg-[#FFF4E5]"><x-icon name="receipt" class="w-3.5 h-3.5" /> Record Payment</button>
                             @endif
-                            @if ($next[2])
+                            @if ($next[2] === 'reissue')
+                                <button type="button" @click="$dispatch('open-document', { type: 'quotation' })" class="shrink-0 text-xs font-semibold px-3.5 py-2 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110">{{ $next[1] }}</button>
+                            @elseif ($next[2])
                                 <button type="submit" form="{{ $next[2] }}" @if ($next[3]) onclick="return confirm({{ Js::from($next[3]) }})" @endif class="shrink-0 text-xs font-semibold px-3.5 py-2 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110">{{ $next[1] }}</button>
                             @else
                                 <button type="button" @click="$store.jobActions.panel = 'complete'" class="shrink-0 text-xs font-semibold px-3.5 py-2 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110">{{ $next[1] }}</button>
@@ -317,22 +332,24 @@
                 </form>
             </div>
             <div x-show="$store.jobActions.panel === 'hold-pending'">
-                <h3 class="text-sm font-semibold text-gray-700 mb-3">Mark Pending</h3>
+                <h3 class="text-sm font-semibold text-gray-700">Waiting on Customer</h3>
+                <p class="text-xs text-gray-500 mb-3">Paused until the customer replies, pays or sends materials. The job stays in your list with a Waiting tag.</p>
                 <form method="POST" action="{{ route('jobs.hold', $job) }}" class="flex flex-wrap items-end gap-2">
                     @csrf
                     <input type="hidden" name="hold_status" value="pending">
                     <input type="text" name="hold_reason" placeholder="Reason (optional)" class="rounded-md border-gray-300 shadow-sm text-sm flex-1 min-w-[200px]">
-                    <button type="submit" class="text-xs font-semibold px-3.5 py-2 rounded-lg bg-amber-500 text-white hover:bg-amber-600">Mark Pending</button>
+                    <button type="submit" class="text-xs font-semibold px-3.5 py-2 rounded-lg bg-amber-500 text-white hover:bg-amber-600">Mark as Waiting</button>
                     <button type="button" @click="$store.jobActions.panel = null" class="text-xs text-gray-500 hover:underline">Cancel</button>
                 </form>
             </div>
             <div x-show="$store.jobActions.panel === 'hold-suspended'">
-                <h3 class="text-sm font-semibold text-gray-700 mb-3">Suspend Job</h3>
+                <h3 class="text-sm font-semibold text-gray-700">Put On Hold</h3>
+                <p class="text-xs text-gray-500 mb-3">Stopped on our side, for example a problem, a dispute or a decision still pending inside the company.</p>
                 <form method="POST" action="{{ route('jobs.hold', $job) }}" class="flex flex-wrap items-end gap-2">
                     @csrf
                     <input type="hidden" name="hold_status" value="suspended">
                     <input type="text" name="hold_reason" placeholder="Reason (optional)" class="rounded-md border-gray-300 shadow-sm text-sm flex-1 min-w-[200px]">
-                    <button type="submit" class="text-xs font-semibold px-3.5 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600">Suspend</button>
+                    <button type="submit" class="text-xs font-semibold px-3.5 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600">Put On Hold</button>
                     <button type="button" @click="$store.jobActions.panel = null" class="text-xs text-gray-500 hover:underline">Cancel</button>
                 </form>
             </div>
@@ -342,10 +359,11 @@
                     @csrf
                     <div>
                         <label class="text-xs text-gray-500">Final Value (RM) *</label>
-                        <input type="number" step="0.01" min="0" name="final_value" value="{{ number_format($payment['invoiced'] ?? (float) $job->estimation_value, 2, '.', '') }}" required class="block rounded-md border-gray-300 shadow-sm text-sm w-40">
+                        <input type="number" step="0.01" min="0" name="final_value" value="{{ number_format($money['basis'], 2, '.', '') }}" required class="block rounded-md border-gray-300 shadow-sm text-sm w-40">
                     </div>
-                    @if ($payment)
-                        <span class="text-[11px] text-gray-400 self-center">Filled in from Invoice {{ $payment['invoice_number'] }}</span>
+                    <span class="text-[11px] text-gray-400 self-center">{{ $payment ? 'From Invoice '.$payment['invoice_number'].', after any credit notes.' : 'From the quoted total (no invoice yet).' }}</span>
+                    @if ($money['owed'] > 0)
+                        <p class="basis-full flex items-center gap-1.5 text-xs text-amber-700"><x-icon name="triangle-alert" class="w-4 h-4 shrink-0" /> RM {{ number_format($money['owed'], 2) }} is still unpaid. You can still close the job; the balance stays in Collections.</p>
                     @endif
                     <x-primary-button type="submit">Mark Completed</x-primary-button>
                     <button type="button" @click="$store.jobActions.panel = null" class="text-xs text-gray-500 hover:underline">Cancel</button>
@@ -370,9 +388,9 @@
             </div>
             @if ($canPay)
             <div x-show="$store.jobActions.panel === 'payment'" x-cloak
-                 @if ($errors->hasAny(['amount', 'paid_on', 'payment_method', 'bank', 'proof'])) x-effect="$store.jobActions.panel ??= 'payment'" @endif
+                 @if ($errors->hasAny(['amount', 'paid_on', 'payment_method', 'bank', 'proof']) || request()->has('pay')) x-effect="$store.jobActions.panel ??= 'payment'" @endif
                  x-data="{ scope: '{{ $payProject ? 'project' : 'job' }}', owed: {{ Js::from(['project' => $payProject['owed'] ?? 0, 'job' => $money['owed']]) }}, amount: '' }"
-                 x-init="amount = {{ Js::from(old('amount')) }} ?? owed[scope].toFixed(2)">
+                 x-init="amount = {{ Js::from(old('amount', request('pay'))) }} ?? owed[scope].toFixed(2)">
                 <h3 class="text-sm font-semibold text-gray-700">Record Payment</h3>
                 <p class="text-xs text-gray-500 mb-3">What the customer paid. The receipt is issued straight after, ready to send.</p>
                 <form method="POST" action="{{ route('jobs.payments.store', $job) }}" enctype="multipart/form-data" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -391,7 +409,7 @@
                     </div>
                     <div>
                         <label class="text-xs text-gray-500">Payment Date *</label>
-                        <input type="date" name="paid_on" value="{{ old('paid_on', now()->toDateString()) }}" max="{{ now()->toDateString() }}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                        <input type="date" name="paid_on" value="{{ old('paid_on', request('paid_on', now()->toDateString())) }}" max="{{ now()->toDateString() }}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
                         <p class="mt-1 text-[11px] text-gray-400">The day the money came in.</p>
                     </div>
                     <div>
@@ -406,7 +424,7 @@
                         <label class="text-xs text-gray-500">Paid Into *</label>
                         <select name="bank" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
                             @foreach (config('kretivco.bank_details') as $key => $bank)
-                                <option value="{{ $key }}" @selected(old('bank', $job->bank ?: 'mbb') === $key)>{{ $bank['label'] }} ({{ $bank['acct'] }})</option>
+                                <option value="{{ $key }}" @selected(old('bank', request('bank', $job->bank ?: 'mbb')) === $key)>{{ $bank['label'] }} ({{ $bank['acct'] }})</option>
                             @endforeach
                         </select>
                     </div>
@@ -424,11 +442,11 @@
             @endif
 
             <div x-show="$store.jobActions.panel === 'rollback'">
-                <h3 class="text-sm font-semibold text-gray-700 mb-3">Roll Back Status</h3>
+                <h3 class="text-sm font-semibold text-gray-700 mb-3">Move Back a Step</h3>
                 <form method="POST" action="{{ route('jobs.rollback', $job) }}" class="flex flex-wrap items-end gap-2">
                     @csrf
-                    <input type="text" name="reason" placeholder="Reason (optional)" class="rounded-md border-gray-300 shadow-sm text-sm flex-1 min-w-[200px]">
-                    <button type="submit" class="text-xs font-semibold px-3.5 py-2 rounded-lg bg-gray-700 text-white hover:bg-gray-800">Confirm Rollback</button>
+                    <input type="text" name="reason" required placeholder="Why is it moving back? (required)" class="rounded-md border-gray-300 shadow-sm text-sm flex-1 min-w-[200px]">
+                    <button type="submit" class="text-xs font-semibold px-3.5 py-2 rounded-lg bg-gray-700 text-white hover:bg-gray-800">Move Back</button>
                     <button type="button" @click="$store.jobActions.panel = null" class="text-xs text-gray-500 hover:underline">Cancel</button>
                 </form>
             </div>
@@ -643,7 +661,7 @@
                     @endif
 
                     @if ($combineCandidates->isNotEmpty())
-                        <button type="button" @click="showCombine = !showCombine" class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#C2185B] hover:underline mb-4"><x-icon name="link" class="w-3.5 h-3.5" /> Combine with Other Job (Same Customer)</button>
+                        <button type="button" @click="showCombine = !showCombine" class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#C2185B] hover:underline mb-4"><x-icon name="link" class="w-3.5 h-3.5" /> Bill Together with Another Job (Same Customer)</button>
                         <form method="POST" action="{{ route('jobs.documents.combine', $job) }}" x-show="showCombine" x-cloak class="mb-4 p-3 rounded-xl bg-[#FFF9F6] border border-[#F5ECE8]">
                             @csrf
                             <div class="space-y-1.5 mb-3">

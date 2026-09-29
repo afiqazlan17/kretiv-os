@@ -20,9 +20,17 @@ use Illuminate\View\View;
 // payslips to staff). Staff only ever see their own payslips.
 class PayrollController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, PayrollService $payroll): View
     {
         $this->authorizeHr($request);
+
+        // From the 20th, this month's draft is prepared on HR's first visit, so it's
+        // ready to check (overtime up to the 15th is in by then).
+        $period = now()->format('Y-m');
+        if (now()->day >= 20 && ! PayrollRun::where('period', $period)->exists()) {
+            $this->createRun($period, $payroll);
+            session()->now('success', 'The draft payroll for '.now()->format('F').' was prepared automatically. Check it, then finalise.');
+        }
 
         return view('hr.payroll.index', [
             'runs' => PayrollRun::withCount('payslips')->withSum('payslips', 'net')->orderByDesc('period')->get(),
@@ -35,12 +43,16 @@ class PayrollController extends Controller
         $this->authorizeHr($request);
         $data = $request->validate(['period' => ['required', 'date_format:Y-m', 'unique:payroll_runs,period']]);
 
-        $month = Carbon::parse($data['period'].'-01');
-        $payDay = $month->copy()->day((int) config('kretivco.payroll.pay_day'));
-        $run = PayrollRun::create(['period' => $data['period'], 'pay_date' => $payDay->isWeekend() ? $payDay->previousWeekday() : $payDay]);
+        return redirect()->route('hr.payroll.show', $this->createRun($data['period'], $payroll));
+    }
+
+    private function createRun(string $period, PayrollService $payroll): PayrollRun
+    {
+        $payDay = Carbon::parse($period.'-01')->day((int) config('kretivco.payroll.pay_day'));
+        $run = PayrollRun::create(['period' => $period, 'pay_date' => $payDay->isWeekend() ? $payDay->previousWeekday() : $payDay]);
         $payroll->prepare($run);
 
-        return redirect()->route('hr.payroll.show', $run);
+        return $run;
     }
 
     public function show(Request $request, PayrollRun $run): View

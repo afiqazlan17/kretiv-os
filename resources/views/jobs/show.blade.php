@@ -1,3 +1,9 @@
+@php
+    // Record Payment: once the job is taken in, while something is still owed.
+    $canPay = auth()->user()->can('update', $job) && auth()->user()->canIssueDocument('receipt')
+        && ! in_array($job->status, [\App\Models\Job::STATUS_NEW, \App\Models\Job::STATUS_CANCELLED], true)
+        && ($money['owed'] > 0 || ($payProject['owed'] ?? 0) > 0);
+@endphp
 <x-app-layout>
     <x-slot name="header">
         <div class="space-y-4">
@@ -15,6 +21,9 @@
                         @elseif ($next = \App\Http\Controllers\JobController::ADVANCE_MAP[$job->status] ?? null)
                             @php $nextLabel = ['confirmed' => 'Customer Confirmed', 'in_progress' => 'Start '.$job->statusLabel('in_progress'), 'delivered' => 'Mark as '.$job->statusLabel('delivered')][$next]; @endphp
                             <button type="submit" form="advance-form" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1] text-green-600"><x-icon name="circle-check" class="w-4 h-4" /> {{ $nextLabel }}</button>
+                        @endif
+                        @if ($canPay)
+                            <button type="button" @click="$store.jobActions.panel = 'payment'" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1] text-[#E85D04]"><x-icon name="receipt" class="w-4 h-4" /> Record Payment</button>
                         @endif
                         <button type="button" @click="$store.jobActions.panel = 'reassign'" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1]"><x-icon name="repeat" class="w-4 h-4 text-gray-400" /> Change Current Responsible</button>
                         <button type="button" @click="$store.jobActions.panel = 'edit'" class="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-lg hover:bg-[#FFF5F1]"><x-icon name="pencil" class="w-4 h-4 text-gray-400" /> Edit Job Details</button>
@@ -112,6 +121,9 @@
                             <x-icon name="message-circle" class="w-3.5 h-3.5" /> WhatsApp customer
                         </a>
                     @endif
+                    @if ($money['fully_paid'])
+                        <span class="inline-flex items-center gap-1 text-xs font-semibold rounded-full px-3 py-1 bg-[#ECFDF5] text-[#047857]"><x-icon name="circle-check" class="w-3.5 h-3.5" /> Fully paid</span>
+                    @endif
                     @if ($job->hold_status)
                         @php $hs = config('kretivco.hold_statuses.'.$job->hold_status); @endphp
                         <span class="inline-block text-xs font-semibold rounded-full px-3 py-1 bg-amber-400 text-amber-950">{{ $hs['label'] }}@if ($job->hold_reason): {{ $job->hold_reason }}@endif</span>
@@ -125,6 +137,17 @@
 
         @if (session('success'))
             <div class="rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3">{{ session('success') }}</div>
+        @endif
+        @if ($recorded = session('payment_recorded'))
+            <div class="rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3 flex flex-wrap items-center gap-2">
+                <x-icon name="circle-check" class="w-4 h-4 shrink-0" />
+                <span class="flex-1 min-w-[14rem]">Payment of RM {{ number_format($recorded['amount'], 2) }} recorded. Receipt {{ $recorded['number'] }} is ready.@if ($recorded['suggest_close']) The job is delivered and fully paid, so you can close it now.@elseif ($recorded['fully_paid']) The job is fully paid.@endif</span>
+                <a href="{{ $recorded['url'] }}" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-green-300 bg-white hover:bg-green-50"><x-icon name="file-text" class="w-3.5 h-3.5" /> Open receipt</a>
+                <a href="{{ $recorded['whatsapp'] }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg text-white bg-[#25D366] hover:brightness-105"><x-icon name="message-circle" class="w-3.5 h-3.5" /> Send on WhatsApp</a>
+                @if ($recorded['suggest_close'])
+                    <button type="button" @click="$store.jobActions.panel = 'complete'" class="text-xs font-semibold px-3 py-1.5 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110">Close Job</button>
+                @endif
+            </div>
         @endif
         @if ($errors->any())
             <div class="rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">
@@ -188,10 +211,12 @@
                     $doLabel = \App\Support\DocumentData::label('delivery', $job->department);
                     $next = match ($job->status) {
                         'new' => ['Take in this job to start the quotation.', 'Take In Job', 'takein-form', null],
-                        'potential' => ['Moves to Confirmed when the customer pays a deposit (issue a Receipt), sends their PO, or you mark it confirmed.', 'Customer Confirmed', 'advance-form', 'Customer confirmed the job?'],
+                        'potential' => ['Moves to Confirmed when you record the customer\'s deposit, they send their PO, or you mark it confirmed.', 'Customer Confirmed', 'advance-form', 'Customer confirmed the job?'],
                         'confirmed' => ['Moves to '.$job->statusLabel('in_progress').' when the customer approves the artwork, or when you start the work.', 'Start '.$job->statusLabel('in_progress'), 'advance-form', 'Start the work? The job moves to '.$job->statusLabel('in_progress').'.'],
                         'in_progress' => ['Moves to '.$job->statusLabel('delivered').' when you issue the '.$doLabel.', or mark it done.', 'Mark as '.$job->statusLabel('delivered'), 'advance-form', 'Mark as '.$job->statusLabel('delivered').'?'],
-                        'delivered' => ['Close the job once everything is paid and handed over.', 'Close Job', null, null],
+                        'delivered' => $money['owed'] > 0
+                            ? ['Delivered. Waiting for the balance of RM '.number_format($money['owed'], 2).'. Record it when the customer pays, then close the job.', 'Close Job', null, null]
+                            : ['Delivered and fully paid. Close the job?', 'Close Job', null, null],
                         default => null,
                     };
                 @endphp
@@ -218,6 +243,9 @@
                         <x-icon name="arrow-right" class="w-4 h-4 text-[#C2185B] shrink-0" />
                         <p class="flex-1 min-w-[14rem] text-sm text-gray-600"><span class="font-semibold text-gray-900">Next step:</span> {{ $next[0] }}</p>
                         @can('update', $job)
+                            @if ($canPay)
+                                <button type="button" @click="$store.jobActions.panel = 'payment'" class="shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-lg border border-[#E85D04] text-[#E85D04] hover:bg-[#FFF4E5]"><x-icon name="receipt" class="w-3.5 h-3.5" /> Record Payment</button>
+                            @endif
                             @if ($next[2])
                                 <button type="submit" form="{{ $next[2] }}" @if ($next[3]) onclick="return confirm({{ Js::from($next[3]) }})" @endif class="shrink-0 text-xs font-semibold px-3.5 py-2 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110">{{ $next[1] }}</button>
                             @else
@@ -340,6 +368,61 @@
                     <button type="button" @click="$store.jobActions.panel = null" class="text-xs text-gray-500 hover:underline">Cancel</button>
                 </form>
             </div>
+            @if ($canPay)
+            <div x-show="$store.jobActions.panel === 'payment'" x-cloak
+                 @if ($errors->hasAny(['amount', 'paid_on', 'payment_method', 'bank', 'proof'])) x-effect="$store.jobActions.panel ??= 'payment'" @endif
+                 x-data="{ scope: '{{ $payProject ? 'project' : 'job' }}', owed: {{ Js::from(['project' => $payProject['owed'] ?? 0, 'job' => $money['owed']]) }}, amount: '' }"
+                 x-init="amount = {{ Js::from(old('amount')) }} ?? owed[scope].toFixed(2)">
+                <h3 class="text-sm font-semibold text-gray-700">Record Payment</h3>
+                <p class="text-xs text-gray-500 mb-3">What the customer paid. The receipt is issued straight after, ready to send.</p>
+                <form method="POST" action="{{ route('jobs.payments.store', $job) }}" enctype="multipart/form-data" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    @csrf
+                    @if ($payProject)
+                        <div class="sm:col-span-2 lg:col-span-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
+                            <label class="inline-flex items-center gap-2"><input type="radio" name="scope" value="project" x-model="scope" @change="amount = owed.project.toFixed(2)" class="text-[#C2185B]"> Whole project ({{ implode(', ', $payProject['jobs']) }}), RM {{ number_format($payProject['owed'], 2) }} owed</label>
+                            <label class="inline-flex items-center gap-2"><input type="radio" name="scope" value="job" x-model="scope" @change="amount = owed.job.toFixed(2)" class="text-[#C2185B]"> This job only, RM {{ number_format($money['owed'], 2) }} owed</label>
+                        </div>
+                    @endif
+                    <div>
+                        <label class="text-xs text-gray-500">Amount Paid (RM) *</label>
+                        <input type="number" step="0.01" min="0.01" name="amount" x-model="amount" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                        <p class="mt-1 text-[11px] text-gray-400">Filled in with the balance owed. Change it for a deposit or part payment.</p>
+                        <x-input-error :messages="$errors->get('amount')" class="mt-1" />
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">Payment Date *</label>
+                        <input type="date" name="paid_on" value="{{ old('paid_on', now()->toDateString()) }}" max="{{ now()->toDateString() }}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                        <p class="mt-1 text-[11px] text-gray-400">The day the money came in.</p>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">Payment Method *</label>
+                        <select name="payment_method" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                            @foreach (\App\Support\DocumentData::PAYMENT_METHODS as $method)
+                                <option value="{{ $method }}" @selected(old('payment_method') === $method)>{{ $method }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">Paid Into *</label>
+                        <select name="bank" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                            @foreach (config('kretivco.bank_details') as $key => $bank)
+                                <option value="{{ $key }}" @selected(old('bank', $job->bank ?: 'mbb') === $key)>{{ $bank['label'] }} ({{ $bank['acct'] }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="text-xs text-gray-500">Proof of Payment (bank slip or screenshot)</label>
+                        <input type="file" name="proof" accept="image/*,application/pdf" class="mt-1 block w-full text-xs text-gray-500 file:mr-2 file:rounded-lg file:border-0 file:bg-[#FFF1EC] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-[#C2185B]">
+                        <x-input-error :messages="$errors->get('proof')" class="mt-1" />
+                    </div>
+                    <div class="sm:col-span-2 lg:col-span-3 flex items-center gap-2">
+                        <x-primary-button type="submit">Save Payment and Issue Receipt</x-primary-button>
+                        <button type="button" @click="$store.jobActions.panel = null" class="text-xs text-gray-500 hover:underline">Cancel</button>
+                    </div>
+                </form>
+            </div>
+            @endif
+
             <div x-show="$store.jobActions.panel === 'rollback'">
                 <h3 class="text-sm font-semibold text-gray-700 mb-3">Roll Back Status</h3>
                 <form method="POST" action="{{ route('jobs.rollback', $job) }}" class="flex flex-wrap items-end gap-2">
@@ -447,13 +530,33 @@
                                 <div class="text-sm font-bold text-gray-900">{{ $payment['balance'] > 0 ? 'RM '.number_format($payment['balance'], 2) : 'Fully paid' }}</div>
                             </div>
                         </div>
-                        @if ($payment['entries']->isNotEmpty())
+                    @elseif ($money['paid'] > 0)
+                        <div class="grid grid-cols-3 gap-2 mb-4">
+                            <div class="rounded-xl bg-[#F1F1FF] px-3 py-2.5">
+                                <div class="text-[11px] font-semibold text-[#4338CA]">Quoted</div>
+                                <div class="text-sm font-bold text-gray-900">RM {{ number_format($money['basis'], 2) }}</div>
+                            </div>
+                            <div class="rounded-xl bg-[#ECFDF5] px-3 py-2.5">
+                                <div class="text-[11px] font-semibold text-[#047857]">Deposit Paid</div>
+                                <div class="text-sm font-bold text-gray-900">RM {{ number_format($money['paid'], 2) }}</div>
+                            </div>
+                            <div class="rounded-xl px-3 py-2.5 {{ $money['owed'] > 0 ? 'bg-[#FFF4E5]' : 'bg-[#ECFDF5]' }}">
+                                <div class="text-[11px] font-semibold {{ $money['owed'] > 0 ? 'text-[#B45309]' : 'text-[#047857]' }}">Balance</div>
+                                <div class="text-sm font-bold text-gray-900">{{ $money['owed'] > 0 ? 'RM '.number_format($money['owed'], 2) : 'Fully paid' }}</div>
+                            </div>
+                        </div>
+                    @endif
+                        @if ($payments->isNotEmpty())
+                            @php $slips = collect($job->attachments ?? [])->where('kind', 'payment_proof')->keyBy('doc_number'); @endphp
                             <div class="mb-4 rounded-xl border border-[#F5ECE8] divide-y divide-[#F5ECE8] text-xs">
-                                @foreach ($payment['entries'] as $entry)
+                                @foreach ($payments as $entry)
                                     <div class="flex items-center gap-2 px-3 py-2">
                                         <span class="font-semibold text-gray-700">Payment {{ $loop->iteration }}</span>
                                         <span class="font-mono text-gray-400">{{ $entry->doc_number }}</span>
                                         <span class="text-gray-400">{{ \Illuminate\Support\Carbon::parse($entry->date)->format('d M Y') }}</span>
+                                        @if ($slip = $slips[$entry->doc_number] ?? null)
+                                            <a href="{{ route('jobs.attachments.show', [$job, $slip['id']]) }}" target="_blank" class="inline-flex items-center gap-1 text-[#C2185B] hover:underline"><x-icon name="paperclip" class="w-3 h-3" /> Slip</a>
+                                        @endif
                                         <span class="ml-auto font-bold text-gray-900">RM {{ number_format((float) $entry->amount, 2) }}</span>
                                         @if (auth()->user()->canVoidPayments())
                                             <form method="POST" action="{{ route('jobs.payments.void', [$job, $entry]) }}" onsubmit="return confirm('Void payment {{ $entry->doc_number }} (RM {{ number_format((float) $entry->amount, 2) }})? It will be removed from the ledger.')">
@@ -465,7 +568,6 @@
                                 @endforeach
                             </div>
                         @endif
-                    @endif
                     @can('update', $job)
                     @php
                         $docsLocked = in_array($job->status, [\App\Models\Job::STATUS_NEW, \App\Models\Job::STATUS_CANCELLED], true);
@@ -516,6 +618,13 @@
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-2">
                         @foreach ($docButtons as $docType => [$docLabel, $docColor, $docIcon])
                             @continue(! auth()->user()->canIssueDocument($docType))
+                            @if ($docType === 'receipt')
+                                {{-- Payments come in through Record Payment, which issues the receipt itself. --}}
+                                <button type="button" @if ($canPay) @click="$store.jobActions.panel = 'payment'; window.scrollTo({ top: 0, behavior: 'smooth' })" @else disabled title="{{ $docsLocked ? 'Take In Job first.' : 'Fully paid.' }}" @endif
+                                        class="inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-2.5 rounded-lg text-white whitespace-nowrap {{ $canPay ? 'hover:brightness-110' : 'opacity-40 cursor-not-allowed' }}"
+                                        style="background: {{ $docColor }}"><x-icon :name="$docIcon" class="w-4 h-4" /> Record Payment</button>
+                                @continue
+                            @endif
                             @php $docDisabled = $docWhy($docType) !== null; @endphp
                             <button type="button"
                                     @if ($docDisabled) disabled title="{{ $docWhy($docType) }}" @else @click="$dispatch('open-document', { type: '{{ $docType }}' })" @endif

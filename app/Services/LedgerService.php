@@ -242,7 +242,7 @@ class LedgerService
 
     // Receipt issued: payment received, clears what was owed. Same
     // supersede rule as invoices.
-    public function postReceiptEntry($job, string $docNumber, string $userName, $amountOverride = null, ?string $bank = null): ?LedgerEntry
+    public function postReceiptEntry($job, string $docNumber, string $userName, $amountOverride = null, ?string $bank = null, $date = null): ?LedgerEntry
     {
         $amount = $this->computeReceiptAmount($job, $amountOverride);
 
@@ -270,7 +270,7 @@ class LedgerService
         $hasInvoice = LedgerEntry::where('job_id', $job->job_id)->where('type', 'invoice')->where('reversed', false)->exists();
 
         return $this->afterPosting($job, $userName, $this->addEntry([
-            'date' => now(),
+            'date' => $date ?? now(),
             'type' => 'receipt',
             'description' => "Receipt {$docNumber}: {$job->customer?->name}",
             'department' => $job->department,

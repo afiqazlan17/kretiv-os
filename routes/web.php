@@ -149,6 +149,7 @@ $onHost('jobs', function () {
         });
         Route::get('/jobs/{job}/documents/{document}', [DocumentController::class, 'showDocument'])->name('jobs.documents.show');
         Route::post('/jobs/{job}/documents/combine', [DocumentController::class, 'combine'])->name('jobs.documents.combine');
+        Route::post('/jobs/{job}/payments', [DocumentController::class, 'recordPayment'])->name('jobs.payments.store');
         Route::post('/jobs/{job}/payments/{entry}/void', [DocumentController::class, 'voidPayment'])->name('jobs.payments.void');
         Route::post('/jobs/{job}/vendor-costs', [JobVendorCostController::class, 'store'])->name('jobs.vendor-costs.store');
         Route::put('/jobs/{job}/vendor-costs/{costId}', [JobVendorCostController::class, 'update'])->name('jobs.vendor-costs.update');

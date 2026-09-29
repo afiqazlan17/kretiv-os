@@ -10,6 +10,7 @@ use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Support\DocumentData;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -114,5 +115,46 @@ class ProjectDocumentTest extends TestCase
 
         $solo = $this->job('KP-2026-002', 'print', 100, Job::STATUS_CONFIRMED, null);
         $this->actingAs($bod)->getJson($this->url('draft', $solo, 'quotation'))->assertJsonPath('scope', 'job')->assertJsonPath('project', null);
+    }
+
+    public function test_record_payment_posts_on_the_payment_date_keeps_the_slip_and_issues_the_receipt(): void
+    {
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $print = $this->job('KP-2026-001', 'print', 400);
+        $this->job('KB-2026-001', 'brand', 200);
+
+        $this->actingAs($bod)->get(route('jobs.show', $print))->assertOk()->assertSee('Record Payment')->assertSee('Whole project (KP-2026-001, KB-2026-001)', false);
+
+        $this->actingAs($bod)->post(route('jobs.payments.store', $print), [
+            'amount' => 300, 'payment_method' => 'Bank Transfer', 'paid_on' => now()->subDays(2)->toDateString(),
+            'bank' => 'affin', 'scope' => 'project', 'proof' => UploadedFile::fake()->image('slip.jpg'),
+        ])->assertRedirect()->assertSessionHas('payment_recorded');
+
+        $entries = LedgerEntry::where('type', 'receipt')->get();
+        $this->assertCount(2, $entries);
+        $this->assertTrue($entries->every(fn ($e) => $e->bank === 'affin' && $e->date->isSameDay(now()->subDays(2))));
+        $this->assertSame(2, JobDocument::where('doc_type', 'receipt')->count());
+        $this->assertSame('payment_proof', collect($print->refresh()->attachments)->first()['kind']);
+        $this->assertSame(Job::STATUS_CONFIRMED, $print->status);
+
+        // More than what's left is refused.
+        $this->actingAs($bod)->post(route('jobs.payments.store', $print), [
+            'amount' => 301, 'payment_method' => 'Cash', 'paid_on' => now()->toDateString(), 'bank' => 'mbb', 'scope' => 'project',
+        ])->assertSessionHasErrors('amount');
+    }
+
+    public function test_paying_in_full_before_delivery_does_not_suggest_closing(): void
+    {
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $job = $this->job('KP-2026-009', 'print', 150, Job::STATUS_CONFIRMED, null);
+
+        $this->actingAs($bod)->post(route('jobs.payments.store', $job), [
+            'amount' => 150, 'payment_method' => 'Cash', 'paid_on' => now()->toDateString(), 'bank' => 'mbb',
+        ])->assertSessionHas('payment_recorded', fn ($p) => $p['fully_paid'] && ! $p['suggest_close']);
+        $this->assertSame(Job::STATUS_CONFIRMED, $job->refresh()->status);
+        $this->actingAs($bod)->get(route('jobs.show', $job))->assertSee('Fully paid');
+
+        $job->update(['status' => Job::STATUS_DELIVERED]);
+        $this->actingAs($bod)->get(route('jobs.show', $job))->assertSee('Delivered and fully paid. Close the job?');
     }
 }

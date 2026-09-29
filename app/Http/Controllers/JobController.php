@@ -399,9 +399,21 @@ class JobController extends Controller
         $payments = $receiptEntries->where('reversed', false)->values();
         $paid = (float) $payments->sum('amount');
 
+        // What the customer owes on this job (quoted total before the invoice), and
+        // the same for the whole project when a payment can cover it.
+        [$basis, , $paidSoFar] = DocumentData::projectBasis(collect([$job]));
+        $payJobs = DocumentData::projectJobs($job, 'receipt');
+        $projectMoney = $payJobs->isEmpty() ? null : DocumentData::projectBasis($payJobs);
+
         return view('jobs.show', [
             'job' => $job,
             'documents' => $documents,
+            'payments' => $payments,
+            'money' => [
+                'basis' => $basis, 'paid' => $paidSoFar, 'owed' => max(0.0, round($basis - $paidSoFar, 2)),
+                'fully_paid' => $paidSoFar > 0 && $basis - $paidSoFar <= 0.005,
+            ],
+            'payProject' => $projectMoney ? ['jobs' => $payJobs->pluck('job_id')->all(), 'owed' => max(0.0, round($projectMoney[0] - $projectMoney[2], 2))] : null,
             'hasInvoice' => $invoice !== null,
             // Money owed vs received for this job, straight from the ledger.
             'payment' => $invoice ? [

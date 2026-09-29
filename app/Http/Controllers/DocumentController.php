@@ -9,13 +9,16 @@ use App\Models\JobDocument;
 use App\Models\LedgerEntry;
 use App\Services\LedgerService;
 use App\Support\DocumentData;
+use App\Support\Phone;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -426,6 +429,99 @@ class DocumentController extends Controller
         return response($bytes, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
+    }
+
+    /**
+     * Record Payment: what the customer paid, when, into which account, with
+     * the bank slip. Posts it to the ledger (split across the project's jobs
+     * when it covers the whole project), confirms a job still at quotation,
+     * and issues the receipt straight away, ready to open or send on WhatsApp.
+     */
+    public function recordPayment(Request $request, Job $job, LedgerService $ledger): RedirectResponse
+    {
+        $this->authorize('update', $job);
+        $this->ensureAllowed($job, 'receipt');
+
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'payment_method' => ['required', Rule::in(DocumentData::PAYMENT_METHODS)],
+            'paid_on' => ['required', 'date', 'before_or_equal:today'],
+            'bank' => ['required', Rule::in(array_keys(config('kretivco.bank_details')))],
+            'proof' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,heic,pdf', 'max:10240'],
+            'scope' => ['nullable', Rule::in(['project', 'job'])],
+        ]);
+
+        $jobs = ($data['scope'] ?? null) === 'project' ? DocumentData::projectJobs($job, 'receipt') : collect();
+        foreach ($jobs as $j) {
+            $this->authorize('update', $j);
+        }
+        $isProject = $jobs->isNotEmpty();
+        $jobs = $isProject ? $jobs : collect([$job]);
+
+        [$basis, $invoiceNumber, $paid, $per] = DocumentData::projectBasis($jobs);
+        $owed = round($basis - $paid, 2);
+        $amount = round((float) $data['amount'], 2);
+        if ($owed <= 0) {
+            return back()->withErrors(['amount' => 'Nothing is owed on '.($isProject ? 'this project' : 'this job').'.'])->withInput();
+        }
+        if ($amount > $owed + 0.005) {
+            return back()->withErrors(['amount' => 'That is more than the balance still owed (RM '.number_format($owed, 2).').'])->withInput();
+        }
+
+        $userName = $request->user()->name;
+        $paidOn = Carbon::parse($data['paid_on']);
+        $docNumber = $isProject ? DocumentData::projectNumber('receipt', $jobs) : DocumentData::number('receipt', $job);
+        $input = ['title' => $jobs->pluck('job_type')->filter()->unique()->join(' + '), 'amount_paid' => $amount, 'payment_method' => $data['payment_method']];
+        $doc = $isProject
+            ? DocumentData::buildProject($job, $jobs, 'receipt', $input, $docNumber, $request->user()->shortName())
+            : DocumentData::build($job, 'receipt', $input, $docNumber, $request->user()->shortName(), $basis, $invoiceNumber, $paid);
+        $doc['paid_on'] = $paidOn->format('d M Y');
+
+        foreach (DocumentData::allocate($amount, $per) as $id => $share) {
+            $j = $jobs->firstWhere('id', $id);
+            $ledger->postReceiptEntry($j, $docNumber, $userName, $share, $data['bank'], $paidOn);
+            $j->confirmBecause('payment received ('.$docNumber.')');
+        }
+
+        if ($file = $request->file('proof')) {
+            $proofPath = $file->storeAs("{$job->job_id}/payment_proof/default", time().'_'.$file->getClientOriginalName(), 'public');
+            foreach ($jobs as $j) {
+                $j->update(['attachments' => [...($j->attachments ?? []), [
+                    'id' => (string) Str::uuid(), 'kind' => 'payment_proof', 'line_item_id' => null, 'design' => null,
+                    'path' => $proofPath, 'name' => $file->getClientOriginalName(), 'doc_number' => $docNumber,
+                    'uploaded_by' => $userName, 'uploaded_at' => now()->toIso8601String(),
+                ]]]);
+            }
+        }
+
+        $bytes = Pdf::loadView('documents.pdf', ['doc' => $doc])->output();
+        $filename = "{$docNumber}.pdf";
+        $path = "{$job->job_id}/document/".time()."_{$filename}";
+        Storage::disk('public')->put($path, $bytes);
+
+        $how = 'RM '.number_format($amount, 2).', '.$data['payment_method'].', paid '.$paidOn->format('d M Y');
+        $archived = null;
+        foreach ($jobs as $j) {
+            $with = $isProject ? ' for the project, with '.$jobs->where('id', '!=', $j->id)->pluck('job_id')->join(', ') : '';
+            $document = $this->archiveDocument('receipt', $j, $docNumber, $path, $filename, $request, " for a payment of {$how}{$with}");
+            $archived = $j->is($job) ? $document : $archived;
+        }
+
+        $job->refresh();
+        [$basisAfter, , $paidAfter] = DocumentData::projectBasis(collect([$job]));
+        $fullyPaid = $basisAfter - $paidAfter <= 0.005;
+        $link = URL::temporarySignedRoute('documents.shared', now()->addDays(30), ['document' => $archived->id]);
+        $text = 'Hi '.($job->customer?->name ?? '').", we've received your payment of RM ".number_format($amount, 2)
+            .". Here is your receipt {$docNumber}. Thank you.\n\n{$link}";
+
+        return back()->with('payment_recorded', [
+            'amount' => $amount,
+            'number' => $docNumber,
+            'url' => route('jobs.documents.show', [$job, $archived]),
+            'whatsapp' => 'https://wa.me/'.Phone::whatsapp($job->customer?->phone).'?text='.rawurlencode($text),
+            'fully_paid' => $fullyPaid,
+            'suggest_close' => $fullyPaid && $job->status === Job::STATUS_DELIVERED,
         ]);
     }
 

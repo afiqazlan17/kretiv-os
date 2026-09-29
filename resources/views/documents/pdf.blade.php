@@ -52,6 +52,9 @@
             @if (($doc['paid_before'] ?? 0) > 0)
                 <tr><td>Paid Before</td><td class="v">(RM {{ number_format($doc['paid_before'], 2) }})</td></tr>
             @endif
+            @if (! empty($doc['paid_on']))
+                <tr><td>Payment Date</td><td class="v">{{ $doc['paid_on'] }}</td></tr>
+            @endif
             <tr><td>Payment Method</td><td class="v">{{ $doc['payment_method'] }}</td></tr>
             <tr><td><b>Amount Paid (MYR)</b></td><td class="v"><b>RM {{ number_format($doc['amount_paid'], 2) }}</b></td></tr>
             <tr class="grand"><td>Balance Due (MYR)</td><td class="v">RM {{ number_format($doc['balance_due'], 2) }}</td></tr>

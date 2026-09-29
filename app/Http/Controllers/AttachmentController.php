@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Job;
+use App\Rules\SafeUpload;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -22,7 +23,7 @@ class AttachmentController extends Controller
         $this->authorize('update', $job);
 
         $validated = $request->validate([
-            'file' => ['required', 'file', 'max:20480'],
+            'file' => ['required', 'file', 'max:20480', new SafeUpload],
             'kind' => ['required', 'string', 'max:50'],
             'line_item_id' => ['nullable', 'string', 'max:50'],
             'design' => ['nullable', 'integer', 'min:1', 'max:50'],

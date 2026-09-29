@@ -9,6 +9,7 @@ use App\Models\Job;
 use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Models\Vendor;
+use App\Rules\SafeUpload;
 use App\Services\LedgerService;
 use App\Support\DocumentData;
 use App\Support\NoteSanitizer;
@@ -836,7 +837,7 @@ class JobController extends Controller
         $validated = $request->validate([
             'note' => ['required', 'string', 'max:20000'],
             'attachments' => ['nullable', 'array', 'max:5'],
-            'attachments.*' => ['file', 'max:20480'],
+            'attachments.*' => ['file', 'max:20480', new SafeUpload],
         ]);
 
         $attachments = collect($request->file('attachments', []))->map(function ($file) use ($job) {

@@ -1,0 +1,4 @@
+# Uploaded files (job documents, POs, payment slips, artwork, HR files) are
+# only ever served through the app, which checks who is logged in. Nothing in
+# here may be opened directly by URL, and nothing in here may run as a script.
+Require all denied

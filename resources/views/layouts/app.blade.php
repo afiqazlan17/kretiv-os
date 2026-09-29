@@ -34,6 +34,7 @@
             </div>
         </div>
 
+        @include('layouts.partials.privacy-prompt')
         @stack('scripts')
     </body>
 </html>

@@ -56,6 +56,19 @@ class User extends Authenticatable
         ];
     }
 
+    /** Has read the current Staff Privacy Notice (asked once per notice version). */
+    public function hasAcknowledgedPrivacy(): bool
+    {
+        // Cached for the request: the layout asks on every page.
+        $attributes = request()->attributes;
+        $key = "privacy_ack_{$this->id}";
+        if (! $attributes->has($key)) {
+            $attributes->set($key, PrivacyAcknowledgement::where('user_id', $this->id)->where('version', config('kretivco.privacy.version'))->exists());
+        }
+
+        return $attributes->get($key);
+    }
+
     public function isBod(): bool
     {
         return $this->role === self::ROLE_BOD;

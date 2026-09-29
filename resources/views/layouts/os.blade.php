@@ -31,6 +31,7 @@
                             </button>
                             <div x-show="open" x-cloak x-transition class="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-xl p-1.5 text-sm text-gray-700">
                                 <a href="{{ route('password.change') }}" class="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-[#FFF5F1]"><x-icon name="key-round" class="w-4 h-4 text-gray-400" /> Change password</a>
+                                <a href="{{ route('privacy.staff') }}" class="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-[#FFF5F1]"><x-icon name="shield-check" class="w-4 h-4 text-gray-400" /> Privacy Notice</a>
                                 @if ($user->isBod())
                                     <a href="{{ route('settings.index') }}" class="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-[#FFF5F1]"><x-icon name="user-cog" class="w-4 h-4 text-gray-400" /> Users &amp; Access</a>
                                 @endif
@@ -49,6 +50,7 @@
             </main>
         </div>
 
+        @include('layouts.partials.privacy-prompt')
         @stack('scripts')
     </body>
 </html>

@@ -113,6 +113,14 @@
             </aside>
         </div>
         <p class="text-xs text-gray-400 text-center pt-2">{{ config('kretivco.brand.name') }} · {{ config('kretivco.brand.phone') }} · {{ config('kretivco.brand.email') }}</p>
+        {{-- PDPA notice for customers, in English and Bahasa Melayu. --}}
+        <details class="max-w-2xl mx-auto text-xs text-gray-500">
+            <summary class="text-center cursor-pointer hover:text-gray-700">Privacy Notice / Notis Privasi</summary>
+            <div class="mt-3 space-y-3 bg-white rounded-2xl border border-[#F1E6E1] p-4 leading-relaxed">
+                <p>We use your name, company, phone, email, address and SSM number to prepare your quotations, invoices, deliveries and artwork approvals, and to keep our accounts. When you approve or request changes here, we record the time, your IP address and browser, as proof of your decision. We share details only with those who need them for your order (such as couriers or production partners), our accountant, and authorities such as LHDN when the law requires. We keep records for 7 years as required by law. To see, correct or ask about your data, contact <a href="mailto:{{ config('kretivco.brand.email') }}" class="underline">{{ config('kretivco.brand.email') }}</a>.</p>
+                <p>Kami menggunakan nama, syarikat, telefon, emel, alamat dan no. SSM anda untuk menyediakan sebut harga, invois, penghantaran dan kelulusan artwork, serta untuk rekod akaun kami. Apabila anda meluluskan atau meminta perubahan di sini, kami merekod masa, alamat IP dan pelayar anda sebagai bukti keputusan anda. Kami berkongsi butiran hanya dengan pihak yang memerlukannya untuk pesanan anda (seperti kurier atau rakan produksi), akauntan kami, dan pihak berkuasa seperti LHDN jika dikehendaki undang-undang. Rekod disimpan selama 7 tahun seperti yang dikehendaki undang-undang. Untuk melihat, membetulkan atau bertanya tentang data anda, hubungi <a href="mailto:{{ config('kretivco.brand.email') }}" class="underline">{{ config('kretivco.brand.email') }}</a>.</p>
+            </div>
+        </details>
     </main>
 </body>
 </html>

@@ -298,6 +298,16 @@ return [
         'lhdn_employer_no' => env('LHDN_EMPLOYER_NO', ''),
     ],
 
+    // Personal data (PDPA): who answers privacy questions, and the Staff Privacy
+    // Notice version. Change the version when the notice changes, and every staff
+    // member is asked to acknowledge it again.
+    'privacy' => [
+        'officer' => 'Amirul Hafiz Zulkefly',
+        'email' => 'amirul@kretiv.co',
+        'version' => '2026-09-29',
+        'updated' => '29 September 2026',
+    ],
+
     'bank_details' => [
         'mbb' => ['label' => 'MAYBANK', 'acct' => '5621-0668-8317', 'name' => 'KRETIVCO MEDIAWORKS'],
         'affin' => ['label' => 'AFFIN', 'acct' => '105630012033', 'name' => 'KRETIVCO MEDIAWORKS'],

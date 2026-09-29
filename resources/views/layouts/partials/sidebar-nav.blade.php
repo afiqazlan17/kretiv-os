@@ -203,6 +203,7 @@
             </div>
         </div>
         <a href="{{ route('password.change') }}" class="mt-2.5 flex items-center justify-center gap-1.5 w-full py-1.5 text-[11px] font-medium text-gray-500 hover:text-[#C2185B]"><x-icon name="key-round" class="w-3.5 h-3.5" /> Change password</a>
+        <a href="{{ route('privacy.staff') }}" class="flex items-center justify-center gap-1.5 w-full py-1 text-[11px] font-medium text-gray-500 hover:text-[#C2185B]"><x-icon name="shield-check" class="w-3.5 h-3.5" /> Privacy Notice</a>
         <form method="POST" action="{{ route('logout') }}">
             @csrf
             <button type="submit" class="mt-1 w-full py-1.5 text-[11px] font-medium text-gray-500 bg-white border border-[#F0DDD5] rounded-lg hover:text-[#C2185B] hover:border-[#F4B6C8]">

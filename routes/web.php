@@ -31,6 +31,7 @@ use App\Http\Controllers\JobVendorCostController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OsController;
+use App\Http\Controllers\PrivacyController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecurringExpenseController;
 use App\Http\Controllers\ReportController;
@@ -55,6 +56,8 @@ $osRoutes = function () {
         Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
         Route::post('/clock-out', [AttendanceController::class, 'clockOut'])->name('os.clock-out');
         Route::post('/clock-out/undo', [AttendanceController::class, 'undoClockOut'])->name('os.clock-out.undo');
+        Route::get('/privacy', [PrivacyController::class, 'staff'])->name('privacy.staff');
+        Route::post('/privacy/acknowledge', [PrivacyController::class, 'acknowledge'])->name('privacy.acknowledge');
         Route::get('/access', [OsController::class, 'access'])->name('os.access');
         Route::put('/access/{user}', [OsController::class, 'updateAccess'])->name('os.access.update');
     });

@@ -73,9 +73,8 @@ class InSystemAutomationTest extends TestCase
     {
         $hr = User::factory()->create(['role' => User::ROLE_HR]);
         $intern = User::factory()->create(['name' => 'Intern Ali']);
-        $intern->employee()->create(['basic_salary' => 1000, 'end_date' => now()->addDays(10)]);
-
         $this->travelTo(now()->startOfMonth()->addDays(11)); // the 12th
+        $intern->employee()->create(['basic_salary' => 1000, 'end_date' => now()->addDays(10)]);
         PayrollRun::create(['period' => now()->subMonthNoOverflow()->format('Y-m'), 'pay_date' => now()->subMonthNoOverflow(), 'status' => 'finalized']);
         NotificationCenter::flush();
         $texts = collect(NotificationCenter::for($hr)['actions'])->pluck('text');

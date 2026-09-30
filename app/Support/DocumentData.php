@@ -199,6 +199,8 @@ class DocumentData
             'notes' => self::customNotes($job, $type) ?? self::defaultNotes($type, self::bank($job), $job->department),
             'payment_method' => self::PAYMENT_METHODS[0],
             'amount_paid' => $invoiceTotal === null ? null : max(0.0, round($invoiceTotal - $paidBefore, 2)),
+            // Tenders can ask for a longer validity (e.g. 90 days); kept per job once changed.
+            'valid_days' => (int) ($job->document_notes['valid_days'] ?? self::QUOTATION_VALID_DAYS),
             'due_date' => now()->addDays($type === 'proforma' ? self::PROFORMA_DUE_DAYS : self::INVOICE_DUE_DAYS)->toDateString(),
             'credit_reason' => 'discount',
             'credit_reason_text' => '',
@@ -308,7 +310,7 @@ class DocumentData
 
         // Extra header line under Date: how long a quotation holds, or when an invoice is due.
         $headerExtra = match ($type) {
-            'quotation' => ['Valid until', now()->addDays(self::QUOTATION_VALID_DAYS)->format('d M Y')],
+            'quotation' => ['Valid until', now()->addDays((int) $pick('valid_days'))->format('d M Y')],
             'invoice', 'proforma' => ['Due', Carbon::parse($pick('due_date'))->format('d M Y')],
             default => null,
         };

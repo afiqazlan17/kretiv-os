@@ -106,6 +106,12 @@
                             </div>
                         </template>
 
+                        <template x-if="type === 'quotation'">
+                            <div><label class="text-xs font-semibold text-gray-500">Valid For (days)</label>
+                                <input type="number" min="1" max="365" x-model="form.valid_days" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                                <p class="mt-1 text-[11px] text-gray-400">Valid until <span x-text="validUntil"></span>. Standard is 14 days; change it for tenders. Update the matching note too.</p></div>
+                        </template>
+
                         <template x-if="type === 'invoice' || type === 'proforma'">
                             <div><label class="text-xs font-semibold text-gray-500">Due Date</label>
                                 <input type="date" x-model="form.due_date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
@@ -334,6 +340,10 @@
                 if (this.scope === 'project') return this.projectTotal;
                 const sub = this.form.items.reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.price) || 0), 0);
                 return sub + (parseFloat(this.form.delivery) || 0) - (parseFloat(this.form.discount) || 0);
+            },
+            get validUntil() {
+                const d = new Date(); d.setDate(d.getDate() + (parseInt(this.form.valid_days) || 14));
+                return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
             },
             get balanceDue() {
                 const paid = parseFloat(this.form.amount_paid); const owed = (parseFloat(this.invoiceTotal) || 0) - this.paidBefore;

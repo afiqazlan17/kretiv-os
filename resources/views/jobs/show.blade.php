@@ -6,7 +6,7 @@
     // A quotation holds for 14 days from the day it was issued (latest version).
     $quotedAt = $documents->where('doc_type', 'quotation')->max('generated_at');
     $quoteExpiredOn = $job->status === 'potential' && $quotedAt
-        ? \Illuminate\Support\Carbon::parse($quotedAt)->addDays(\App\Support\DocumentData::QUOTATION_VALID_DAYS) : null;
+        ? \Illuminate\Support\Carbon::parse($quotedAt)->addDays((int) ($job->document_notes['valid_days'] ?? \App\Support\DocumentData::QUOTATION_VALID_DAYS)) : null;
     $quoteExpiredOn = $quoteExpiredOn?->isPast() ? $quoteExpiredOn : null;
 @endphp
 <x-app-layout>

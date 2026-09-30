@@ -29,4 +29,16 @@ class ItemImagePreviewTest extends TestCase
 
         $this->assertStringContainsString('/Subtype /Image', $pdf);
     }
+
+    public function test_quotation_validity_can_be_changed_and_is_kept(): void
+    {
+        $bod = User::factory()->create(['role' => User::ROLE_BOD]);
+        $c = Customer::create(['customer_id' => 'C001', 'name' => 'Acme']);
+        $job = Job::create(['job_id' => 'KP-2026-001', 'customer_id' => $c->id, 'department' => 'print', 'job_type' => 'Banner', 'job_type_category' => 'client_project', 'status' => Job::STATUS_POTENTIAL, 'estimation_value' => 1000]);
+
+        $this->actingAs($bod)->postJson(route('jobs.documents.save', [$job, 'quotation']), ['title' => 'Banner', 'valid_days' => 90])->assertOk();
+
+        $this->assertSame(90, $job->fresh()->document_notes['valid_days']);
+        $this->actingAs($bod)->getJson(route('jobs.documents.draft', [$job, 'quotation']))->assertJsonPath('defaults.valid_days', 90);
+    }
 }

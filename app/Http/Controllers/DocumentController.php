@@ -626,6 +626,7 @@ class DocumentController extends Controller
             'address_line_2' => ['nullable', 'string', 'max:500'],
             'phone' => ['nullable', 'string', 'max:50'],
             'due_date' => ['nullable', 'date'],
+            'valid_days' => ['nullable', 'integer', 'min:1', 'max:365'],
             'title' => ['required', 'string', 'max:255'],
             'by_staff' => ['nullable', 'string', 'max:255'],
             'items' => ['nullable', 'array', 'max:50'],
@@ -670,6 +671,19 @@ class DocumentController extends Controller
      */
     private function rememberNotes(Request $request, Collection $jobs, string $key): void
     {
+        if (str_ends_with($key, 'quotation') && $request->filled('valid_days')) {
+            foreach ($jobs as $job) {
+                $days = (int) $request->input('valid_days');
+                $saved = $job->document_notes ?? [];
+                if ($days === DocumentData::QUOTATION_VALID_DAYS) {
+                    unset($saved['valid_days']);
+                } else {
+                    $saved['valid_days'] = $days;
+                }
+                $job->update(['document_notes' => $saved ?: null]);
+            }
+        }
+
         $lines = DocumentData::noteLines($request->input('notes'));
         if (! $request->boolean('use_default_notes') && $lines === []) {
             return;

@@ -238,6 +238,12 @@
                                 </div>
                             </div>
 
+                            <div class="mb-3">
+                                <x-input-label value="Quotation valid for (days)" />
+                                <input type="number" min="1" max="365" name="per_dept[{{ $key }}][valid_days]" x-model="perDept.{{ $key }}.validDays" :disabled="!depts.includes('{{ $key }}')" class="mt-1 block w-40 rounded-md border-gray-300 shadow-sm text-xs">
+                                <p class="mt-1 text-[11px] text-gray-400">Standard is 14 days. Tenders may ask for longer, e.g. 90.</p>
+                            </div>
+
                             {{-- Lets staff tweak the quotation's wording before the job is saved. Edited notes are stored on the job (document_notes.quotation) and are what the Quotation modal opens with later. --}}
                             <div class="mb-3 p-3 rounded-xl bg-white border border-dashed border-[#E8D5CD]">
                                 <div class="flex items-center justify-between gap-2">
@@ -334,7 +340,7 @@
                 depts: {{ old('departments') ? json_encode(old('departments')) : '[]' }},
                 perDept: Object.fromEntries(departmentKeys.map(k => [k, {
                     jobTypeCategory: 'client_project', productLine: '', segment: '', pkg: '', jobType: '', lineItems: [], bank: '', delivery: '', discount: '',
-                    editNotes: false, notesLines: [],
+                    editNotes: false, notesLines: [], validDays: 14,
                 }])),
                 mobileTab: 'form',
                 pvPager: window.createPdfPager(),
@@ -365,7 +371,7 @@
                     const payload = {
                         customer_id: this.customerId || null, department: d, bank: pd.bank || null, title: pd.jobType || '',
                         estimation_value: tier ? tier.tier.price : null,
-                        delivery: pd.delivery === '' ? 0 : pd.delivery, discount: pd.discount === '' ? 0 : pd.discount, items,
+                        delivery: pd.delivery === '' ? 0 : pd.delivery, discount: pd.discount === '' ? 0 : pd.discount, items, valid_days: parseInt(pd.validDays) || 14,
                     };
                     const notes = pd.editNotes ? pd.notesLines.map(l => l.trim()).filter(l => l !== '').join('\n') : '';
                     if (notes !== '') payload.notes = notes;

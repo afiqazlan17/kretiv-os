@@ -192,6 +192,7 @@ class JobController extends Controller
             'per_dept.*.deadline' => ['nullable', 'date'],
             'per_dept.*.notes' => ['nullable', 'string'],
             'per_dept.*.quotation_notes' => ['nullable', 'string', 'max:5000'],
+            'per_dept.*.valid_days' => ['nullable', 'integer', 'min:1', 'max:365'],
             'per_dept.*.delivery_amount' => ['nullable', 'numeric', 'min:0'],
             'per_dept.*.discount_amount' => ['nullable', 'numeric', 'min:0'],
             'per_dept.*.line_items' => ['nullable', 'array'],
@@ -285,7 +286,10 @@ class JobController extends Controller
                 'delivery_amount' => $fields['delivery_amount'] ?? null,
                 'discount_amount' => $fields['discount_amount'] ?? null,
                 'line_items' => $resolved['line_items'],
-                'document_notes' => ($quotationNotes = DocumentData::noteLines($fields['quotation_notes'] ?? null)) ? ['quotation' => $quotationNotes] : null,
+                'document_notes' => array_filter([
+                    'quotation' => DocumentData::noteLines($fields['quotation_notes'] ?? null) ?: null,
+                    'valid_days' => (int) ($fields['valid_days'] ?? 0) && (int) $fields['valid_days'] !== DocumentData::QUOTATION_VALID_DAYS ? (int) $fields['valid_days'] : null,
+                ]) ?: null,
                 // "I'll handle this job" skips the queue: it's taken in straight away.
                 'status' => $request->boolean('take_in') ? Job::STATUS_POTENTIAL : Job::STATUS_NEW,
                 'pic' => $request->boolean('take_in') ? $request->user()->name : null,

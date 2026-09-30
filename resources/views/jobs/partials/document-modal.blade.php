@@ -287,10 +287,23 @@
                 const file = event.target.files[0]; event.target.value = '';
                 if (!file) return;
                 row.uploading = true; this.error = '';
-                const body = new FormData(); body.append('file', file);
+                // Shrink in the browser first: hosting caps uploads at about 2 MB, and phone photos and mockups are often bigger.
+                let upload = file;
+                try {
+                    const img = await createImageBitmap(file);
+                    const scale = Math.min(1, 2000 / Math.max(img.width, img.height));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.round(img.width * scale); canvas.height = Math.round(img.height * scale);
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.88));
+                    if (blob) upload = new File([blob], 'picture.jpg', { type: 'image/jpeg' });
+                } catch (e) { /* send the original */ }
+                const body = new FormData(); body.append('file', upload);
                 try {
                     const res = await fetch(this.urls.itemImage, { method: 'POST', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': this.token() }, body });
-                    if (res.ok) row.image = (await res.json()).image; else this.error = await this.failure(res);
+                    if (res.ok) row.image = (await res.json()).image; else { this.error = await this.failure(res); alert(this.error); }
                 } catch (e) { this.error = 'Upload failed. Check the connection and try again.'; }
                 row.uploading = false;
             },

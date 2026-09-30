@@ -20,9 +20,9 @@ class ItemImages
     private const MAX_SIDE = 1600;
 
     /** Printed size limits in the PDF item column, in points. */
-    private const MAX_W = 270.0;
+    private const MAX_W = 200.0;
 
-    private const MAX_H = 190.0;
+    private const MAX_H = 150.0;
 
     public static function valid(?string $name): bool
     {

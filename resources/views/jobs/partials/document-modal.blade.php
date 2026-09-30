@@ -154,7 +154,16 @@
                                 <button type="button" @click="toggleNotes()" class="text-xs font-semibold text-gray-500 hover:text-gray-800" x-text="editNotes ? 'Use default' : 'Edit Notes'"></button>
                             </div>
                             <template x-if="editNotes">
-                                <textarea rows="8" x-model="notesText" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm" placeholder="One note per line"></textarea>
+                                <div class="mt-1 space-y-1.5">
+                                    <template x-for="(n, i) in noteList" :key="i">
+                                        <div class="flex items-start gap-2">
+                                            <span class="w-5 pt-2 text-right text-sm font-semibold text-gray-400" x-text="(i + 1) + '.'"></span>
+                                            <textarea rows="2" x-model="noteList[i]" @keydown.enter.prevent="addNote(i + 1)" class="block w-full rounded-md border-gray-300 shadow-sm text-sm" placeholder="Note"></textarea>
+                                            <button type="button" @click="noteList.splice(i, 1)" class="pt-2 text-gray-400 hover:text-red-500" title="Remove note" aria-label="Remove note"><x-icon name="trash-2" class="w-4 h-4" /></button>
+                                        </div>
+                                    </template>
+                                    <button type="button" @click="addNote(noteList.length)" class="inline-flex items-center gap-1 pl-7 text-xs font-bold text-[#C2185B] hover:underline"><x-icon name="plus" class="w-3.5 h-3.5" /> Add note</button>
+                                </div>
                             </template>
                             <p x-show="!editNotes" class="mt-1 text-xs text-gray-400">Uses the default wording for <span x-text="label.toLowerCase() + 's'"></span>. Click "Edit Notes" to change it for this job.</p>
                             <p x-show="editNotes" class="mt-1 text-xs text-gray-400">These notes are kept for this job once you Save or Download. "Use default" switches back to the standard wording.</p>
@@ -211,7 +220,7 @@
             jobCode: cfg.jobCode, urls: cfg.urls, mobileTab: 'form', scope: 'project', project: null, projectTotal: 0,
             open: false, type: 'quotation', label: 'Quotation', loading: false, busy: false, previewing: false,
             error: '', notice: '', form: blank(), paymentMethods: [], creditReasons: {}, invoiceNumber: null, invoiceTotal: null, paidBefore: 0, customerPhone: '', docNumber: '',
-            editNotes: false, notesText: '', defaultNotes: [], previewUrl: null, frameSrc: ['', ''], active: 0, pending: null, dirty: false, timer: null, seq: 0, pageDirty: false,
+            editNotes: false, notesText: '', noteList: [], defaultNotes: [], previewUrl: null, frameSrc: ['', ''], active: 0, pending: null, dirty: false, timer: null, seq: 0, pageDirty: false,
             pager: window.createPdfPager(),
 
             url(action) { return this.urls[action].replace('__TYPE__', this.type) + (this.scope === 'project' ? '?scope=project' : ''); },
@@ -230,6 +239,8 @@
                 this.$watch('form', () => this.schedule());
                 this.$watch('editNotes', () => this.schedule());
                 this.$watch('notesText', () => this.schedule());
+                // One box per note, numbered like the PDF; stored as one line each.
+                this.$watch('noteList', (list) => { this.notesText = list.map((n) => n.replace(/\s*\n\s*/g, ' ')).join('\n'); });
                 // Without this the page behind the modal keeps scrolling on
                 // mobile (touch events bubble past the modal's own scroll
                 // areas to the body), which felt like the popup wasn't
@@ -255,7 +266,7 @@
                 this.label = d.label; this.docNumber = d.doc_number; this.customerPhone = d.customer_phone || '';
                 this.invoiceNumber = d.invoice_number; this.invoiceTotal = d.invoice_total; this.paidBefore = d.paid_before || 0; this.paymentMethods = d.payment_methods; this.creditReasons = d.credit_reasons || {};
                 // Standard wording for "Use default"; the job's own saved notes (if any) open in edit mode.
-                this.defaultNotes = d.standard_notes; this.notesText = d.defaults.notes.join('\n'); this.editNotes = d.notes_custom;
+                this.defaultNotes = d.standard_notes; this.notesText = d.defaults.notes.join('\n'); this.noteList = [...d.defaults.notes]; this.editNotes = d.notes_custom;
                 const f = d.defaults; delete f.notes;
                 this.loading = false;
                 this.form = f;
@@ -308,7 +319,8 @@
                 row.uploading = false;
             },
             removeItem(i) { this.form.items.splice(i, 1); },
-            toggleNotes() { this.editNotes = !this.editNotes; if (!this.editNotes) this.notesText = this.defaultNotes.join('\n'); },
+            toggleNotes() { this.editNotes = !this.editNotes; if (!this.editNotes) { this.notesText = this.defaultNotes.join('\n'); this.noteList = [...this.defaultNotes]; } },
+            addNote(at) { this.noteList.splice(at, 0, ''); this.$nextTick(() => this.$root.querySelectorAll('textarea[placeholder="Note"]')[at]?.focus()); },
             payload() {
                 const p = { ...JSON.parse(JSON.stringify(this.form)) };
                 (p.items || []).forEach((r) => delete r.uploading);

@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\PrivacyAcknowledgement;
 use App\Models\User;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class PrivacyNoticeTest extends TestCase
@@ -50,7 +52,7 @@ class PrivacyNoticeTest extends TestCase
 
     public function test_reset_links_go_only_to_active_kretiv_co_accounts_with_one_reply_for_all(): void
     {
-        \Illuminate\Support\Facades\Notification::fake();
+        Notification::fake();
         $active = User::factory()->create(['email' => 'aina@kretiv.co']);
         $gone = User::factory()->create(['email' => 'old@kretiv.co', 'active' => false]);
 
@@ -59,7 +61,7 @@ class PrivacyNoticeTest extends TestCase
         $this->post('/forgot-password', ['email' => 'nobody@kretiv.co'])->assertSessionHas('status');
         $this->post('/forgot-password', ['email' => 'aina@kretiv.co'])->assertSessionHas('status');
 
-        \Illuminate\Support\Facades\Notification::assertSentTo($active, \Illuminate\Auth\Notifications\ResetPassword::class);
-        \Illuminate\Support\Facades\Notification::assertNotSentTo($gone, \Illuminate\Auth\Notifications\ResetPassword::class);
+        Notification::assertSentTo($active, ResetPassword::class);
+        Notification::assertNotSentTo($gone, ResetPassword::class);
     }
 }

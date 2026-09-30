@@ -157,7 +157,7 @@
                                         <x-icon name="chevron-right" class="w-4 h-4 transition-transform" x-bind:class="openId === {{ $customer->id }} && 'rotate-90 text-[#C2185B]'" />
                                     </td>
                                 </tr>
-                                <tr x-show="openId === {{ $customer->id }}" x-cloak>
+                                <tr x-show="openId === {{ $customer->id }} && editingId !== {{ $customer->id }}" x-cloak>
                                     <td colspan="5" class="px-5 md:px-6 py-5 bg-[#FFF9F6]">
                                         <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
                                             <div>
@@ -167,7 +167,7 @@
                                             <div class="flex items-center gap-2">
                                                 <a href="{{ route('jobs.create', ['customer_id' => $customer->id]) }}" class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110"><x-icon name="plus" class="w-3.5 h-3.5" /> New job</a>
                                                 @can('update', $customer)
-                                                    <button type="button" @click.stop="editingId = editingId === {{ $customer->id }} ? null : {{ $customer->id }}" class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#EFE3DE] text-gray-700 bg-white hover:bg-[#FFF7F3]"><x-icon name="pencil" class="w-3.5 h-3.5" /> Edit</button>
+                                                    <button type="button" @click.stop="editingId = editingId === {{ $customer->id }} ? null : {{ $customer->id }}; $nextTick(() => document.getElementById('edit-{{ $customer->id }}')?.scrollIntoView({ behavior: 'smooth', block: 'center' }))" class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#EFE3DE] text-gray-700 bg-white hover:bg-[#FFF7F3]"><x-icon name="pencil" class="w-3.5 h-3.5" /> Edit</button>
                                                 @endcan
                                                 <button type="button" @click="openId = null" class="text-gray-400 hover:text-gray-700" aria-label="Close"><x-icon name="x" class="w-4 h-4" /></button>
                                             </div>
@@ -246,7 +246,7 @@
                                     </td>
                                 </tr>
                                 @can('update', $customer)
-                                <tr x-show="editingId === {{ $customer->id }}" x-cloak>
+                                <tr id="edit-{{ $customer->id }}" x-show="editingId === {{ $customer->id }}" x-cloak>
                                     <td colspan="5" class="px-5 md:px-6 py-4 bg-white border-t border-[#F5ECE8]">
                                         <form method="POST" action="{{ route('customers.update', $customer) }}" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
                                             @csrf

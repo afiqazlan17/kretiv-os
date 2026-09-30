@@ -32,6 +32,8 @@
     table.notes-t td.note-head { font-weight: bold; padding-top: 3pt; }
     .spec-line { padding-left: 17pt; color: #333333; }
     .spec-line .dot { display: inline-block; width: 9pt; margin-left: -9pt; }
+    .spec-pair { padding-left: 8pt; color: #333333; margin-top: 1pt; }
+    .spec-pair b { color: #141414; }
     .spec-head { padding-left: 8pt; color: #141414; font-weight: bold; margin-top: 2pt; }
     .rt { text-align: right !important; white-space: nowrap; }
     .doc-end { page-break-inside: avoid; }

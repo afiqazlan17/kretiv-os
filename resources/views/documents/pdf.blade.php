@@ -43,7 +43,7 @@
                 </tr>
             </thead>
             <tbody>
-                @include('documents.partials.sections', ['cols' => 1, 'money' => false])
+                @include('documents.partials.sections', ['cols' => 1, 'money' => false, 'images' => false])
             </tbody>
         </table>
 

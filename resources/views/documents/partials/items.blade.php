@@ -4,6 +4,8 @@
     the next page instead of jumping whole to a new page. Lines typed with
     a bullet (*, -, •) print as bullets; other lines print as small headings.
     $money: whether to print Qty / Unit Price / Amount columns.
+    An item with a picture (tender mockup) prints as one row instead, so the
+    name, description and picture always stay together on the same page.
 --}}
 @foreach ($items as $i => $item)
     @php
@@ -16,9 +18,21 @@
         $qtyOnly = $qtyOnly ?? false;
         $empty = $money ? '<td></td><td></td><td></td>' : ($qtyOnly ? '<td></td>' : '');
     @endphp
-    <tr class="first {{ $count === 0 ? 'last' : '' }}">
+    @php $picture = ($images ?? true) && ! empty($item['image_file']); @endphp
+    <tr class="first {{ $count === 0 || $picture ? 'last' : '' }}">
         <td class="c">{{ ($start ?? 0) + $i + 1 }}</td>
-        <td><div class="item-name">{{ $item['item'] }}</div></td>
+        <td><div class="item-name">{{ $item['item'] }}</div>
+            @if ($picture)
+                @foreach ($lines as [$kind, $text])
+                    @if ($kind === 'bullet')
+                        <div class="spec-line"><span class="dot">&bull;</span>{{ $text }}</div>
+                    @else
+                        <div class="spec-head">{{ $text }}</div>
+                    @endif
+                @endforeach
+                <img class="item-img" src="{{ $item['image_file'] }}" style="width:{{ $item['image_w'] }}pt;height:{{ $item['image_h'] }}pt;">
+            @endif
+        </td>
         @if ($money && (float) $item['price'] == 0.0)
             {{-- A RM 0 line is scope detail (what's included), not something charged: leave the figures blank. --}}
             <td></td><td></td><td></td>
@@ -30,7 +44,7 @@
             <td class="c">{{ rtrim(rtrim(number_format($item['qty'], 2, '.', ''), '0'), '.') }}</td>
         @endif
     </tr>
-    @foreach ($lines as $n => [$kind, $text])
+    @foreach ($picture ? [] : $lines as $n => [$kind, $text])
         <tr class="more {{ $n === $count - 1 ? 'last' : '' }}">
             <td></td>
             <td>

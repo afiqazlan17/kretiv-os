@@ -9,6 +9,7 @@ use App\Models\JobDocument;
 use App\Models\LedgerEntry;
 use App\Services\LedgerService;
 use App\Support\DocumentData;
+use App\Support\ItemImages;
 use App\Support\Phone;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
@@ -76,7 +77,7 @@ class DocumentController extends Controller
 
         $doc = $this->buildDoc($request, $job, $type, $this->projectScope($request, $job, $type));
 
-        return response(Pdf::loadView('documents.pdf', ['doc' => $doc])->output(), 200, [
+        return response(DocumentData::pdf($doc), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="preview.pdf"',
         ]);
@@ -143,7 +144,7 @@ class DocumentController extends Controller
             $request->user()->shortName(),
         );
 
-        return response(Pdf::loadView('documents.pdf', ['doc' => $doc])->output(), 200, [
+        return response(DocumentData::pdf($doc), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="preview.pdf"',
         ]);
@@ -166,6 +167,7 @@ class DocumentController extends Controller
                 'size' => '',
                 'qty' => $i['qty'],
                 'price' => $i['price'],
+                'image' => $i['image'],
             ], $doc['items']),
             'delivery_amount' => $doc['delivery'] ?: null,
             'discount_amount' => $doc['discount'] ?: null,
@@ -227,7 +229,7 @@ class DocumentController extends Controller
 
         $this->rememberNotes($request, collect([$job]), $type);
 
-        $bytes = Pdf::loadView('documents.pdf', ['doc' => $doc])->output();
+        $bytes = DocumentData::pdf($doc);
         $filename = "{$docNumber}.pdf";
         $path = "{$job->job_id}/document/".time()."_{$filename}";
         Storage::disk('public')->put($path, $bytes);
@@ -276,7 +278,7 @@ class DocumentController extends Controller
 
         $this->rememberNotes($request, $jobs, 'project_'.$type);
 
-        $bytes = Pdf::loadView('documents.pdf', ['doc' => $doc])->output();
+        $bytes = DocumentData::pdf($doc);
         $filename = "{$docNumber}.pdf";
         $path = "{$job->job_id}/document/".time()."_{$filename}";
         Storage::disk('public')->put($path, $bytes);
@@ -495,7 +497,7 @@ class DocumentController extends Controller
             }
         }
 
-        $bytes = Pdf::loadView('documents.pdf', ['doc' => $doc])->output();
+        $bytes = DocumentData::pdf($doc);
         $filename = "{$docNumber}.pdf";
         $path = "{$job->job_id}/document/".time()."_{$filename}";
         Storage::disk('public')->put($path, $bytes);
@@ -631,6 +633,7 @@ class DocumentController extends Controller
             'items.*.desc' => ['nullable', 'string', 'max:2000'],
             'items.*.qty' => ['nullable', 'numeric', 'min:0'],
             'items.*.price' => ['nullable', 'numeric', 'min:0'],
+            'items.*.image' => ['nullable', 'string', 'regex:'.ItemImages::NAME],
             'delivery' => ['nullable', 'numeric', 'min:0'],
             'discount' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string', 'max:5000'],

@@ -1,3 +1,5 @@
+{{-- Kept together: a note list split across pages left one note stranded on the last page. --}}
+<div class="doc-end">
 <div class="note-title">Note:</div>
 <table class="notes-t">
     @php $n = 0; @endphp
@@ -54,3 +56,4 @@
         @endif
     </tr>
 </table>
+</div>

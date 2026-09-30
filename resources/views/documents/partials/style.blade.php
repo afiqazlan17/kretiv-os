@@ -34,6 +34,9 @@
     .spec-line .dot { display: inline-block; width: 9pt; margin-left: -9pt; }
     .spec-head { padding-left: 8pt; color: #141414; font-weight: bold; margin-top: 2pt; }
     .rt { text-align: right !important; white-space: nowrap; }
+    .doc-end { page-break-inside: avoid; }
+    .item-img { display: block; margin: 6pt 0 1pt 8pt; border: 0.5pt solid #d0d0d0; }
+    table.grid tr { page-break-inside: avoid; }
 
 
     .note-title { margin-top: 19.5pt; font-weight: bold; line-height: 15.3pt; margin-bottom: 1pt; }

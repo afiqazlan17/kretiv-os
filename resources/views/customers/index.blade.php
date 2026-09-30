@@ -90,6 +90,7 @@
                         </select>
                     </div>
                     <div class="sm:col-span-2 space-y-1.5">
+                        <x-address-paste />
                         <div>
                             <x-input-label for="address_line_1" value="Address" />
                             <x-text-input id="address_line_1" name="address_line_1" type="text" class="mt-1 block w-full" :value="old('address_line_1')" placeholder="Line 1" />
@@ -260,6 +261,7 @@
                                                     <option value="{{ $key }}" {{ $customer->source === $key ? 'selected' : '' }}>{{ $label }}</option>
                                                 @endforeach
                                             </select>
+                                            <x-address-paste />
                                             <x-text-input name="address_line_1" type="text" class="block w-full" :value="$customer->address_line_1" placeholder="Address line 1" />
                                             <x-text-input name="address_line_2" type="text" class="block w-full" :value="$customer->address_line_2" placeholder="Address line 2" />
                                             <div class="grid grid-cols-3 gap-2">

@@ -24,6 +24,7 @@ use App\Http\Controllers\Hr\MyProfileController;
 use App\Http\Controllers\Hr\PayrollController;
 use App\Http\Controllers\Hr\ProfileRequestController;
 use App\Http\Controllers\Hr\StaffController;
+use App\Http\Controllers\ItemImageController;
 use App\Http\Controllers\ItemLibraryController;
 use App\Http\Controllers\JobController;
 use App\Http\Controllers\JobFormController;
@@ -144,6 +145,8 @@ $onHost('jobs', function () {
         Route::post('/jobs/{job}/attachments', [AttachmentController::class, 'store'])->name('jobs.attachments.store');
         Route::get('/jobs/{job}/attachments/{attachmentId}', [AttachmentController::class, 'show'])->name('jobs.attachments.show');
         Route::delete('/jobs/{job}/attachments/{attachmentId}', [AttachmentController::class, 'destroy'])->name('jobs.attachments.destroy');
+        Route::post('/jobs/{job}/item-images', [ItemImageController::class, 'store'])->middleware('throttle:30,1')->name('jobs.item-images.store');
+        Route::get('/jobs/{job}/item-images/{name}', [ItemImageController::class, 'show'])->name('jobs.item-images.show');
         Route::prefix('/jobs/{job}/documents/{type}')->whereIn('type', DocumentData::TYPES)->group(function () {
             Route::get('/draft', [DocumentController::class, 'draft'])->name('jobs.documents.draft');
             Route::post('/preview', [DocumentController::class, 'preview'])->name('jobs.documents.preview');

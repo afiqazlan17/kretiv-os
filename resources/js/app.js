@@ -108,4 +108,64 @@ window.lookupPostcode = async function (input) {
     } catch (e) { /* leave fields as staff typed */ }
 };
 
+// "Paste full address": splits a Malaysian address copied from WhatsApp or an
+// email into line 1, line 2, postcode, city and state. Street parts before the
+// postcode are shared between line 1 and line 2; the town after the postcode is
+// the city; a state name at the end is the state.
+const MY_STATES = {
+    johor: 'Johor', kedah: 'Kedah', kelantan: 'Kelantan', melaka: 'Melaka', malacca: 'Melaka',
+    'negeri sembilan': 'Negeri Sembilan', pahang: 'Pahang', perak: 'Perak', perlis: 'Perlis',
+    'pulau pinang': 'Pulau Pinang', penang: 'Pulau Pinang', sabah: 'Sabah', sarawak: 'Sarawak',
+    selangor: 'Selangor', terengganu: 'Terengganu', 'kuala lumpur': 'Wilayah Persekutuan Kuala Lumpur',
+    putrajaya: 'Wilayah Persekutuan Putrajaya', labuan: 'Wilayah Persekutuan Labuan',
+};
+const findState = (text) => {
+    const t = text.toLowerCase().replace(/w\.?\s*p\.?|wilayah persekutuan/g, '').trim();
+    const key = Object.keys(MY_STATES).find((k) => t === k || t.endsWith(` ${k}`));
+    return key ? { name: MY_STATES[key], rest: text.slice(0, text.length - key.length).replace(/(w\.?\s*p\.?|wilayah persekutuan)\s*$/i, '').trim() } : null;
+};
+window.parseMyAddress = function (text) {
+    const parts = String(text || '').split(/[,\n]+/).map((s) => s.trim().replace(/\.$/, '')).filter(Boolean);
+    if (parts.length && /^malaysia$/i.test(parts[parts.length - 1])) parts.pop();
+    const out = { address_line_1: '', address_line_2: '', postcode: '', city: '', state: '' };
+
+    const last = parts.length ? findState(parts[parts.length - 1]) : null;
+    if (last) {
+        out.state = last.name;
+        // "50450 Kuala Lumpur": the state name is also the city, so keep the part.
+        if (!/^\d{5}$/.test(last.rest)) {
+            parts.pop();
+            if (last.rest) parts.push(last.rest);
+        }
+    }
+    const at = parts.findIndex((p) => /\b\d{5}\b/.test(p));
+    let street = parts;
+    if (at >= 0) {
+        out.postcode = parts[at].match(/\b\d{5}\b/)[0];
+        const town = parts[at].replace(out.postcode, '').trim();
+        out.city = town || parts[at + 1] || '';
+        street = parts.slice(0, at);
+    }
+    const half = Math.ceil(street.length / 2);
+    out.address_line_1 = street.slice(0, half).join(', ');
+    out.address_line_2 = street.slice(half).join(', ');
+    return out;
+};
+
+// Fills the address inputs (by name) of the form the paste box sits in.
+window.fillPastedAddress = function (button) {
+    const form = button.closest('form');
+    const box = form?.querySelector('[data-address-paste]');
+    if (!box || !box.value.trim()) return;
+    const parsed = window.parseMyAddress(box.value);
+    Object.entries(parsed).forEach(([name, value]) => {
+        const input = form.querySelector(`[name="${name}"]`);
+        if (input && value) { input.value = value; input.dispatchEvent(new Event('input', { bubbles: true })); }
+    });
+    const postcode = form.querySelector('[name="postcode"]');
+    if (postcode && (!parsed.city || !parsed.state)) window.lookupPostcode(postcode);
+    box.value = '';
+    button.closest('details')?.removeAttribute('open');
+};
+
 Alpine.start();

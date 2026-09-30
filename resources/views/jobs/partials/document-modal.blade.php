@@ -3,7 +3,8 @@
      Download PDF produces. --}}
 <div x-data="documentModal(@js([
         'jobCode' => $job->job_id,
-        'urls' => collect(['draft', 'preview', 'save', 'generate'])->mapWithKeys(fn ($a) => [$a => route('jobs.documents.'.$a, [$job, '__TYPE__'])])->all(),
+        'urls' => collect(['draft', 'preview', 'save', 'generate'])->mapWithKeys(fn ($a) => [$a => route('jobs.documents.'.$a, [$job, '__TYPE__'])])->all()
+            + ['itemImage' => route('jobs.item-images.store', $job), 'itemImageShow' => route('jobs.item-images.show', [$job, '__NAME__'])],
     ]))"
      @open-document.window="openFor($event.detail.type)"
      @keydown.escape.window="open && close()"
@@ -74,6 +75,16 @@
                                             <x-item-dropdown /></div>
                                         <div><label class="text-[11px] text-gray-400">Description</label>
                                             <textarea rows="2" x-model="row.desc" class="block w-full rounded-md border-gray-300 shadow-sm text-sm"></textarea></div>
+                                        <div x-show="type !== 'receipt'" class="flex items-center gap-3">
+                                            <template x-if="row.image">
+                                                <a :href="imageUrl(row.image)" target="_blank" rel="noopener"><img :src="imageUrl(row.image)" alt="Item picture" class="h-14 w-14 rounded-md border border-[#EFE3DE] object-cover"></a>
+                                            </template>
+                                            <label class="cursor-pointer text-xs font-semibold text-[#C2185B] hover:underline">
+                                                <input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="uploadImage($event, row)">
+                                                <span x-text="row.uploading ? 'Uploading...' : (row.image ? 'Change picture' : 'Add picture (mockup)')"></span>
+                                            </label>
+                                            <button type="button" x-show="row.image" @click="row.image = ''" class="text-xs text-gray-400 hover:text-red-500">Remove</button>
+                                        </div>
                                         <div class="flex items-end gap-2">
                                             <div class="flex-1"><label class="text-[11px] text-gray-400">Quantity (Qty)</label>
                                                 <input type="number" min="0" step="any" x-model="row.qty" class="block w-full rounded-md border-gray-300 shadow-sm text-sm"></div>
@@ -270,11 +281,24 @@
                 this.resetFrames();
                 if (this.pageDirty) window.location.reload();
             },
-            addItem() { this.form.items.push({ item: '', desc: '', qty: 1, price: 0 }); },
+            addItem() { this.form.items.push({ item: '', desc: '', qty: 1, price: 0, image: '' }); },
+            imageUrl(name) { return this.urls.itemImageShow.replace('__NAME__', name); },
+            async uploadImage(event, row) {
+                const file = event.target.files[0]; event.target.value = '';
+                if (!file) return;
+                row.uploading = true; this.error = '';
+                const body = new FormData(); body.append('file', file);
+                try {
+                    const res = await fetch(this.urls.itemImage, { method: 'POST', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': this.token() }, body });
+                    if (res.ok) row.image = (await res.json()).image; else this.error = await this.failure(res);
+                } catch (e) { this.error = 'Upload failed. Check the connection and try again.'; }
+                row.uploading = false;
+            },
             removeItem(i) { this.form.items.splice(i, 1); },
             toggleNotes() { this.editNotes = !this.editNotes; if (!this.editNotes) this.notesText = this.defaultNotes.join('\n'); },
             payload() {
                 const p = { ...JSON.parse(JSON.stringify(this.form)) };
+                (p.items || []).forEach((r) => delete r.uploading);
                 if (this.type === 'receipt' || this.type === 'credit_note') { p.delivery = 0; p.discount = 0; }
                 else { delete p.payment_method; delete p.amount_paid; }
                 if (this.editNotes) p.notes = this.notesText; else p.use_default_notes = true;

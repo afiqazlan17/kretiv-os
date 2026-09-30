@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Job;
 use App\Models\JobDocument;
 use App\Models\LedgerEntry;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -219,10 +220,29 @@ class DocumentData
                 'desc' => $item === $desc ? '' : $desc,
                 'qty' => (float) ($li['qty'] ?? 1),
                 'price' => (float) ($li['price'] ?? 0),
+                'image' => ItemImages::valid($li['image'] ?? null) ? $li['image'] : '',
             ];
         })->values()->all();
 
         return $items ?: [['item' => (string) $job->job_type, 'desc' => '', 'qty' => 1.0, 'price' => (float) ($job->estimation_value ?? 0)]];
+    }
+
+    /**
+     * The document PDF. When it runs past one page, every page gets
+     * "Page X of Y" at the bottom right so a printed set stays in order.
+     */
+    public static function pdf(array $doc): string
+    {
+        $pdf = Pdf::loadView('documents.pdf', ['doc' => $doc]);
+        $dompdf = $pdf->getDomPDF();
+        $dompdf->render();
+        $canvas = $dompdf->getCanvas();
+        if ($canvas->get_page_count() > 1) {
+            $font = $dompdf->getFontMetrics()->getFont('Helvetica');
+            $canvas->page_text($canvas->get_width() - 100, $canvas->get_height() - 30, 'Page {PAGE_NUM} of {PAGE_COUNT}', $font, 7.5, [0.53, 0.53, 0.53]);
+        }
+
+        return $dompdf->output();
     }
 
     /**
@@ -239,8 +259,9 @@ class DocumentData
                 'desc' => trim((string) ($r['desc'] ?? '')),
                 'qty' => (float) ($r['qty'] ?? 1),
                 'price' => (float) ($r['price'] ?? 0),
+                'image' => ItemImages::valid($r['image'] ?? null) ? $r['image'] : '',
             ])
-            ->filter(fn ($r) => $r['item'] !== '' || $r['desc'] !== '')
+            ->filter(fn ($r) => $r['item'] !== '' || $r['desc'] !== '' || $r['image'] !== '')
             ->map(fn ($r) => $r + ['amount' => round($r['qty'] * $r['price'], 2)])
             ->values()
             ->all();
@@ -258,7 +279,7 @@ class DocumentData
         $bank = self::bank($job);
         $pick = fn (string $key) => array_key_exists($key, $input) && $input[$key] !== null ? $input[$key] : $defaults[$key];
 
-        $items = self::normalizeItems(array_key_exists('items', $input) ? (array) $input['items'] : $defaults['items']);
+        $items = ItemImages::resolve(self::normalizeItems(array_key_exists('items', $input) ? (array) $input['items'] : $defaults['items']), $job);
         $creditReason = null;
         if ($type === 'credit_note') {
             // One line: the credit against the invoice, with the reason.
@@ -513,7 +534,7 @@ class DocumentData
 
         $sections = $jobs->map(fn (Job $j) => [
             'label' => config("kretivco.departments.{$j->department}.label", $j->department).': '.$j->job_type,
-            'items' => self::normalizeItems(self::itemsFromJob($j)),
+            'items' => ItemImages::resolve(self::normalizeItems(self::itemsFromJob($j)), $j),
         ])->values()->all();
 
         $input = array_merge($input, [

@@ -61,7 +61,14 @@
                                 <input type="text" x-model="inlineCustomer.phone" placeholder="Phone" class="rounded-md border-gray-300 shadow-sm text-xs h-9">
                                 <input type="email" x-model="inlineCustomer.email" placeholder="Email" class="rounded-md border-gray-300 shadow-sm text-xs h-9">
                                 <input type="text" x-model="inlineCustomer.address_line_1" placeholder="Address line 1" class="col-span-2 rounded-md border-gray-300 shadow-sm text-xs h-9">
-                                <input type="text" x-model="inlineCustomer.address_line_2" placeholder="Postcode, city, state" class="col-span-2 rounded-md border-gray-300 shadow-sm text-xs h-9">
+                                <input type="text" x-model="inlineCustomer.address_line_2" placeholder="Address line 2" class="col-span-2 rounded-md border-gray-300 shadow-sm text-xs h-9">
+                                <input type="text" x-model="inlineCustomer.postcode" placeholder="Postcode" class="rounded-md border-gray-300 shadow-sm text-xs h-9">
+                                <input type="text" x-model="inlineCustomer.city" placeholder="City" class="rounded-md border-gray-300 shadow-sm text-xs h-9">
+                                <input type="text" x-model="inlineCustomer.state" placeholder="State" class="col-span-2 rounded-md border-gray-300 shadow-sm text-xs h-9">
+                                <details class="col-span-2 text-xs"><summary class="cursor-pointer font-semibold text-[#C2185B]">Paste full address</summary>
+                                    <textarea x-model="inlinePaste" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs" placeholder="No. 105, Jalan SP 7/14, Bandar Saujana Putra, 42610 Jenjarom, Selangor"></textarea>
+                                    <button type="button" @click="fillInlineAddress($event)" class="mt-1 font-semibold px-2.5 py-1 rounded-md text-white bg-[#C2185B]">Fill in</button>
+                                </details>
                             </div>
                             <select x-model="inlineCustomer.source" class="w-full rounded-md border-gray-300 shadow-sm text-xs h-9 mb-2">
                                 @foreach (config('kretivco.sources') as $key => $label)
@@ -336,7 +343,8 @@
                 customerQuery: '',
                 customerOpen: false,
                 showInlineCustomer: false,
-                inlineCustomer: { name: '', company: '', phone: '', email: '', address_line_1: '', address_line_2: '', source: 'referral' },
+                inlineCustomer: { name: '', company: '', phone: '', email: '', address_line_1: '', address_line_2: '', postcode: '', city: '', state: '', source: 'referral' },
+                inlinePaste: '',
                 inlineSaving: false,
                 inlineError: null,
                 inlineExisting: null,
@@ -450,6 +458,18 @@
                     this.customerQuery = '';
                     this.customerOpen = false;
                 },
+                async fillInlineAddress(event) {
+                    const a = window.parseMyAddress(this.inlinePaste);
+                    Object.keys(a).forEach((k) => { if (a[k]) this.inlineCustomer[k] = a[k]; });
+                    if (a.postcode && (!a.city || !a.state)) {
+                        try {
+                            const res = await fetch(`/postcode-lookup/${a.postcode}`, { headers: { Accept: 'application/json' } });
+                            if (res.ok) { const d = await res.json(); this.inlineCustomer.city ||= d.city; this.inlineCustomer.state ||= d.state; }
+                        } catch (e) { /* keep what was parsed */ }
+                    }
+                    this.inlinePaste = '';
+                    event.target.closest('details')?.removeAttribute('open');
+                },
                 async saveInlineCustomer() {
                     if (!this.inlineCustomer.name.trim()) return;
                     this.inlineSaving = true;
@@ -479,7 +499,7 @@
                         });
                         this.selectCustomer({ id: customer.id });
                         this.showInlineCustomer = false;
-                        this.inlineCustomer = { name: '', company: '', phone: '', email: '', address_line_1: '', address_line_2: '', source: 'referral' };
+                        this.inlineCustomer = { name: '', company: '', phone: '', email: '', address_line_1: '', address_line_2: '', postcode: '', city: '', state: '', source: 'referral' };
                     } catch (e) {
                         this.inlineError = e.message;
                     }

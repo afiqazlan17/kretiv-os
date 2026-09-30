@@ -12,6 +12,7 @@ use App\Models\Vendor;
 use App\Rules\SafeUpload;
 use App\Services\LedgerService;
 use App\Support\DocumentData;
+use App\Support\ItemImages;
 use App\Support\NoteSanitizer;
 use App\Support\PaymentHistory;
 use Illuminate\Http\RedirectResponse;
@@ -578,6 +579,7 @@ class JobController extends Controller
 
             return $copy;
         });
+        ItemImages::copy($job, $copy);
 
         return redirect()->route('jobs.show', $copy)->with('success', "{$copy->job_id} created from {$job->job_id}. Check the items and send the quotation.");
     }

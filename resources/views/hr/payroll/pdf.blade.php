@@ -44,7 +44,7 @@
 <body>
     <table>
         <tr>
-            <td style="width:58pt"><img src="{{ public_path('images/kretivco-logo.png') }}" style="width:50pt;height:50pt"></td>
+            <td style="width:58pt"><img src="{{ public_path(config('kretivco.brand.logo')) }}" style="width:50pt;height:50pt"></td>
             <td>
                 <div class="brand">{{ config('kretivco.brand.name') }}</div>
                 <div class="muted small">{{ config('kretivco.brand.ssm') }}</div>

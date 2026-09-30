@@ -14,7 +14,7 @@
     @if ($bank)
         {{-- Bank line on the left, DuitNow QR beside it on the right: stacking the
              QR underneath pushed the signature block onto a page of its own. --}}
-        @php $qr = ['affin' => 'images/affin-duitnow-qr.png', 'mbb' => 'images/maybank-duitnow-qr.png'][$bankKey ?? ''] ?? null; @endphp
+        @php $qr = config('kretivco.bank_qr')[$bankKey ?? ''] ?? null; @endphp
         <table class="pay-block pay-t">
             <tr>
                 <td>
@@ -36,8 +36,8 @@
     <tr>
         <td style="width:228.5pt; position:relative;">
             <b>Issued by:</b>
-            @if (file_exists(public_path('images/kretivco-stamp.png')))
-                <img src="{{ public_path('images/kretivco-stamp.png') }}" class="stamp-img">
+            @if (($stamp = config('kretivco.brand.stamp')) && file_exists(public_path($stamp)))
+                <img src="{{ public_path($stamp) }}" class="stamp-img">
             @endif
             <div class="sign-line"></div>
         </td>

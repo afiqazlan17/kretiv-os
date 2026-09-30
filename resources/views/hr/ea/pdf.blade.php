@@ -37,7 +37,7 @@
 <body>
     <table>
         <tr>
-            <td style="width:52pt"><img src="{{ public_path('images/kretivco-logo.png') }}" style="width:44pt;height:44pt"></td>
+            <td style="width:52pt"><img src="{{ public_path(config('kretivco.brand.logo')) }}" style="width:44pt;height:44pt"></td>
             <td>
                 <div style="font-size:12pt;font-weight:bold">{{ config('kretivco.brand.name') }}</div>
                 <div class="muted" style="font-size:7pt">{{ config('kretivco.brand.ssm') }} · {{ config('kretivco.brand.address_line_1') }}, {{ config('kretivco.brand.address_line_2') }}</div>

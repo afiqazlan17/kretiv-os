@@ -14,7 +14,7 @@
 </style></head>
 <body>
     <table><tr>
-        <td style="width:52pt"><img src="{{ public_path('images/kretivco-logo.png') }}" style="width:44pt;height:44pt"></td>
+        <td style="width:52pt"><img src="{{ public_path(config('kretivco.brand.logo')) }}" style="width:44pt;height:44pt"></td>
         <td><div style="font-size:12pt;font-weight:bold">{{ config('kretivco.brand.name') }}</div><div style="color:#6b6b6b;font-size:8pt">{{ config('kretivco.brand.ssm') }} · {{ config('kretivco.brand.address_line_1') }}, {{ config('kretivco.brand.address_line_2') }}</div></td>
         <td style="text-align:right"><div style="font-size:18pt;font-weight:bold">APPROVAL RECORD</div><div style="color:#6b6b6b">{{ $job->job_id }} · v{{ $a->version }}</div></td>
     </tr></table>

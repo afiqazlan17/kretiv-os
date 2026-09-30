@@ -168,3 +168,72 @@ Local testing of the domain mode: use `lvh.me` (resolves to 127.0.0.1) — e.g.
 `OS_HOST=os.lvh.me JOBS_HOST=jobs.lvh.me SESSION_DOMAIN=.lvh.me php artisan
 serve --port=8001`. (`*.localhost` cookies can't be shared across subdomains.)
 
+
+## Demo install (demo.kretiv.co)
+
+A second, separate copy of KretivOS for prospects, running the made-up
+company **Mirul Enterprise** (`DEMO_MODE=true`, see `config/demo.php`). It has
+its own folder, database and `.env`; nothing is shared with the real system.
+In demo mode: documents show the demo company (no Kretivco stamp, no DuitNow
+QR, fake bank numbers), no email goes out, the demo accounts can't be changed
+or locked, every page carries a "Demo mode" strip, and search engines are told
+not to index it.
+
+**One-time setup**
+
+1. **cPanel -> MySQL Databases**: new database and user (e.g. `kretivco_demo`),
+   user gets ALL privileges on that database only.
+2. **cPanel -> Git Version Control -> Create**: clone the same GitHub repo (same
+   way as the "KretivOS" repo) into `repositories/kretiv-os-demo`.
+   Set the folder and its `public/` to **0755** (see the 404 gotcha above).
+3. **File Manager**: copy `repositories/kretiv-os/vendor` into the demo folder
+   (composer can't run on the server), and extract `build.zip` there too.
+4. **cPanel -> Domains -> Create A New Domain**: `demo.kretiv.co`, document root
+   `repositories/kretiv-os-demo/public`. **Cloudflare DNS**: add `demo` with the
+   same target as `jobs`. Wait for SSL.
+5. **`.env`** in the demo folder (copy `.env.example`), and fill in:
+
+   ```
+   APP_NAME="KretivOS Demo"
+   APP_ENV=production
+   APP_DEBUG=false
+   APP_URL=https://demo.kretiv.co
+   APP_KEY=
+   DEMO_MODE=true
+   DEMO_PASSWORD=demo1234
+   DB_CONNECTION=mysql
+   DB_DATABASE=kretivco_demo
+   DB_USERNAME=kretivco_demo
+   DB_PASSWORD=(the demo database password)
+   MAIL_MAILER=log
+   SESSION_DOMAIN=
+   SESSION_SECURE_COOKIE=true
+   ```
+
+   Leave all `*_HOST` values empty (the demo runs on one host) and keep
+   `SESSION_DOMAIN` empty: `.kretiv.co` there would mix the demo's login
+   cookie with the real system's.
+6. **One-off cron** (then delete it). It generates the key, builds and seeds
+   the demo, and links uploaded files:
+
+   ```
+   cd /home/kretivco/repositories/kretiv-os-demo && /usr/local/bin/ea-php84 artisan key:generate --force > /home/kretivco/demo-setup.log 2>&1 && /usr/local/bin/ea-php84 artisan demo:reset >> /home/kretivco/demo-setup.log 2>&1 && ln -sfn /home/kretivco/repositories/kretiv-os-demo/storage/app/public /home/kretivco/repositories/kretiv-os-demo/public/storage && /usr/local/bin/ea-php84 artisan view:clear >> /home/kretivco/demo-setup.log 2>&1
+   ```
+
+7. **Permanent nightly cron** (this one stays), 3am:
+
+   ```
+   0 3 * * * cd /home/kretivco/repositories/kretiv-os-demo && /usr/local/bin/ea-php84 artisan demo:reset > /home/kretivco/demo-reset.log 2>&1
+   ```
+
+`demo:reset` wipes the database and uploads, so it refuses to run unless
+`DEMO_MODE` is on, `APP_URL` is a demo address, and the database is empty or
+already the demo. On the real system it always refuses.
+
+**Accounts**: `boss@`, `finance@`, `hr@`, `staff@demo.kretiv.co`, password
+`DEMO_PASSWORD`. The login page shows them as one-click buttons.
+
+**Updating the demo** after a `git push`: Git Version Control -> the demo repo
+-> **Update from Remote**; extract the same `build.zip` when CSS/JS changed and
+copy `vendor/` again when `composer.lock` changed. New migrations apply at the
+next nightly reset (or run the reset cron once to apply them now).

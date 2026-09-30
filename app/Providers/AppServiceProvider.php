@@ -25,6 +25,22 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Demo install (demo.kretiv.co): a made-up company on documents, no stamp
+        // or DuitNow QR, and no real emails going out. See config/demo.php.
+        if (config('demo.enabled')) {
+            config([
+                'kretivco.brand' => array_merge(config('kretivco.brand'), config('demo.brand')),
+                'kretivco.bank_details' => config('demo.bank_details'),
+                'kretivco.bank_qr' => [],
+                'kretivco.privacy.officer' => config('demo.privacy.officer'),
+                'kretivco.privacy.email' => config('demo.privacy.email'),
+                'mail.default' => 'log',
+            ]);
+            foreach (config('demo.department_labels') as $key => $label) {
+                config(["kretivco.departments.{$key}.label" => $label]);
+            }
+        }
+
         Job::observe(JobObserver::class);
         User::observe(UserObserver::class);
 

@@ -2,6 +2,20 @@
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
+    @if (config('demo.enabled'))
+        {{-- Demo install: pick an account to see KretivOS from that seat. --}}
+        <div class="mb-5 rounded-xl border border-amber-300/60 bg-amber-50 p-4 text-sm text-amber-900">
+            <p class="font-bold">Try the KretivOS demo</p>
+            <p class="mt-0.5 text-amber-800">Pick a seat, then log in. Password: <b>{{ config('demo.password') }}</b></p>
+            <div class="mt-3 flex flex-wrap gap-2">
+                @foreach (config('demo.accounts') as $email => $label)
+                    <button type="button" onclick="document.getElementById('email').value = {{ Js::from($email) }}; document.getElementById('password').value = {{ Js::from(config('demo.password')) }};"
+                            class="rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-amber-900 border border-amber-300 hover:bg-amber-100">{{ $label }}</button>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     <form method="POST" action="{{ route('login') }}">
         @csrf
 

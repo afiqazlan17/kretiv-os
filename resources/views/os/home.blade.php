@@ -92,6 +92,7 @@
                     </div>
                     <x-icon name="arrow-right" class="w-4 h-4 text-white/40 shrink-0" />
                 </a>
+                @unless (config('demo.enabled'))
                 <a href="https://sc171.mschosting.cloud:2096/" target="_blank" rel="noopener" class="mt-2 flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 px-4 py-3.5 hover:border-white/25 transition-colors">
                     <span class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-white" style="background:linear-gradient(135deg,#3A86FF,#6FB7FF)"><x-icon name="mail" class="w-5 h-5" /></span>
                     <div class="flex-1 min-w-0">
@@ -100,6 +101,7 @@
                     </div>
                     <x-icon name="arrow-right" class="w-4 h-4 text-white/40 shrink-0" />
                 </a>
+                @endunless
             </div>
 
             {{-- Module launcher tiles — simple/uniform, the whole tile is

@@ -35,5 +35,6 @@
 
             <p class="relative z-10 mt-6 text-xs text-white/40">Kretivco Mediaworks</p>
         </div>
+        @include('layouts.partials.demo-banner')
     </body>
 </html>

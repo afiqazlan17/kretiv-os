@@ -51,6 +51,7 @@
         </div>
 
         @include('layouts.partials.privacy-prompt')
+        @include('layouts.partials.demo-banner')
         @stack('scripts')
     </body>
 </html>

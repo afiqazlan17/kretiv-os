@@ -296,6 +296,15 @@ return [
         'phone2' => '+6019-3663805',
         // LHDN employer number (No. Majikan E), printed on Borang EA.
         'lhdn_employer_no' => env('LHDN_EMPLOYER_NO', ''),
+        // Images on documents (public/ paths). Demo mode has no stamp.
+        'logo' => 'images/kretivco-logo.png',
+        'stamp' => 'images/kretivco-stamp.png',
+    ],
+
+    // DuitNow QR printed beside each bank's payment line on documents.
+    'bank_qr' => [
+        'affin' => 'images/affin-duitnow-qr.png',
+        'mbb' => 'images/maybank-duitnow-qr.png',
     ],
 
     // Personal data (PDPA): who answers privacy questions, and the Staff Privacy

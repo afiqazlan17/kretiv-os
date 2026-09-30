@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\DemoGuard;
 use App\Http\Middleware\EnsureModuleAccess;
 use App\Http\Middleware\ForcePasswordChange;
 use App\Http\Middleware\SecurityHeaders;
@@ -18,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias(['module' => EnsureModuleAccess::class]);
         $middleware->appendToGroup('web', ForcePasswordChange::class);
         $middleware->appendToGroup('web', SecurityHeaders::class);
+        $middleware->appendToGroup('web', DemoGuard::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

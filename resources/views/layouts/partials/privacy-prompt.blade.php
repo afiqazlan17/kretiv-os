@@ -1,6 +1,6 @@
 {{-- Asked once per notice version: staff confirm they've read the Staff Privacy Notice (PDPA proof). --}}
 @auth
-    @if (! request()->routeIs('privacy.*') && ! auth()->user()->hasAcknowledgedPrivacy())
+    @if (! config('demo.enabled') && ! request()->routeIs('privacy.*') && ! auth()->user()->hasAcknowledgedPrivacy())
         <div class="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 p-4" x-data="{ ok: false }">
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 text-sm text-gray-700">
                 <div class="flex items-center gap-2.5">

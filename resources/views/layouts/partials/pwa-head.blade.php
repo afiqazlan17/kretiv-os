@@ -16,6 +16,9 @@
 <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v={{ $iconV }}">
 <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}?v={{ $iconV }}">
 <meta name="theme-color" content="#100904">
+@if (config('demo.enabled'))
+<meta name="robots" content="noindex, nofollow">
+@endif
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="KretivOS">

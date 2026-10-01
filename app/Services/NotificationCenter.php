@@ -17,8 +17,8 @@ use App\Models\NotificationRead;
 use App\Models\PayrollRun;
 use App\Models\Payslip;
 use App\Models\ProfileChangeRequest;
+use App\Models\RadarItem;
 use App\Models\RecurringExpense;
-use App\Models\RizqNote;
 use App\Models\User;
 use App\Support\DocumentData;
 use Illuminate\Support\Carbon;
@@ -98,8 +98,8 @@ class NotificationCenter
         $visible = Job::query()->where('archived', false)
             ->when(! $user->isBod(), fn ($q) => $q->whereIn('department', $user->visibleDepartments()));
 
-        if ($user->isBod() && $stale = RizqNote::where('status', RizqNote::STATUS_OPEN)->where('created_at', '<', now()->subDays(RizqNote::STALE_DAYS))->count()) {
-            $actions->push($this->item('sparkles', 'amber', "{$stale} Rizq ".str('note')->plural($stale).' not taken for '.RizqNote::STALE_DAYS.'+ days', route('rizq.index')));
+        if ($user->isBod()) {
+            $this->radar($actions, $updates);
         }
 
         if ($new = (clone $visible)->where('status', Job::STATUS_NEW)->count()) {
@@ -132,6 +132,33 @@ class NotificationCenter
         foreach ($approvals->whereIn('status', ['approved', 'changes_requested'])->filter(fn ($a) => $a->responded_at?->gt(now()->subDays(self::UPDATE_DAYS))) as $a) {
             $what = $a->status === 'approved' ? 'approved' : 'asked for changes to';
             $updates->push($this->item($a->status === 'approved' ? 'check' : 'pencil', 'blue', "{$a->customer_name} {$what} the artwork for {$a->job->job_id} (v{$a->version})", route('jobs.show', $a->job), ['key' => "approval:{$a->id}:{$a->status}", 'at' => $a->responded_at]));
+        }
+    }
+
+    /**
+     * Radar (BOD): items nobody has taken for a while, and due dates. A dated
+     * item pings once at 30, 14, 7 and 3 days before and on the day (each one
+     * clears when read); once overdue it stays as an action until it's done.
+     */
+    private function radar(Collection $actions, Collection $updates): void
+    {
+        if ($stale = RadarItem::where('status', RadarItem::STATUS_OPEN)->where('created_at', '<', now()->subDays(RadarItem::STALE_DAYS))->count()) {
+            $actions->push($this->item('radar', 'amber', "{$stale} Radar ".str('item')->plural($stale).' not taken for '.RadarItem::STALE_DAYS.'+ days', route('radar.index')));
+        }
+
+        $dated = RadarItem::where('status', '!=', RadarItem::STATUS_DONE)->whereNotNull('due_date')
+            ->where('due_date', '<=', today()->addDays(RadarItem::REMIND_DAYS[0]))->orderBy('due_date')->get();
+        foreach ($dated as $item) {
+            $text = $item->headline(60).': '.lcfirst((string) $item->dueLabel());
+            if ($item->daysLeft() < 0) {
+                $actions->push($this->item('alarm-clock', 'red', $text, route('radar.index', ['tab' => $item->status])));
+
+                continue;
+            }
+            $stage = $item->reminderStage();
+            $updates->push($this->item('calendar-clock', $item->daysLeft() <= 3 ? 'red' : 'amber', $text, route('radar.index', ['tab' => $item->status]), [
+                'key' => "radar:{$item->id}:{$stage}", 'at' => $item->due_date->copy()->subDays($stage),
+            ]));
         }
     }
 

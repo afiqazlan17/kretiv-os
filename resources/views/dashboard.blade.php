@@ -31,23 +31,25 @@
 
     <div class="p-5 md:p-7 space-y-6">
 
-        {{-- Rizq (BOD only): leads written down that still need someone. --}}
+        {{-- Radar (BOD only): things that need action, and the next due date. --}}
         @if (auth()->user()->isBod())
             @php
-                $rizqCounts = \App\Models\RizqNote::selectRaw('status, count(*) as n')->whereIn('status', ['open', 'taken'])->groupBy('status')->pluck('n', 'status');
-                $rizqOldest = \App\Models\RizqNote::where('status', 'open')->oldest()->first();
+                $radarCounts = \App\Models\RadarItem::selectRaw('status, count(*) as n')->whereIn('status', ['open', 'taken'])->groupBy('status')->pluck('n', 'status');
+                $radarSoon = \App\Models\RadarItem::where('status', '!=', 'done')->whereNotNull('due_date')->where('due_date', '<=', today()->addDays(\App\Models\RadarItem::SOON_DAYS))->count();
+                $radarNext = \App\Models\RadarItem::where('status', '!=', 'done')->whereNotNull('due_date')->orderBy('due_date')->first();
             @endphp
-            <a href="{{ route('rizq.index') }}" class="k-card p-4 flex flex-wrap items-center gap-x-6 gap-y-2 hover:bg-[#FFF9F6]">
+            <a href="{{ route('radar.index') }}" class="k-card p-4 flex flex-wrap items-center gap-x-6 gap-y-2 hover:bg-[#FFF9F6]">
                 <div class="flex items-center gap-2">
-                    <x-icon name="sparkles" class="w-5 h-5 text-[#F46A3A]" />
-                    <span class="font-bold text-gray-900">Rizq</span>
+                    <x-icon name="radar" class="w-5 h-5 text-[#F46A3A]" />
+                    <span class="font-bold text-gray-900">Radar</span>
                 </div>
-                <div class="text-sm"><span class="font-bold text-gray-900">{{ $rizqCounts['open'] ?? 0 }}</span> <span class="text-gray-500">not taken</span></div>
-                <div class="text-sm"><span class="font-bold text-gray-900">{{ $rizqCounts['taken'] ?? 0 }}</span> <span class="text-gray-500">in hand</span></div>
-                @if ($rizqOldest)
-                    <div class="text-xs text-gray-400 truncate min-w-0 flex-1">Oldest not taken: {{ $rizqOldest->headline(60) }}, {{ $rizqOldest->created_at->diffForHumans() }}</div>
+                <div class="text-sm"><span class="font-bold text-gray-900">{{ $radarCounts['open'] ?? 0 }}</span> <span class="text-gray-500">not taken</span></div>
+                <div class="text-sm"><span class="font-bold text-gray-900">{{ $radarCounts['taken'] ?? 0 }}</span> <span class="text-gray-500">in hand</span></div>
+                <div class="text-sm"><span class="font-bold {{ $radarSoon ? 'text-red-600' : 'text-gray-900' }}">{{ $radarSoon }}</span> <span class="text-gray-500">due this week</span></div>
+                @if ($radarNext)
+                    <div class="text-xs text-gray-400 truncate min-w-0 flex-1">Next: {{ $radarNext->headline(50) }}, {{ lcfirst($radarNext->dueLabel()) }}</div>
                 @endif
-                <span class="ml-auto text-xs font-semibold text-[#C2185B]">Open Rizq</span>
+                <span class="ml-auto text-xs font-semibold text-[#C2185B]">Open Radar</span>
             </a>
         @endif
 

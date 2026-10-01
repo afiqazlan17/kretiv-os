@@ -23,11 +23,11 @@
             <div class="k-card p-5 md:p-6" :class="mobileTab === 'preview' ? 'hidden lg:block' : ''">
                 <form method="POST" action="{{ route('jobs.store') }}" @invalid.capture="formError = 'Fill in the highlighted field before saving. It might be in a department section above.'" @submit="formError = null">
                     @csrf
-                    @if ($rizq ?? null)
-                        <input type="hidden" name="rizq_note_id" value="{{ $rizq->id }}">
+                    @if ($radar ?? null)
+                        <input type="hidden" name="radar_item_id" value="{{ $radar->id }}">
                         <div class="mb-5 rounded-xl border border-[#F8D7E3] bg-[#FFF5F8] px-4 py-3 text-sm">
-                            <div class="text-xs font-semibold text-[#C2185B] mb-1">From Rizq · {{ $rizq->creator?->shortName() ?? 'BOD' }}, {{ $rizq->created_at->format('j M') }}</div>
-                            <p class="text-gray-700 whitespace-pre-line">{{ $rizq->body }}</p>
+                            <div class="text-xs font-semibold text-[#C2185B] mb-1">From Radar · {{ $radar->creator?->shortName() ?? 'BOD' }}, {{ $radar->created_at->format('j M') }}</div>
+                            <p class="text-gray-700 whitespace-pre-line">{{ $radar->body }}</p>
                             <p class="mt-1 text-[11px] text-gray-400">The note is copied into Job Notes below. Saving the job moves the note to Done with a link to this job.</p>
                         </div>
                     @endif
@@ -277,7 +277,7 @@
 
                             <div>
                                 <x-input-label value="Special Remarks" />
-                                <textarea name="per_dept[{{ $key }}][notes]" :disabled="!depts.includes('{{ $key }}')" rows="{{ ($rizq ?? null) ? 4 : 2 }}" placeholder="Anything the team should know about this job" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">{{ ($rizq ?? null)?->body }}</textarea>
+                                <textarea name="per_dept[{{ $key }}][notes]" :disabled="!depts.includes('{{ $key }}')" rows="{{ ($radar ?? null) ? 4 : 2 }}" placeholder="Anything the team should know about this job" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">{{ ($radar ?? null)?->body }}</textarea>
                             </div>
                         </div>
                     @endforeach
@@ -345,7 +345,7 @@
             return {
                 customers,
                 packageCatalog,
-                depts: {!! old('departments') ? json_encode(old('departments')) : (($rizq ?? null)?->department && in_array($rizq->department, array_keys($departments), true) ? json_encode([$rizq->department]) : '[]') !!},
+                depts: {!! old('departments') ? json_encode(old('departments')) : (($radar ?? null)?->department && in_array($radar->department, array_keys($departments), true) ? json_encode([$radar->department]) : '[]') !!},
                 perDept: Object.fromEntries(departmentKeys.map(k => [k, {
                     jobTypeCategory: 'client_project', productLine: '', segment: '', pkg: '', jobType: '', lineItems: [], bank: '', delivery: '', discount: '',
                     editNotes: false, notesLines: [], validDays: 14,
@@ -364,8 +364,8 @@
                 inlineExisting: null,
                 formError: null,
                 init() {
-                    @if (($rizq ?? null) && ! old('departments'))
-                        Object.values(this.perDept).forEach(pd => { pd.jobType = @js($rizq->headline()); });
+                    @if (($radar ?? null) && ! old('departments'))
+                        Object.values(this.perDept).forEach(pd => { pd.jobType = @js($radar->headline()); });
                     @endif
                     ['depts', 'perDept', 'customerId', 'previewDept'].forEach(k => this.$watch(k, () => this.schedulePreview()));
                     this.schedulePreview();

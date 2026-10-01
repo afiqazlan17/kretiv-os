@@ -7,9 +7,9 @@
     $activeCls = $inHr ? 'bg-gradient-to-r from-[#EDE9FE] to-[#F5F3FF] text-[#6D28D9] font-semibold' : ($inFinance ? 'bg-gradient-to-r from-[#DCFCE7] to-[#ECFDF5] text-[#047857] font-semibold' : 'bg-gradient-to-r from-[#FFE4EC] to-[#FFF1E6] text-[#C2185B] font-semibold');
     $navItems = [
         ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'layout-dashboard'],
-        // Rizq: BOD's shared notepad; the badge counts notes nobody has taken yet.
-        ['key' => 'rizq', 'label' => 'Rizq', 'route' => 'rizq.index', 'pattern' => 'rizq.*', 'icon' => 'sparkles', 'roles' => ['bod'],
-            'badge' => $user?->isBod() ? (\App\Models\RizqNote::where('status', 'open')->count() ?: null) : null],
+        // Radar: BOD's board of things needing action; the badge counts items nobody has taken or due within a week.
+        ['key' => 'radar', 'label' => 'Radar', 'route' => 'radar.index', 'pattern' => 'radar.*', 'icon' => 'radar', 'roles' => ['bod'],
+            'badge' => $user?->isBod() ? (\App\Models\RadarItem::needsAttention()->count() ?: null) : null],
         ['key' => 'jobs', 'label' => 'Job', 'route' => 'jobs.index', 'pattern' => 'jobs.*', 'icon' => 'clipboard-list'],
         ['key' => 'customers', 'label' => 'Customers', 'route' => 'customers.index', 'icon' => 'users'],
         ['key' => 'vendors', 'label' => 'Vendors', 'route' => 'vendors.index', 'icon' => 'factory'],

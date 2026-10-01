@@ -9,7 +9,7 @@
             {{-- Greeting + attendance. Staff only see their own times; lateness is
                  for HR, Dept Heads and BOD (HR > Team attendance). --}}
             <div class="os-card rounded-2xl p-5 flex flex-col">
-                <div x-data="{ time: '', date: '' }"
+                <div class="relative" x-data="{ time: '', date: '' }"
                      x-init="
                         const tick = () => {
                             const now = new Date();
@@ -19,35 +19,55 @@
                         tick();
                         setInterval(tick, 1000);
                      ">
-                    <h1 class="text-2xl font-semibold text-white leading-snug">{{ $greeting['title'] }}</h1>
-                    <p class="text-sm italic text-white/55 mt-0.5">{{ $greeting['line'] }}</p>
+                    {{-- Radar (BOD only): a sonar sweep with a dot for each item that needs action (not taken, or due within a week). Tap to add one. --}}
+                    @if ($radarCount !== null)
+                        @php
+                            $blips = [[40, .62], [130, .74], [215, .5], [300, .7], [80, .4], [255, .8]];
+                            $orbSweep = 4; // seconds per turn
+                        @endphp
+                        <div class="absolute right-0 top-1/2 -translate-y-1/2 z-20" x-data="{ open: false, count: {{ $radarCount }} }" @click.outside="open = false" @radar-saved="count = $event.detail.count ?? count">
+                            <button type="button" @click="open = !open" aria-label="Radar: add something that needs action" class="radar-orb">
+                                <span class="radar-rings"></span>
+                                <span class="radar-sweep" style="animation-duration: {{ $orbSweep }}s"></span>
+                                <template x-for="(b, i) in {{ json_encode($blips) }}.slice(0, Math.min(count, 6))" :key="i">
+                                    <span class="radar-blip" :style="`left: calc(50% + ${Math.sin(b[0] * Math.PI / 180) * b[1] * 38}px); top: calc(50% - ${Math.cos(b[0] * Math.PI / 180) * b[1] * 38}px); animation-duration: {{ $orbSweep }}s; animation-delay: ${b[0] / 360 * {{ $orbSweep }}}s`"></span>
+                                </template>
+                                <span class="radar-word">Radar</span>
+                            </button>
+                            <span x-show="count > 0" x-text="count" class="absolute -top-0.5 -right-0.5 min-w-[20px] h-5 px-1 rounded-full bg-[#FCB03C] text-[11px] font-bold text-gray-900 flex items-center justify-center pointer-events-none"></span>
+                            <div x-show="open" x-cloak x-transition class="absolute right-0 top-full mt-2 w-[min(21rem,calc(100vw-2.5rem))] rounded-2xl bg-white text-gray-800 p-3 shadow-xl">
+                                <div class="flex items-center justify-between mb-2">
+                                    <p class="text-sm font-bold text-gray-900">Add to Radar</p>
+                                    <a href="{{ route('radar.index') }}" class="text-xs font-semibold text-[#C2185B] hover:underline">Open Radar</a>
+                                </div>
+                                @include('radar.partials.compose', ['action' => route('os.radar.store'), 'dark' => true])
+                            </div>
+                        </div>
+                        <style>
+                            .radar-orb { position: relative; display: block; width: 80px; height: 80px; border-radius: 9999px; overflow: hidden;
+                                background: radial-gradient(circle, rgba(255, 92, 138, .14) 0%, rgba(20, 8, 12, .85) 70%); border: 1px solid rgba(255, 138, 91, .45);
+                                box-shadow: 0 0 22px -6px rgba(255, 92, 138, .7), inset 0 0 14px rgba(255, 92, 138, .18); }
+                            .radar-rings { position: absolute; inset: 0; border-radius: 9999px;
+                                background: repeating-radial-gradient(circle, transparent 0 12px, rgba(255, 170, 140, .16) 12px 13px),
+                                    linear-gradient(transparent calc(50% - .5px), rgba(255, 170, 140, .16) calc(50% - .5px) calc(50% + .5px), transparent calc(50% + .5px)),
+                                    linear-gradient(90deg, transparent calc(50% - .5px), rgba(255, 170, 140, .16) calc(50% - .5px) calc(50% + .5px), transparent calc(50% + .5px)); }
+                            .radar-sweep { position: absolute; inset: 0; border-radius: 9999px; animation: radar-spin linear infinite;
+                                background: conic-gradient(from 0deg, transparent 0deg 270deg, rgba(255, 92, 138, .05) 290deg, rgba(244, 106, 58, .35) 345deg, rgba(252, 176, 60, .75) 360deg); }
+                            .radar-blip { position: absolute; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 9999px; background: #FCB03C;
+                                box-shadow: 0 0 6px 1px rgba(252, 176, 60, .9); opacity: .25; animation: radar-blip linear infinite; }
+                            .radar-word { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; letter-spacing: -.01em;
+                                background: linear-gradient(90deg, #FF7AA2, #FF8A5B, #FFC65C); -webkit-background-clip: text; background-clip: text; color: transparent;
+                                filter: drop-shadow(0 0 3px rgba(255, 122, 162, .95)) drop-shadow(0 0 9px rgba(244, 106, 58, .7)); }
+                            @keyframes radar-spin { to { transform: rotate(360deg); } }
+                            @keyframes radar-blip { 0% { opacity: 1; transform: scale(1.4); } 35% { opacity: .55; transform: scale(1); } 100% { opacity: .25; transform: scale(1); } }
+                            @media (prefers-reduced-motion: reduce) { .radar-sweep, .radar-blip { animation: none; } .radar-blip { opacity: 1; } }
+                        </style>
+                    @endif
+                    <h1 class="text-2xl font-semibold text-white leading-snug {{ $radarCount !== null ? 'pr-24' : '' }}">{{ $greeting['title'] }}</h1>
+                    <p class="text-sm italic text-white/55 mt-0.5 {{ $radarCount !== null ? 'pr-24' : '' }}">{{ $greeting['line'] }}</p>
                     <div class="mt-4">
                         <div class="flex items-center justify-between gap-3">
                             <div class="font-mono text-3xl font-semibold text-[#FCB03C] tracking-wide" x-text="time"></div>
-                            {{-- Rizq (BOD only): glowing circle beside the clock. Tap to jot down a lead; the dot counts notes nobody has taken. --}}
-                            @if ($rizqOpen !== null)
-                                <div class="relative shrink-0" x-data="{ open: false, count: {{ $rizqOpen }} }" @click.outside="open = false" @rizq-saved="count = $event.detail.open ?? count">
-                                    <button type="button" @click="open = !open" aria-label="Rizq: write down a lead"
-                                            class="rizq-orb relative w-14 h-14 rounded-full flex items-center justify-center border border-white/20 bg-white/5 hover:bg-white/10 transition-colors">
-                                        <span class="rizq-word text-base font-extrabold tracking-tight">Rizq</span>
-                                        <span x-show="count > 0" x-text="count" class="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-[#FCB03C] text-[11px] font-bold text-gray-900 flex items-center justify-center"></span>
-                                    </button>
-                                    <div x-show="open" x-cloak x-transition class="absolute right-0 mt-2 w-[min(20rem,calc(100vw-2.5rem))] rounded-2xl bg-white text-gray-800 p-3 shadow-xl z-30">
-                                        <div class="flex items-center justify-between mb-2">
-                                            <p class="text-sm font-bold text-gray-900">New lead for Rizq</p>
-                                            <a href="{{ route('rizq.index') }}" class="text-xs font-semibold text-[#C2185B] hover:underline">Open Rizq</a>
-                                        </div>
-                                        @include('rizq.partials.compose', ['action' => route('os.rizq.store'), 'dark' => true])
-                                    </div>
-                                </div>
-                                <style>
-                                    .rizq-orb { box-shadow: 0 0 18px -4px rgba(255, 92, 138, .55), inset 0 0 12px rgba(252, 176, 60, .12); animation: rizq-pulse 3.2s ease-in-out infinite; }
-                                    .rizq-word { background: linear-gradient(90deg, #FF7AA2, #FF8A5B, #FFC65C); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 3px rgba(255, 122, 162, .95)) drop-shadow(0 0 10px rgba(244, 106, 58, .75)); animation: rizq-text 3.2s ease-in-out infinite; }
-                                    @keyframes rizq-text { 0%, 100% { filter: drop-shadow(0 0 2px rgba(255, 122, 162, .8)) drop-shadow(0 0 6px rgba(244, 106, 58, .5)); } 50% { filter: drop-shadow(0 0 4px rgba(255, 122, 162, 1)) drop-shadow(0 0 14px rgba(252, 176, 60, .85)); } }
-                                    @keyframes rizq-pulse { 0%, 100% { box-shadow: 0 0 14px -4px rgba(255, 92, 138, .45), inset 0 0 10px rgba(252, 176, 60, .1); } 50% { box-shadow: 0 0 26px -2px rgba(255, 92, 138, .8), inset 0 0 14px rgba(252, 176, 60, .2); } }
-                                    @media (prefers-reduced-motion: reduce) { .rizq-orb, .rizq-word { animation: none; } }
-                                </style>
-                            @endif
                         </div>
                         <div class="text-xs text-white/50 mt-1" x-text="date"></div>
                     </div>

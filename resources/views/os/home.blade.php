@@ -23,20 +23,20 @@
                          attention (not taken, overdue, or a reminder not yet seen). Tap to check or add. --}}
                     @if ($radar !== null)
                         @php
-                            $blips = [[40, .62], [130, .74], [215, .5], [300, .7], [80, .4], [255, .8]];
                             $orbSweep = 4; // seconds per turn
-                            $radarUrgent = $radar->contains(fn ($i) => $i->daysLeft() !== null && $i->daysLeft() <= 3);
+                            // One blip per item; red for items due within 3 days or overdue (listed first).
+                            $blipUrgent = $radar->map(fn ($i) => $i->daysLeft() !== null && $i->daysLeft() <= 3)->sortDesc()->values();
+                            $radarUrgent = $blipUrgent->contains(true);
                         @endphp
-                        <div class="absolute right-0 top-1/2 -translate-y-1/2 z-20" x-data="{ open: false, count: {{ $radar->count() }} }" @click.outside="open = false" @radar-saved="count = $event.detail.count ?? count">
-                            <button type="button" @click="open = !open" aria-label="Radar" class="radar-orb {{ $radarUrgent ? 'radar-orb--urgent' : '' }}">
+                        <div class="absolute right-0 top-1/2 -translate-y-1/2 z-20" x-data="radarOrb({{ $radar->count() }}, @js($blipUrgent), {{ $orbSweep }})" @click.outside="open = false" @radar-saved="count = $event.detail.count ?? count">
+                            <button type="button" @click="open = !open" :aria-label="count ? `Radar: ${count} need attention` : 'Radar'" class="radar-orb {{ $radarUrgent ? 'radar-orb--urgent' : '' }}">
                                 <span class="radar-rings"></span>
                                 <span class="radar-sweep" style="animation-duration: {{ $orbSweep }}s"></span>
-                                <template x-for="(b, i) in {{ json_encode($blips) }}.slice(0, Math.min(count, 6))" :key="i">
-                                    <span class="radar-blip" :style="`left: calc(50% + ${Math.sin(b[0] * Math.PI / 180) * b[1] * 38}px); top: calc(50% - ${Math.cos(b[0] * Math.PI / 180) * b[1] * 38}px); animation-duration: {{ $orbSweep }}s; animation-delay: ${b[0] / 360 * {{ $orbSweep }}}s`"></span>
+                                <template x-for="i in Math.min(count, 40)" :key="i">
+                                    <span class="radar-blip" :class="urgent[i - 1] ? 'radar-blip--red' : ''" :style="blip(i - 1)"></span>
                                 </template>
                                 <span class="radar-word">Radar</span>
                             </button>
-                            <span x-show="count > 0" x-text="count" class="absolute -top-1.5 -right-1.5 z-10 min-w-[22px] h-[22px] px-1.5 rounded-full ring-[3px] ring-[#1c0f12] shadow-md {{ $radarUrgent ? 'bg-red-500 text-white' : 'bg-[#FCB03C] text-gray-900' }} text-[11px] font-bold flex items-center justify-center pointer-events-none"></span>
                             <div x-show="open" x-cloak x-transition class="absolute right-0 top-full mt-2 w-[min(21rem,calc(100vw-2.5rem))] rounded-2xl bg-white text-gray-800 p-3 shadow-xl">
                                 @if ($radar->isNotEmpty())
                                     <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-1.5">Needs attention</p>
@@ -65,17 +65,36 @@
                                     linear-gradient(90deg, transparent calc(50% - .5px), rgba(255, 170, 140, .16) calc(50% - .5px) calc(50% + .5px), transparent calc(50% + .5px)); }
                             .radar-sweep { position: absolute; inset: 0; border-radius: 9999px; animation: radar-spin linear infinite;
                                 background: conic-gradient(from 0deg, transparent 0deg 270deg, rgba(255, 92, 138, .05) 290deg, rgba(244, 106, 58, .35) 345deg, rgba(252, 176, 60, .75) 360deg); }
-                            .radar-blip { position: absolute; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 9999px; background: #FCB03C;
+                            .radar-blip { position: absolute; width: var(--d, 6px); height: var(--d, 6px); transform: translate(-50%, -50%); border-radius: 9999px; background: #FCB03C;
                                 box-shadow: 0 0 6px 1px rgba(252, 176, 60, .9); opacity: .25; animation: radar-blip linear infinite; }
                             .radar-word { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; letter-spacing: -.01em;
                                 background: linear-gradient(90deg, #FF7AA2, #FF8A5B, #FFC65C); -webkit-background-clip: text; background-clip: text; color: transparent;
                                 filter: drop-shadow(0 0 3px rgba(255, 122, 162, .95)) drop-shadow(0 0 9px rgba(244, 106, 58, .7)); }
-                            .radar-orb--urgent .radar-blip { background: #FF4D6D; box-shadow: 0 0 7px 1px rgba(255, 77, 109, .95); }
+                            .radar-blip--red { background: #FF4D6D; box-shadow: 0 0 7px 1px rgba(255, 77, 109, .95); }
                             .radar-orb--urgent { border-color: rgba(255, 77, 109, .6); }
                             @keyframes radar-spin { to { transform: rotate(360deg); } }
-                            @keyframes radar-blip { 0% { opacity: 1; transform: scale(1.4); } 35% { opacity: .55; transform: scale(1); } 100% { opacity: .25; transform: scale(1); } }
+                            @keyframes radar-blip { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1.5); } 35% { opacity: .55; transform: translate(-50%, -50%) scale(1); } 100% { opacity: .25; transform: translate(-50%, -50%) scale(1); } }
                             @media (prefers-reduced-motion: reduce) { .radar-sweep, .radar-blip { animation: none; } .radar-blip { opacity: 1; } }
                         </style>
+                        <script>
+                            // Spreads n blips around the scope (golden-angle spiral) without covering the word in the middle,
+                            // and times each one to flash as the sweep passes its angle.
+                            function radarOrb(count, urgent, sweep) {
+                                return {
+                                    open: false, count, urgent,
+                                    blip(i) {
+                                        const n = Math.max(this.count, 1);
+                                        const angle = (i * 137.508) % 360;
+                                        const rad = angle * Math.PI / 180;
+                                        const sideways = Math.abs(Math.sin(rad)) > 0.55; // left or right of the word "Radar"
+                                        const min = sideways ? 0.66 : 0.42;
+                                        const r = (min + (0.86 - min) * Math.sqrt((i + 0.5) / n)) * 38;
+                                        const size = n <= 12 ? 6 : (n <= 24 ? 5 : 4);
+                                        return `left: calc(50% + ${(Math.sin(rad) * r).toFixed(1)}px); top: calc(50% - ${(Math.cos(rad) * r).toFixed(1)}px); --d: ${size}px; animation-duration: ${sweep}s; animation-delay: ${(angle / 360 * sweep).toFixed(2)}s`;
+                                    },
+                                };
+                            }
+                        </script>
                     @endif
                     <h1 class="text-2xl font-semibold text-white leading-snug {{ $radar !== null ? 'pr-24' : '' }}">{{ $greeting['title'] }}</h1>
                     <p class="text-sm italic text-white/55 mt-0.5 {{ $radar !== null ? 'pr-24' : '' }}">{{ $greeting['line'] }}</p>

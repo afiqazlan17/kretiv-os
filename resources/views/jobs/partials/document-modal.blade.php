@@ -226,7 +226,7 @@
             jobCode: cfg.jobCode, urls: cfg.urls, mobileTab: 'form', scope: 'project', project: null, projectTotal: 0,
             open: false, type: 'quotation', label: 'Quotation', loading: false, busy: false, previewing: false,
             error: '', notice: '', form: blank(), paymentMethods: [], creditReasons: {}, invoiceNumber: null, invoiceTotal: null, paidBefore: 0, customerPhone: '', docNumber: '',
-            editNotes: false, notesText: '', noteList: [], defaultNotes: [], previewUrl: null, frameSrc: ['', ''], active: 0, pending: null, dirty: false, timer: null, seq: 0, pageDirty: false,
+            editNotes: false, notesText: '', noteList: [], defaultNotes: [], previewUrl: null, previewBlob: null, previewName: '', frameSrc: ['', ''], active: 0, pending: null, dirty: false, timer: null, seq: 0, pageDirty: false,
             pager: window.createPdfPager(),
 
             url(action) { return this.urls[action].replace('__TYPE__', this.type) + (this.scope === 'project' ? '?scope=project' : ''); },
@@ -361,7 +361,10 @@
                 if (mine !== this.seq) return;
                 this.previewing = false;
                 if (!res.ok) { this.error = await this.failure(res); return; }
-                const url = URL.createObjectURL(await res.blob());
+                const blob = await res.blob();
+                this.previewBlob = blob;
+                this.previewName = (res.headers.get('Content-Disposition') || '').match(/filename="?([^";]+)"?/)?.[1] || `${this.docNumber}.pdf`;
+                const url = URL.createObjectURL(blob);
                 const src = url + '#toolbar=0&navpanes=0&view=FitH';
                 const t = this.pending ?? (1 - this.active);
                 if (this.frameSrc[t]) URL.revokeObjectURL(this.frameSrc[t].split('#')[0]);
@@ -384,10 +387,25 @@
                 a.href = URL.createObjectURL(await res.blob()); a.download = name; document.body.appendChild(a); a.click(); a.remove();
                 this.busy = false; this.pageDirty = true; this.dirty = false; this.close();
             },
-            print() {
-                if (!this.previewUrl) return;
+            // Phones can't print a PDF inside the page (iPhone showed a 404), so they get the
+            // share sheet with the named PDF, which has Print and Save to Files.
+            // Computers print from a hidden frame; the page title is swapped so
+            // "Save as PDF" suggests the document's name instead of "Kretivco Jobs".
+            async print() {
+                if (!this.previewUrl || !this.previewBlob) return;
+                const name = this.previewName || `${this.docNumber}.pdf`;
+                const file = new File([this.previewBlob], name, { type: 'application/pdf' });
+                if (window.matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try { await navigator.share({ files: [file] }); } catch (e) { /* closed the sheet */ }
+                    return;
+                }
+                const title = document.title;
+                document.title = name.replace(/\.pdf$/i, '');
                 const f = document.createElement('iframe'); f.style.display = 'none'; f.src = this.previewUrl;
-                f.onload = () => { f.contentWindow.focus(); f.contentWindow.print(); };
+                f.onload = () => {
+                    f.contentWindow.focus(); f.contentWindow.print();
+                    setTimeout(() => { document.title = title; }, 1000);
+                };
                 document.body.appendChild(f); setTimeout(() => f.remove(), 60000);
             },
             /**

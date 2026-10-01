@@ -79,7 +79,7 @@ class DocumentController extends Controller
 
         return response(DocumentData::pdf($doc), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="preview.pdf"',
+            'Content-Disposition' => 'inline; filename="'.DocumentData::fileName($doc['doc_number'], $doc['customer']['company'], $doc['customer']['name']).'"',
         ]);
     }
 
@@ -148,7 +148,7 @@ class DocumentController extends Controller
 
         return response(DocumentData::pdf($doc), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="preview.pdf"',
+            'Content-Disposition' => 'inline; filename="'.DocumentData::fileName($doc['doc_number'], $doc['customer']['company'], $doc['customer']['name']).'"',
         ]);
     }
 
@@ -232,7 +232,7 @@ class DocumentController extends Controller
         $this->rememberNotes($request, collect([$job]), $type);
 
         $bytes = DocumentData::pdf($doc);
-        $filename = "{$docNumber}.pdf";
+        $filename = DocumentData::fileName($docNumber, $doc['customer']['company'], $doc['customer']['name']);
         $path = "{$job->job_id}/document/".time()."_{$filename}";
         Storage::disk('public')->put($path, $bytes);
 
@@ -281,7 +281,7 @@ class DocumentController extends Controller
         $this->rememberNotes($request, $jobs, 'project_'.$type);
 
         $bytes = DocumentData::pdf($doc);
-        $filename = "{$docNumber}.pdf";
+        $filename = DocumentData::fileName($docNumber, $doc['customer']['company'], $doc['customer']['name']);
         $path = "{$job->job_id}/document/".time()."_{$filename}";
         Storage::disk('public')->put($path, $bytes);
 
@@ -420,7 +420,7 @@ class DocumentController extends Controller
             'generatedBy' => $request->user()->shortName(),
         ]);
 
-        $filename = "{$docNumber}.pdf";
+        $filename = DocumentData::fileName($docNumber, $job->customer?->company, $job->customer?->name);
         $bytes = $pdf->output();
         $path = "{$job->job_id}/document/".time()."_{$filename}";
         Storage::disk('public')->put($path, $bytes);
@@ -500,7 +500,7 @@ class DocumentController extends Controller
         }
 
         $bytes = DocumentData::pdf($doc);
-        $filename = "{$docNumber}.pdf";
+        $filename = DocumentData::fileName($docNumber, $doc['customer']['company'], $doc['customer']['name']);
         $path = "{$job->job_id}/document/".time()."_{$filename}";
         Storage::disk('public')->put($path, $bytes);
 

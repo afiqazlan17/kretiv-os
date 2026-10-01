@@ -230,6 +230,19 @@ class DocumentData
     }
 
     /**
+     * File name for a document: QTN26100006-P_Cambox.my.pdf. Company first,
+     * otherwise the person's name; spaces become underscores and anything a
+     * file system or WhatsApp could choke on is dropped.
+     */
+    public static function fileName(string $docNumber, ?string $company, ?string $name = null): string
+    {
+        $who = trim((string) ($company ?: $name));
+        $who = trim((string) preg_replace('/_+/', '_', (string) preg_replace('/[^A-Za-z0-9.\-]+/', '_', $who)), '_.-');
+
+        return $docNumber.($who !== '' ? '_'.mb_substr($who, 0, 60) : '').'.pdf';
+    }
+
+    /**
      * The document PDF. When it runs past one page, every page gets
      * "Page X of Y" at the bottom right so a printed set stays in order.
      */

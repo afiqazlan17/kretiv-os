@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Customer;
 use App\Models\Job;
 use App\Models\User;
+use App\Support\DocumentData;
 use App\Support\ItemImages;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -40,5 +41,12 @@ class ItemImagePreviewTest extends TestCase
 
         $this->assertSame(90, $job->fresh()->document_notes['valid_days']);
         $this->actingAs($bod)->getJson(route('jobs.documents.draft', [$job, 'quotation']))->assertJsonPath('defaults.valid_days', 90);
+    }
+
+    public function test_document_file_names_carry_the_customer(): void
+    {
+        $this->assertSame('QTN26100006-P_Cambox.my.pdf', DocumentData::fileName('QTN26100006-P', 'Cambox.my', 'Afiq'));
+        $this->assertSame('INV26100003-P_Pembangunan_Sumber_Manusia_Berhad_HRD_Corp.pdf', DocumentData::fileName('INV26100003-P', 'Pembangunan Sumber Manusia Berhad (HRD Corp)'));
+        $this->assertSame('RCP26100001-P_Afiq_Ismail.pdf', DocumentData::fileName('RCP26100001-P', '', 'Afiq Ismail'));
     }
 }

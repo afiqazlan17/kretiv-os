@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <title>{{ basename(\App\Support\DocumentData::fileName($doc['doc_number'], $doc['customer']['company'], $doc['customer']['name']), '.pdf') }}</title>
     @include('documents.partials.style')
 </head>
 <body>

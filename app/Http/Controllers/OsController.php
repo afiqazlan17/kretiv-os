@@ -39,7 +39,7 @@ class OsController extends Controller
         $due = $myJobs->filter(fn (Job $j) => $j->deadline && $j->deadline->startOfDay()->lte($today));
 
         return view('os.home', [
-            'radarCount' => $user->isBod() ? RadarItem::needsAttention()->count() : null,
+            'radar' => $user->isBod() ? RadarItem::attentionFor($user) : null,
             'myJobs' => $myJobs,
             'queueCount' => $queueCount,
             'dueJobs' => $due,

@@ -19,14 +19,16 @@
                         tick();
                         setInterval(tick, 1000);
                      ">
-                    {{-- Radar (BOD only): a sonar sweep with a dot for each item that needs action (not taken, or due within a week). Tap to add one. --}}
-                    @if ($radarCount !== null)
+                    {{-- Radar (BOD only, and only here): a sonar sweep with a blip for each item that needs
+                         attention (not taken, overdue, or a reminder not yet seen). Tap to check or add. --}}
+                    @if ($radar !== null)
                         @php
                             $blips = [[40, .62], [130, .74], [215, .5], [300, .7], [80, .4], [255, .8]];
                             $orbSweep = 4; // seconds per turn
+                            $radarUrgent = $radar->contains(fn ($i) => $i->daysLeft() !== null && $i->daysLeft() <= 3);
                         @endphp
-                        <div class="absolute right-0 top-1/2 -translate-y-1/2 z-20" x-data="{ open: false, count: {{ $radarCount }} }" @click.outside="open = false" @radar-saved="count = $event.detail.count ?? count">
-                            <button type="button" @click="open = !open" aria-label="Radar: add something that needs action" class="radar-orb">
+                        <div class="absolute right-0 top-1/2 -translate-y-1/2 z-20" x-data="{ open: false, count: {{ $radar->count() }} }" @click.outside="open = false" @radar-saved="count = $event.detail.count ?? count">
+                            <button type="button" @click="open = !open" aria-label="Radar" class="radar-orb {{ $radarUrgent ? 'radar-orb--urgent' : '' }}">
                                 <span class="radar-rings"></span>
                                 <span class="radar-sweep" style="animation-duration: {{ $orbSweep }}s"></span>
                                 <template x-for="(b, i) in {{ json_encode($blips) }}.slice(0, Math.min(count, 6))" :key="i">
@@ -34,13 +36,23 @@
                                 </template>
                                 <span class="radar-word">Radar</span>
                             </button>
-                            <span x-show="count > 0" x-text="count" class="absolute -top-0.5 -right-0.5 min-w-[20px] h-5 px-1 rounded-full bg-[#FCB03C] text-[11px] font-bold text-gray-900 flex items-center justify-center pointer-events-none"></span>
+                            <span x-show="count > 0" x-text="count" class="absolute -top-0.5 -right-0.5 min-w-[20px] h-5 px-1 rounded-full {{ $radarUrgent ? 'bg-red-500 text-white' : 'bg-[#FCB03C] text-gray-900' }} text-[11px] font-bold flex items-center justify-center pointer-events-none"></span>
                             <div x-show="open" x-cloak x-transition class="absolute right-0 top-full mt-2 w-[min(21rem,calc(100vw-2.5rem))] rounded-2xl bg-white text-gray-800 p-3 shadow-xl">
-                                <div class="flex items-center justify-between mb-2">
-                                    <p class="text-sm font-bold text-gray-900">Add to Radar</p>
-                                    <a href="{{ route('radar.index') }}" class="text-xs font-semibold text-[#C2185B] hover:underline">Open Radar</a>
-                                </div>
-                                @include('radar.partials.compose', ['action' => route('os.radar.store'), 'dark' => true])
+                                @if ($radar->isNotEmpty())
+                                    <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-1.5">Needs attention</p>
+                                    <div class="space-y-1 mb-3">
+                                        @foreach ($radar->sortBy(fn ($i) => $i->daysLeft() ?? 9999)->take(4) as $item)
+                                            <a href="{{ route('radar.index', ['tab' => $item->status]) }}" class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-[#FFF5F1]">
+                                                <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ ($item->daysLeft() ?? 99) <= 3 ? 'bg-red-500' : 'bg-[#FCB03C]' }}"></span>
+                                                <span class="truncate flex-1 text-gray-800">{{ $item->headline(48) }}</span>
+                                                <span class="shrink-0 text-gray-400">{{ $item->dueLabel() ?? 'Not taken' }}</span>
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                @endif
+                                <a href="{{ route('radar.index') }}" class="flex items-center justify-center gap-1.5 w-full mb-3 text-sm font-semibold px-4 py-2 rounded-xl text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110"><x-icon name="radar" class="w-4 h-4" /> Open Radar</a>
+                                <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-1.5">Quick add</p>
+                                @include('radar.partials.compose', ['action' => route('radar.store'), 'dark' => true])
                             </div>
                         </div>
                         <style>
@@ -58,13 +70,15 @@
                             .radar-word { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; letter-spacing: -.01em;
                                 background: linear-gradient(90deg, #FF7AA2, #FF8A5B, #FFC65C); -webkit-background-clip: text; background-clip: text; color: transparent;
                                 filter: drop-shadow(0 0 3px rgba(255, 122, 162, .95)) drop-shadow(0 0 9px rgba(244, 106, 58, .7)); }
+                            .radar-orb--urgent .radar-blip { background: #FF4D6D; box-shadow: 0 0 7px 1px rgba(255, 77, 109, .95); }
+                            .radar-orb--urgent { border-color: rgba(255, 77, 109, .6); }
                             @keyframes radar-spin { to { transform: rotate(360deg); } }
                             @keyframes radar-blip { 0% { opacity: 1; transform: scale(1.4); } 35% { opacity: .55; transform: scale(1); } 100% { opacity: .25; transform: scale(1); } }
                             @media (prefers-reduced-motion: reduce) { .radar-sweep, .radar-blip { animation: none; } .radar-blip { opacity: 1; } }
                         </style>
                     @endif
-                    <h1 class="text-2xl font-semibold text-white leading-snug {{ $radarCount !== null ? 'pr-24' : '' }}">{{ $greeting['title'] }}</h1>
-                    <p class="text-sm italic text-white/55 mt-0.5 {{ $radarCount !== null ? 'pr-24' : '' }}">{{ $greeting['line'] }}</p>
+                    <h1 class="text-2xl font-semibold text-white leading-snug {{ $radar !== null ? 'pr-24' : '' }}">{{ $greeting['title'] }}</h1>
+                    <p class="text-sm italic text-white/55 mt-0.5 {{ $radar !== null ? 'pr-24' : '' }}">{{ $greeting['line'] }}</p>
                     <div class="mt-4">
                         <div class="flex items-center justify-between gap-3">
                             <div class="font-mono text-3xl font-semibold text-[#FCB03C] tracking-wide" x-text="time"></div>

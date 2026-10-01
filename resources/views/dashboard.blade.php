@@ -31,28 +31,6 @@
 
     <div class="p-5 md:p-7 space-y-6">
 
-        {{-- Radar (BOD only): things that need action, and the next due date. --}}
-        @if (auth()->user()->isBod())
-            @php
-                $radarCounts = \App\Models\RadarItem::selectRaw('status, count(*) as n')->whereIn('status', ['open', 'taken'])->groupBy('status')->pluck('n', 'status');
-                $radarSoon = \App\Models\RadarItem::where('status', '!=', 'done')->whereNotNull('due_date')->where('due_date', '<=', today()->addDays(\App\Models\RadarItem::SOON_DAYS))->count();
-                $radarNext = \App\Models\RadarItem::where('status', '!=', 'done')->whereNotNull('due_date')->orderBy('due_date')->first();
-            @endphp
-            <a href="{{ route('radar.index') }}" class="k-card p-4 flex flex-wrap items-center gap-x-6 gap-y-2 hover:bg-[#FFF9F6]">
-                <div class="flex items-center gap-2">
-                    <x-icon name="radar" class="w-5 h-5 text-[#F46A3A]" />
-                    <span class="font-bold text-gray-900">Radar</span>
-                </div>
-                <div class="text-sm"><span class="font-bold text-gray-900">{{ $radarCounts['open'] ?? 0 }}</span> <span class="text-gray-500">not taken</span></div>
-                <div class="text-sm"><span class="font-bold text-gray-900">{{ $radarCounts['taken'] ?? 0 }}</span> <span class="text-gray-500">in hand</span></div>
-                <div class="text-sm"><span class="font-bold {{ $radarSoon ? 'text-red-600' : 'text-gray-900' }}">{{ $radarSoon }}</span> <span class="text-gray-500">due this week</span></div>
-                @if ($radarNext)
-                    <div class="text-xs text-gray-400 truncate min-w-0 flex-1">Next: {{ $radarNext->headline(50) }}, {{ lcfirst($radarNext->dueLabel()) }}</div>
-                @endif
-                <span class="ml-auto text-xs font-semibold text-[#C2185B]">Open Radar</span>
-            </a>
-        @endif
-
         {{-- Row 1: KPI tiles. Each has a solid gradient icon badge in its own
         colour plus a faint matching bubble in the corner, so the row reads as
         four friendly, distinct tiles rather than four identical boxes.

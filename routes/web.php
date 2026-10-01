@@ -62,7 +62,15 @@ $osRoutes = function () {
         Route::post('/clock-out/undo', [AttendanceController::class, 'undoClockOut'])->name('os.clock-out.undo');
         Route::get('/privacy', [PrivacyController::class, 'staff'])->name('privacy.staff');
         Route::post('/privacy/acknowledge', [PrivacyController::class, 'acknowledge'])->name('privacy.acknowledge');
-        Route::post('/radar', [RadarController::class, 'store'])->middleware('throttle:30,1')->name('os.radar.store');
+        // Radar: BOD's action board. Lives in KretivOS only (reached from the radar orb on the home screen).
+        Route::get('/radar', [RadarController::class, 'index'])->name('radar.index');
+        Route::post('/radar', [RadarController::class, 'store'])->middleware('throttle:30,1')->name('radar.store');
+        Route::patch('/radar/{note}', [RadarController::class, 'update'])->name('radar.update');
+        Route::post('/radar/{note}/take', [RadarController::class, 'take'])->name('radar.take');
+        Route::post('/radar/{note}/reply', [RadarController::class, 'reply'])->name('radar.reply');
+        Route::post('/radar/{note}/done', [RadarController::class, 'done'])->name('radar.done');
+        Route::post('/radar/{note}/reopen', [RadarController::class, 'reopen'])->name('radar.reopen');
+        Route::get('/radar/{note}/photo', [RadarController::class, 'photo'])->name('radar.photo');
         Route::get('/access', [OsController::class, 'access'])->name('os.access');
         Route::put('/access/{user}', [OsController::class, 'updateAccess'])->name('os.access.update');
     });
@@ -153,14 +161,6 @@ $onHost('jobs', function () {
         Route::get('/jobs/{job}/photos/{photo}', [JobPhotoController::class, 'show'])->name('jobs.photos.show');
         Route::patch('/jobs/{job}/photos/{photo}', [JobPhotoController::class, 'update'])->name('jobs.photos.update');
         Route::delete('/jobs/{job}/photos/{photo}', [JobPhotoController::class, 'destroy'])->name('jobs.photos.destroy');
-        Route::get('/radar', [RadarController::class, 'index'])->name('radar.index');
-        Route::post('/radar', [RadarController::class, 'store'])->middleware('throttle:30,1')->name('radar.store');
-        Route::patch('/radar/{note}', [RadarController::class, 'update'])->name('radar.update');
-        Route::post('/radar/{note}/take', [RadarController::class, 'take'])->name('radar.take');
-        Route::post('/radar/{note}/reply', [RadarController::class, 'reply'])->name('radar.reply');
-        Route::post('/radar/{note}/done', [RadarController::class, 'done'])->name('radar.done');
-        Route::post('/radar/{note}/reopen', [RadarController::class, 'reopen'])->name('radar.reopen');
-        Route::get('/radar/{note}/photo', [RadarController::class, 'photo'])->name('radar.photo');
         Route::get('/portfolio', [PortfolioController::class, 'index'])->name('portfolio.index');
         Route::get('/portfolio/download', [PortfolioController::class, 'download'])->name('portfolio.download');
         Route::post('/jobs/{job}/item-images', [ItemImageController::class, 'store'])->middleware('throttle:30,1')->name('jobs.item-images.store');

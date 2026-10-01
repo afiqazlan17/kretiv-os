@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -28,9 +29,6 @@ class RadarItem extends Model
     /** Reminders go out this many days before the due date (and on the day). */
     public const REMIND_DAYS = [30, 14, 7, 3, 0];
 
-    /** Due within this many days counts as needing attention (orb dots, sidebar badge). */
-    public const SOON_DAYS = 7;
-
     protected $fillable = ['body', 'type', 'due_date', 'department', 'image_path', 'status', 'taken_by', 'taken_at', 'outcome', 'job_id', 'done_by', 'done_at', 'created_by'];
 
     protected function casts(): array
@@ -38,11 +36,43 @@ class RadarItem extends Model
         return ['taken_at' => 'datetime', 'done_at' => 'datetime', 'due_date' => 'date'];
     }
 
-    /** Not done, and either nobody has taken it or its due date is close. */
-    public function scopeNeedsAttention(Builder $query): Builder
+    /**
+     * What lights up the radar orb for this user (Radar has no bell
+     * notifications; the orb is the only signal): items nobody has taken,
+     * overdue items, and items that reached a reminder (30, 14, 7, 3 days
+     * before, or the day itself) the user hasn't seen on the Radar page yet.
+     *
+     * @return Collection<int, self>
+     */
+    public static function attentionFor(User $user): Collection
     {
-        return $query->where('status', '!=', self::STATUS_DONE)
-            ->where(fn ($q) => $q->where('status', self::STATUS_OPEN)->orWhere('due_date', '<=', today()->addDays(self::SOON_DAYS)));
+        $items = self::where('status', '!=', self::STATUS_DONE)
+            ->where(fn ($q) => $q->where('status', self::STATUS_OPEN)
+                ->orWhere(fn ($q) => $q->whereNotNull('due_date')->where('due_date', '<=', today()->addDays(self::REMIND_DAYS[0]))))
+            ->get();
+        $seen = NotificationRead::where('user_id', $user->id)->whereIn('key', $items->map->stageKey()->filter()->values())->pluck('key')->all();
+
+        return $items->filter(fn (self $i) => $i->status === self::STATUS_OPEN
+            || ($i->daysLeft() !== null && $i->daysLeft() < 0)
+            || ($i->stageKey() !== null && ! in_array($i->stageKey(), $seen, true)))->values();
+    }
+
+    /** Opening the Radar page counts as seeing each item's current reminder. */
+    public static function markSeen(User $user): void
+    {
+        $keys = self::where('status', '!=', self::STATUS_DONE)->whereNotNull('due_date')
+            ->where('due_date', '<=', today()->addDays(self::REMIND_DAYS[0]))->get()->map->stageKey()->filter();
+        foreach ($keys as $key) {
+            NotificationRead::firstOrCreate(['user_id' => $user->id, 'key' => $key], ['read_at' => now()]);
+        }
+    }
+
+    /** One key per reminder, so each of 30/14/7/3/0 days lights the orb once. */
+    public function stageKey(): ?string
+    {
+        $stage = $this->reminderStage();
+
+        return $stage === null ? null : "radar:{$this->id}:{$stage}";
     }
 
     /** Dated items first (nearest due date on top), then the rest, newest first. */

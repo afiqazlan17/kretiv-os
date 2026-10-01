@@ -249,10 +249,14 @@
                             @else
                                 <div class="relative z-10 w-8 h-8 rounded-full border-2 border-gray-200 bg-white text-gray-400 flex items-center justify-center text-xs font-bold">{{ $i + 1 }}</div>
                             @endif
-                            <span class="mt-2 text-xs font-medium text-center {{ $state === 'upcoming' ? 'text-gray-400' : 'text-gray-700' }}">{{ $stages[$key] }}</span>
+                            <span class="hidden sm:block mt-2 text-xs font-medium text-center {{ $state === 'upcoming' ? 'text-gray-400' : 'text-gray-700' }}">{{ $stages[$key] }}</span>
                         </div>
                     @endforeach
                 </div>
+                {{-- Six labels don't fit side by side on a phone: show where the job is in one line instead. --}}
+                @if ($currentIdx !== false)
+                    <p class="sm:hidden mt-3 text-center text-sm text-gray-500">Step {{ $currentIdx + 1 }} of {{ count($stageKeys) }}: <span class="font-semibold text-gray-900">{{ $stages[$job->status] }}</span></p>
+                @endif
                 @if ($next)
                     <div class="mt-5 flex flex-wrap items-center gap-3 rounded-xl bg-[#FFF9F6] border border-[#F5ECE8] px-4 py-3">
                         <x-icon name="arrow-right" class="w-4 h-4 text-[#C2185B] shrink-0" />
@@ -570,20 +574,28 @@
                             @php $slips = collect($job->attachments ?? [])->where('kind', 'payment_proof')->keyBy('doc_number'); @endphp
                             <div class="mb-4 rounded-xl border border-[#F5ECE8] divide-y divide-[#F5ECE8] text-xs">
                                 @foreach ($payments as $entry)
-                                    <div class="flex items-center gap-2 px-3 py-2">
+                                    {{-- Two lines on a phone (name and amount, then the details), one line on wider screens. --}}
+                                    @php $receiptDoc = $documents->first(fn ($d) => $d->doc_type === 'receipt' && $d->doc_number === $entry->doc_number); @endphp
+                                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
                                         <span class="font-semibold text-gray-700">Payment {{ $loop->iteration }}</span>
-                                        <span class="font-mono text-gray-400">{{ $entry->doc_number }}</span>
-                                        <span class="text-gray-400">{{ \Illuminate\Support\Carbon::parse($entry->date)->format('d M Y') }}</span>
-                                        @if ($slip = $slips[$entry->doc_number] ?? null)
-                                            <a href="{{ route('jobs.attachments.show', [$job, $slip['id']]) }}" target="_blank" class="inline-flex items-center gap-1 text-[#C2185B] hover:underline"><x-icon name="paperclip" class="w-3 h-3" /> Slip</a>
-                                        @endif
-                                        <span class="ml-auto font-bold text-gray-900">RM {{ number_format((float) $entry->amount, 2) }}</span>
-                                        @if (auth()->user()->canVoidPayments())
-                                            <form method="POST" action="{{ route('jobs.payments.void', [$job, $entry]) }}" onsubmit="return confirm('Void payment {{ $entry->doc_number }} (RM {{ number_format((float) $entry->amount, 2) }})? It will be removed from the ledger.')">
-                                                @csrf
-                                                <button type="submit" class="text-red-500 hover:underline">Void</button>
-                                            </form>
-                                        @endif
+                                        <span class="ml-auto sm:order-last font-bold text-gray-900 whitespace-nowrap">RM {{ number_format((float) $entry->amount, 2) }}</span>
+                                        <div class="w-full sm:w-auto sm:flex-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                                            @if ($receiptDoc)
+                                                <a href="{{ route('jobs.documents.show', [$job, $receiptDoc]) }}" target="_blank" class="inline-flex items-center gap-1 font-mono text-[#E85D04] hover:underline" title="Open receipt"><x-icon name="receipt" class="w-3 h-3" /> {{ $entry->doc_number }}</a>
+                                            @else
+                                                <span class="font-mono text-gray-400">{{ $entry->doc_number }}</span>
+                                            @endif
+                                            <span class="text-gray-400 whitespace-nowrap">{{ \Illuminate\Support\Carbon::parse($entry->date)->format('d M Y') }}</span>
+                                            @if ($slip = $slips[$entry->doc_number] ?? null)
+                                                <a href="{{ route('jobs.attachments.show', [$job, $slip['id']]) }}" target="_blank" class="inline-flex items-center gap-1 text-[#C2185B] hover:underline"><x-icon name="paperclip" class="w-3 h-3" /> Slip</a>
+                                            @endif
+                                            @if (auth()->user()->canVoidPayments())
+                                                <form method="POST" action="{{ route('jobs.payments.void', [$job, $entry]) }}" class="ml-auto sm:ml-0" onsubmit="return confirm('Void payment {{ $entry->doc_number }} (RM {{ number_format((float) $entry->amount, 2) }})? It will be removed from the ledger.')">
+                                                    @csrf
+                                                    <button type="submit" class="text-red-500 hover:underline">Void</button>
+                                                </form>
+                                            @endif
+                                        </div>
                                     </div>
                                 @endforeach
                             </div>
@@ -1080,6 +1092,8 @@
                     @endforeach
                     </div>
                 </div>
+
+                @include('jobs.partials.photos')
 
                 <div class="k-card p-5 md:p-6">
                     <h3 class="text-base font-bold text-gray-900 mb-4">Other Files</h3>

@@ -11,6 +11,7 @@
         ['key' => 'customers', 'label' => 'Customers', 'route' => 'customers.index', 'icon' => 'users'],
         ['key' => 'vendors', 'label' => 'Vendors', 'route' => 'vendors.index', 'icon' => 'factory'],
         ['key' => 'items', 'label' => 'Items', 'route' => 'items.index', 'pattern' => 'items.*', 'icon' => 'package'],
+        ['key' => 'portfolio', 'label' => 'Portfolio', 'route' => 'portfolio.index', 'pattern' => 'portfolio.*', 'icon' => 'image'],
         ['key' => 'reports', 'label' => 'Reports', 'route' => 'reports.index', 'icon' => 'chart-line', 'roles' => ['bod', 'dept_head']],
     ];
 @endphp

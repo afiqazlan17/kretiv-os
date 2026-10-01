@@ -7,7 +7,6 @@ use App\Models\Job;
 use App\Models\JobDocument;
 use App\Models\LedgerEntry;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 // Single source of truth for what a Quotation/Proforma/Invoice/Receipt
@@ -122,10 +121,10 @@ class DocumentData
      *
      * @return array<int, string>
      */
-    public static function defaultNotes(string $type, ?array $bank, ?string $department = null, bool $finalPayment = true): array
+    public static function defaultNotes(string $type, ?array $bank, ?string $department = null, bool $finalPayment = true, string $lang = 'en'): array
     {
         $key = $type === 'receipt' && ! $finalPayment ? 'receipt_deposit' : $type;
-        $set = config("document_notes.{$key}", []);
+        $set = config(($lang === 'ms' ? 'document_notes_ms' : 'document_notes').".{$key}", []);
         $lines = $set[$department] ?? $set['default'] ?? $set['print'] ?? [];
         $contact = config('kretivco.brand.email').' or WhatsApp '.config('kretivco.brand.phone');
 
@@ -186,6 +185,7 @@ class DocumentData
         $block = self::customerBlock($job->customer);
 
         return [
+            'lang' => DocLang::valid($job->customer?->doc_language),
             'customer_name' => $block['name'],
             'company' => $block['company'],
             'address_line_1' => $block['address_line_1'],
@@ -196,7 +196,7 @@ class DocumentData
             'items' => self::itemsFromJob($job),
             'delivery' => (float) ($job->delivery_amount ?? 0),
             'discount' => (float) ($job->discount_amount ?? 0),
-            'notes' => self::customNotes($job, $type) ?? self::defaultNotes($type, self::bank($job), $job->department),
+            'notes' => self::customNotes($job, $type) ?? self::defaultNotes($type, self::bank($job), $job->department, true, DocLang::valid($job->customer?->doc_language)),
             'payment_method' => self::PAYMENT_METHODS[0],
             'amount_paid' => $invoiceTotal === null ? null : max(0.0, round($invoiceTotal - $paidBefore, 2)),
             // Tenders can ask for a longer validity (e.g. 90 days); kept per job once changed.
@@ -254,7 +254,8 @@ class DocumentData
         $canvas = $dompdf->getCanvas();
         if ($canvas->get_page_count() > 1) {
             $font = $dompdf->getFontMetrics()->getFont('Helvetica');
-            $canvas->page_text($canvas->get_width() - 100, $canvas->get_height() - 30, 'Page {PAGE_NUM} of {PAGE_COUNT}', $font, 7.5, [0.53, 0.53, 0.53]);
+            $label = DocLang::t('Page {PAGE_NUM} of {PAGE_COUNT}', $doc['lang'] ?? 'en');
+            $canvas->page_text($canvas->get_width() - ($label === 'Page {PAGE_NUM} of {PAGE_COUNT}' ? 100 : 130), $canvas->get_height() - 30, $label, $font, 7.5, [0.53, 0.53, 0.53]);
         }
 
         return $dompdf->output();
@@ -293,6 +294,7 @@ class DocumentData
         $defaults = self::defaults($job, $type, $userName, $invoiceTotal, $paidBefore);
         $bank = self::bank($job);
         $pick = fn (string $key) => array_key_exists($key, $input) && $input[$key] !== null ? $input[$key] : $defaults[$key];
+        $lang = DocLang::valid($pick('lang'));
 
         $items = ItemImages::resolve(self::normalizeItems(array_key_exists('items', $input) ? (array) $input['items'] : $defaults['items']), $job);
         $creditReason = null;
@@ -312,9 +314,9 @@ class DocumentData
         $isFinal = $type !== 'receipt' || $paidBefore + $receiptPaid >= $invoiceTotal - 0.005;
 
         $notes = match (true) {
-            ! empty($input['use_default_notes']) => self::defaultNotes($type, $bank, $job->department, $isFinal),
+            ! empty($input['use_default_notes']) => self::defaultNotes($type, $bank, $job->department, $isFinal, $lang),
             isset($input['notes']) && trim((string) $input['notes']) !== '' => self::noteLines($input['notes']),
-            self::customNotes($job, $type) === null => self::defaultNotes($type, $bank, $job->department, $isFinal),
+            self::customNotes($job, $type) === null => self::defaultNotes($type, $bank, $job->department, $isFinal, $lang),
             default => $defaults['notes'],
         };
         if ($creditReason !== null) {
@@ -323,19 +325,20 @@ class DocumentData
 
         // Extra header line under Date: how long a quotation holds, or when an invoice is due.
         $headerExtra = match ($type) {
-            'quotation' => ['Valid until', now()->addDays((int) $pick('valid_days'))->format('d M Y')],
-            'invoice', 'proforma' => ['Due', Carbon::parse($pick('due_date'))->format('d M Y')],
+            'quotation' => [DocLang::t('Valid until', $lang), DocLang::date(now()->addDays((int) $pick('valid_days')), $lang)],
+            'invoice', 'proforma' => [DocLang::t('Due', $lang), DocLang::date($pick('due_date'), $lang)],
             default => null,
         };
         $amountPaid = $type === 'receipt' ? (float) ($input['amount_paid'] ?? max(0.0, $invoiceTotal - $paidBefore)) : null;
 
         return [
             'type' => $type,
-            'doc_title' => match ($type) {
+            'lang' => $lang,
+            'doc_title' => DocLang::t(match ($type) {
                 'receipt' => $isFinal ? 'PAYMENT RECEIPT' : 'DEPOSIT RECEIPT',
                 default => strtoupper(self::label($type, $job->department)),
-            },
-            'no_label' => self::noLabel($type),
+            }, $lang),
+            'no_label' => DocLang::t(self::noLabel($type), $lang),
             'po_number' => in_array($type, ['proforma', 'invoice', 'delivery'], true) ? $job->po_number : null,
             'doc_number' => $docNumber,
             'by' => (string) $pick('by_staff'),
@@ -346,7 +349,7 @@ class DocumentData
                 'address_line_2' => $pick('address_line_2'),
                 'phone' => $pick('phone'),
             ],
-            'date' => now()->format('d M Y'),
+            'date' => DocLang::date(now(), $lang),
             'header_extra' => $headerExtra,
             'invoice_number' => $invoiceNumber,
             'title' => (string) $pick('title'),
@@ -446,14 +449,14 @@ class DocumentData
      *
      * @return array<int, string>
      */
-    public static function mergedNotes(string $type, Collection $jobs, ?array $bank, bool $finalPayment = true, bool $useSaved = true): array
+    public static function mergedNotes(string $type, Collection $jobs, ?array $bank, bool $finalPayment = true, bool $useSaved = true, string $lang = 'en'): array
     {
         if ($useSaved && $saved = self::customNotes($jobs->first(), 'project_'.$type)) {
             return $saved;
         }
 
         $lists = $jobs->mapWithKeys(fn (Job $j) => [
-            $j->id => self::customNotes($j, $type) ?? self::defaultNotes($type, $bank, $j->department, $finalPayment),
+            $j->id => self::customNotes($j, $type) ?? self::defaultNotes($type, $bank, $j->department, $finalPayment, $lang),
         ]);
         $common = array_values(array_filter($lists->first(), fn ($l) => $lists->every(fn ($list) => in_array($l, $list, true))));
 
@@ -475,7 +478,7 @@ class DocumentData
             array_push($notes, $name.':', ...$lines);
         }
 
-        return $common === [] ? $notes : [...$notes, 'General:', ...$common];
+        return $common === [] ? $notes : [...$notes, DocLang::t('General:', $lang), ...$common];
     }
 
     /** A notes line that is a heading ("KretivPrint:"), not a numbered note. */
@@ -564,8 +567,8 @@ class DocumentData
 
         $doc = self::build($job, $type, $input, $docNumber, $userName, $basis, $invoiceNumber, $paidBefore);
         $doc['sections'] = $sections;
-        $doc['notes'] = $notesText !== '' ? self::noteLines($notesText) : self::mergedNotes($type, $jobs, self::bank($job), $doc['is_final'], ! $useDefault);
-        $doc['doc_title'] = $type === 'receipt' ? $doc['doc_title'] : strtoupper(self::label($type));
+        $doc['notes'] = $notesText !== '' ? self::noteLines($notesText) : self::mergedNotes($type, $jobs, self::bank($job), $doc['is_final'], ! $useDefault, $doc['lang']);
+        $doc['doc_title'] = $type === 'receipt' ? $doc['doc_title'] : DocLang::t(strtoupper(self::label($type)), $doc['lang']);
         $doc['project_jobs'] = $jobs->pluck('job_id')->all();
 
         return $doc;

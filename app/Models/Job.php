@@ -98,6 +98,12 @@ class Job extends Model
         ];
     }
 
+    /** Finished product photos, for the Portfolio page. */
+    public function photos(): HasMany
+    {
+        return $this->hasMany(JobPhoto::class)->latest();
+    }
+
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);

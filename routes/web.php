@@ -28,10 +28,12 @@ use App\Http\Controllers\ItemImageController;
 use App\Http\Controllers\ItemLibraryController;
 use App\Http\Controllers\JobController;
 use App\Http\Controllers\JobFormController;
+use App\Http\Controllers\JobPhotoController;
 use App\Http\Controllers\JobVendorCostController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OsController;
+use App\Http\Controllers\PortfolioController;
 use App\Http\Controllers\PrivacyController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RecurringExpenseController;
@@ -145,6 +147,12 @@ $onHost('jobs', function () {
         Route::post('/jobs/{job}/attachments', [AttachmentController::class, 'store'])->name('jobs.attachments.store');
         Route::get('/jobs/{job}/attachments/{attachmentId}', [AttachmentController::class, 'show'])->name('jobs.attachments.show');
         Route::delete('/jobs/{job}/attachments/{attachmentId}', [AttachmentController::class, 'destroy'])->name('jobs.attachments.destroy');
+        Route::post('/jobs/{job}/photos', [JobPhotoController::class, 'store'])->middleware('throttle:20,1')->name('jobs.photos.store');
+        Route::get('/jobs/{job}/photos/{photo}', [JobPhotoController::class, 'show'])->name('jobs.photos.show');
+        Route::patch('/jobs/{job}/photos/{photo}', [JobPhotoController::class, 'update'])->name('jobs.photos.update');
+        Route::delete('/jobs/{job}/photos/{photo}', [JobPhotoController::class, 'destroy'])->name('jobs.photos.destroy');
+        Route::get('/portfolio', [PortfolioController::class, 'index'])->name('portfolio.index');
+        Route::get('/portfolio/download', [PortfolioController::class, 'download'])->name('portfolio.download');
         Route::post('/jobs/{job}/item-images', [ItemImageController::class, 'store'])->middleware('throttle:30,1')->name('jobs.item-images.store');
         Route::get('/jobs/{job}/item-images/{name}', [ItemImageController::class, 'show'])->name('jobs.item-images.show');
         Route::prefix('/jobs/{job}/documents/{type}')->whereIn('type', DocumentData::TYPES)->group(function () {

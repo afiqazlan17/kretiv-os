@@ -267,7 +267,7 @@ class DocumentControllerTest extends TestCase
         $draft = $this->actingAs($bod)->getJson(route('jobs.documents.draft', [$job, 'quotation']))->assertOk();
         $draft->assertJsonPath('notes_custom', true);
         $draft->assertJsonPath('defaults.notes', ['Special price for Acme only.', 'Valid until end of month.']);
-        $draft->assertJsonPath('standard_notes', DocumentData::defaultNotes('quotation', DocumentData::bank($job)));
+        $draft->assertJsonPath('standard_notes.en', DocumentData::defaultNotes('quotation', DocumentData::bank($job)));
 
         // Other document types keep the standard wording.
         $this->actingAs($bod)->getJson(route('jobs.documents.draft', [$job, 'invoice']))->assertJsonPath('notes_custom', false);

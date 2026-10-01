@@ -37,26 +37,33 @@ class ItemImages
     /** Resizes and re-encodes as JPEG (drops anything hidden in the original file) and returns the new name. */
     public static function store(UploadedFile $file, Job $job): string
     {
-        $src = @imagecreatefromstring((string) file_get_contents($file->getRealPath()));
+        $name = Str::random(32).'.jpg';
+        Storage::disk('public')->put(self::path($job, $name), self::jpeg($file->getRealPath(), self::MAX_SIDE));
+
+        return $name;
+    }
+
+    /**
+     * JPEG bytes of an image, no larger than $maxSide on its longest side, on
+     * white (transparent PNG mockups would otherwise print black).
+     */
+    public static function jpeg(string $file, int $maxSide, int $quality = 85): string
+    {
+        $src = @imagecreatefromstring((string) file_get_contents($file));
         abort_unless($src, 422, 'This image could not be read. Use a JPG, PNG or WebP file.');
 
         [$w, $h] = [imagesx($src), imagesy($src)];
-        $scale = min(1, self::MAX_SIDE / max($w, $h));
+        $scale = min(1, $maxSide / max($w, $h));
         [$nw, $nh] = [max(1, (int) round($w * $scale)), max(1, (int) round($h * $scale))];
 
-        // White background so transparent PNG mockups don't print black.
         $out = imagecreatetruecolor($nw, $nh);
         imagefill($out, 0, 0, imagecolorallocate($out, 255, 255, 255));
         imagecopyresampled($out, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
 
         ob_start();
-        imagejpeg($out, null, 85);
-        $bytes = (string) ob_get_clean();
+        imagejpeg($out, null, $quality);
 
-        $name = Str::random(32).'.jpg';
-        Storage::disk('public')->put(self::path($job, $name), $bytes);
-
-        return $name;
+        return (string) ob_get_clean();
     }
 
     /**

@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'customer_id', 'name', 'company', 'phone', 'email', 'source', 'customer_type',
-    'ssm_number', 'address_line_1', 'address_line_2', 'postcode', 'city', 'state', 'notes', 'created_by',
+    'ssm_number', 'address_line_1', 'address_line_2', 'postcode', 'city', 'state', 'notes', 'doc_language', 'created_by',
 ])]
 class Customer extends Model
 {

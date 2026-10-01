@@ -6,26 +6,27 @@
     @include('documents.partials.style')
 </head>
 <body>
+    @php $lang = $doc['lang'] ?? 'en'; $T = fn ($s) => \App\Support\DocLang::t($s, $lang); @endphp
     @include('documents.partials.header', ['type' => $doc['type'], 'docTitle' => $doc['doc_title'], 'noLabel' => $doc['no_label'], 'docNumber' => $doc['doc_number'], 'generatedBy' => $doc['by'], 'headerExtra' => $doc['header_extra']])
     @include('documents.partials.customer', ['customer' => $doc['customer']])
 
-    <div class="title-line"><b>Title:</b> {{ $doc['title'] }}</div>
+    <div class="title-line"><b>{{ $T('Title:') }}</b> {{ $doc['title'] }}</div>
     @if (! empty($doc['po_number']))
-        <div class="cust-line"><b>PO No:</b> {{ $doc['po_number'] }}</div>
+        <div class="cust-line"><b>{{ $T('PO No:') }}</b> {{ $doc['po_number'] }}</div>
     @endif
     @if ($doc['type'] === 'receipt' && $doc['invoice_number'])
-        <div class="cust-line"><b>Payment for:</b> Invoice {{ $doc['invoice_number'] }}</div>
+        <div class="cust-line"><b>{{ $T('Payment for:') }}</b> {{ $T('Invoice') }} {{ $doc['invoice_number'] }}</div>
     @elseif ($doc['type'] === 'credit_note' && $doc['invoice_number'])
-        <div class="cust-line"><b>Against:</b> Invoice {{ $doc['invoice_number'] }}</div>
+        <div class="cust-line"><b>{{ $T('Against:') }}</b> {{ $T('Invoice') }} {{ $doc['invoice_number'] }}</div>
     @endif
 
     @if ($doc['type'] === 'delivery')
         <table class="grid">
             <thead>
                 <tr>
-                    <th class="c" style="width:26pt;">No</th>
-                    <th>Description</th>
-                    <th class="c" style="width:60pt;">Qty</th>
+                    <th class="c" style="width:26pt;">{{ $T('No') }}</th>
+                    <th>{{ $T('Description') }}</th>
+                    <th class="c" style="width:60pt;">{{ $T('Qty') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -39,8 +40,8 @@
         <table class="grid">
             <thead>
                 <tr>
-                    <th class="c" style="width:26pt;">No</th>
-                    <th>Description</th>
+                    <th class="c" style="width:26pt;">{{ $T('No') }}</th>
+                    <th>{{ $T('Description') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -49,26 +50,26 @@
         </table>
 
         <table class="tot receipt">
-            <tr><td>{{ $doc['invoice_number'] ? 'Invoice Total' : 'Quotation Total' }}</td><td class="v">RM {{ number_format($doc['invoice_total'], 2) }}</td></tr>
+            <tr><td>{{ $T($doc['invoice_number'] ? 'Invoice Total' : 'Quotation Total') }}</td><td class="v">RM {{ number_format($doc['invoice_total'], 2) }}</td></tr>
             @if (($doc['paid_before'] ?? 0) > 0)
-                <tr><td>Paid Before</td><td class="v">(RM {{ number_format($doc['paid_before'], 2) }})</td></tr>
+                <tr><td>{{ $T('Paid Before') }}</td><td class="v">(RM {{ number_format($doc['paid_before'], 2) }})</td></tr>
             @endif
             @if (! empty($doc['paid_on']))
-                <tr><td>Payment Date</td><td class="v">{{ $doc['paid_on'] }}</td></tr>
+                <tr><td>{{ $T('Payment Date') }}</td><td class="v">{{ $doc['paid_on'] }}</td></tr>
             @endif
-            <tr><td>Payment Method</td><td class="v">{{ $doc['payment_method'] }}</td></tr>
-            <tr><td><b>Amount Paid (MYR)</b></td><td class="v"><b>RM {{ number_format($doc['amount_paid'], 2) }}</b></td></tr>
-            <tr class="grand"><td>Balance Due (MYR)</td><td class="v">RM {{ number_format($doc['balance_due'], 2) }}</td></tr>
+            <tr><td>{{ $T('Payment Method') }}</td><td class="v">{{ $T($doc['payment_method']) }}</td></tr>
+            <tr><td><b>{{ $T('Amount Paid (MYR)') }}</b></td><td class="v"><b>RM {{ number_format($doc['amount_paid'], 2) }}</b></td></tr>
+            <tr class="grand"><td>{{ $T('Balance Due (MYR)') }}</td><td class="v">RM {{ number_format($doc['balance_due'], 2) }}</td></tr>
         </table>
     @else
         <table class="grid">
             <thead>
                 <tr>
-                    <th class="c" style="width:26pt;">No</th>
-                    <th>Description</th>
-                    <th class="c" style="width:36pt;">Qty</th>
-                    <th class="c" style="width:72pt;">Unit Price</th>
-                    <th class="c" style="width:78pt;">Amount</th>
+                    <th class="c" style="width:26pt;">{{ $T('No') }}</th>
+                    <th>{{ $T('Description') }}</th>
+                    <th class="c" style="width:36pt;">{{ $T('Qty') }}</th>
+                    <th class="c" style="width:72pt;">{{ $T('Unit Price') }}</th>
+                    <th class="c" style="width:78pt;">{{ $T('Amount') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -78,22 +79,22 @@
 
         <table class="tot {{ ($doc['deposit_paid'] ?? 0) > 0 || $doc['type'] === 'credit_note' ? 'wide' : '' }}">
             @if ($doc['type'] !== 'credit_note')
-                <tr><td>Subtotal</td><td class="v">RM {{ number_format($doc['subtotal'], 2) }}</td></tr>
+                <tr><td>{{ $T('Subtotal') }}</td><td class="v">RM {{ number_format($doc['subtotal'], 2) }}</td></tr>
             @endif
             @if ($doc['delivery'] > 0)
-                <tr><td>Delivery</td><td class="v">RM {{ number_format($doc['delivery'], 2) }}</td></tr>
+                <tr><td>{{ $T('Delivery') }}</td><td class="v">RM {{ number_format($doc['delivery'], 2) }}</td></tr>
             @endif
             @if ($doc['discount'] > 0)
-                <tr><td>Discount</td><td class="v">(RM {{ number_format($doc['discount'], 2) }})</td></tr>
+                <tr><td>{{ $T('Discount') }}</td><td class="v">(RM {{ number_format($doc['discount'], 2) }})</td></tr>
             @endif
             @if ($doc['type'] === 'credit_note')
-                <tr class="grand"><td>Credit Amount (MYR)</td><td class="v">RM {{ number_format($doc['total'], 2) }}</td></tr>
+                <tr class="grand"><td>{{ $T('Credit Amount (MYR)') }}</td><td class="v">RM {{ number_format($doc['total'], 2) }}</td></tr>
             @else
-                <tr class="grand"><td>Total (MYR)</td><td class="v">RM {{ number_format($doc['total'], 2) }}</td></tr>
+                <tr class="grand"><td>{{ $T('Total (MYR)') }}</td><td class="v">RM {{ number_format($doc['total'], 2) }}</td></tr>
             @endif
             @if (($doc['deposit_paid'] ?? 0) > 0)
-                <tr><td>Less: Deposit Received</td><td class="v">(RM {{ number_format($doc['deposit_paid'], 2) }})</td></tr>
-                <tr class="grand"><td>Balance Due (MYR)</td><td class="v">RM {{ number_format($doc['balance_due'], 2) }}</td></tr>
+                <tr><td>{{ $T('Less: Deposit Received') }}</td><td class="v">(RM {{ number_format($doc['deposit_paid'], 2) }})</td></tr>
+                <tr class="grand"><td>{{ $T('Balance Due (MYR)') }}</td><td class="v">RM {{ number_format($doc['balance_due'], 2) }}</td></tr>
             @endif
         </table>
     @endif

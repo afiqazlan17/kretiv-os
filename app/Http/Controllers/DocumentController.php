@@ -8,6 +8,7 @@ use App\Models\Job;
 use App\Models\JobDocument;
 use App\Models\LedgerEntry;
 use App\Services\LedgerService;
+use App\Support\DocLang;
 use App\Support\DocumentData;
 use App\Support\ItemImages;
 use App\Support\Phone;
@@ -65,7 +66,7 @@ class DocumentController extends Controller
             'credit_reasons' => DocumentData::CREDIT_REASONS,
             'payment_methods' => DocumentData::PAYMENT_METHODS,
             'defaults' => DocumentData::defaults($job, $type, $request->user()->shortName(), $basis, $paidBefore),
-            'standard_notes' => DocumentData::defaultNotes($type, DocumentData::bank($job), $job->department),
+            'standard_notes' => collect(DocLang::LANGS)->map(fn ($l, $lang) => DocumentData::defaultNotes($type, DocumentData::bank($job), $job->department, true, $lang))->all(),
             'notes_custom' => DocumentData::customNotes($job, $type) !== null,
         ]);
     }
@@ -324,7 +325,7 @@ class DocumentController extends Controller
             'payment_methods' => DocumentData::PAYMENT_METHODS,
             'project_total' => $doc['total'],
             'defaults' => array_merge($defaults, ['title' => $title, 'items' => [], 'delivery' => 0, 'discount' => 0, 'notes' => $doc['notes']]),
-            'standard_notes' => DocumentData::mergedNotes($type, $jobs, DocumentData::bank($job), $doc['is_final'], false),
+            'standard_notes' => collect(DocLang::LANGS)->map(fn ($l, $lang) => DocumentData::mergedNotes($type, $jobs, DocumentData::bank($job), $doc['is_final'], false, $lang))->all(),
             'notes_custom' => DocumentData::customNotes($jobs->first(), 'project_'.$type) !== null,
         ];
     }
@@ -629,6 +630,7 @@ class DocumentController extends Controller
             'phone' => ['nullable', 'string', 'max:50'],
             'due_date' => ['nullable', 'date'],
             'valid_days' => ['nullable', 'integer', 'min:1', 'max:365'],
+            'lang' => ['nullable', Rule::in(array_keys(DocLang::LANGS))],
             'title' => ['required', 'string', 'max:255'],
             'by_staff' => ['nullable', 'string', 'max:255'],
             'items' => ['nullable', 'array', 'max:50'],
@@ -673,6 +675,10 @@ class DocumentController extends Controller
      */
     private function rememberNotes(Request $request, Collection $jobs, string $key): void
     {
+        // The customer's documents keep printing in the language last used for them.
+        if ($request->filled('lang') && ($customer = $jobs->first()?->customer) && $customer->doc_language !== $request->input('lang')) {
+            $customer->update(['doc_language' => DocLang::valid($request->input('lang'))]);
+        }
         if (str_ends_with($key, 'quotation') && $request->filled('valid_days')) {
             foreach ($jobs as $job) {
                 $days = (int) $request->input('valid_days');

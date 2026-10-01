@@ -1,5 +1,5 @@
 <div class="block">
-    <div class="cust-label"><b>Customer:</b></div>
+    <div class="cust-label"><b>{{ \App\Support\DocLang::t('Customer:', $lang ?? null) }}</b></div>
     @if (! empty($customer['name']))<div class="cust-line">{{ $customer['name'] }}</div>@endif
     @if (! empty($customer['company']))<div class="cust-line">{{ $customer['company'] }}</div>@endif
     @if (! empty($customer['address_line_1']))<div class="cust-line">{{ $customer['address_line_1'] }}</div>@endif

@@ -46,6 +46,14 @@
                                 <p x-show="scope === 'project' && project.left_out.length" class="text-[11px] text-gray-400" x-text="'Not included: ' + project.left_out.join(', ')"></p>
                             </div>
                         </template>
+                        {{-- Document language: fixed wording and standard notes switch; what staff typed stays as typed. Remembered for this customer. --}}
+                        <div class="flex items-center justify-between gap-3">
+                            <span class="text-xs font-semibold text-gray-500">Language</span>
+                            <div class="inline-flex p-0.5 rounded-lg bg-[#F7F1EE] text-xs font-semibold">
+                                <button type="button" @click="setLang('en')" :class="form.lang === 'en' ? 'bg-white shadow text-gray-900' : 'text-gray-500'" class="px-3 py-1 rounded-md">English</button>
+                                <button type="button" @click="setLang('ms')" :class="form.lang === 'ms' ? 'bg-white shadow text-gray-900' : 'text-gray-500'" class="px-3 py-1 rounded-md">Bahasa Melayu</button>
+                            </div>
+                        </div>
                         <div><label class="text-xs font-semibold text-gray-500">Customer Name</label>
                             <input type="text" x-model="form.customer_name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></div>
                         <div><label class="text-xs font-semibold text-gray-500">Company</label>
@@ -226,7 +234,7 @@
             jobCode: cfg.jobCode, urls: cfg.urls, mobileTab: 'form', scope: 'project', project: null, projectTotal: 0,
             open: false, type: 'quotation', label: 'Quotation', loading: false, busy: false, previewing: false,
             error: '', notice: '', form: blank(), paymentMethods: [], creditReasons: {}, invoiceNumber: null, invoiceTotal: null, paidBefore: 0, customerPhone: '', docNumber: '',
-            editNotes: false, notesText: '', noteList: [], defaultNotes: [], previewUrl: null, previewBlob: null, previewName: '', frameSrc: ['', ''], active: 0, pending: null, dirty: false, timer: null, seq: 0, pageDirty: false,
+            editNotes: false, notesText: '', noteList: [], standardNotes: { en: [], ms: [] }, previewUrl: null, previewBlob: null, previewName: '', frameSrc: ['', ''], active: 0, pending: null, dirty: false, timer: null, seq: 0, pageDirty: false,
             pager: window.createPdfPager(),
 
             url(action) { return this.urls[action].replace('__TYPE__', this.type) + (this.scope === 'project' ? '?scope=project' : ''); },
@@ -272,7 +280,7 @@
                 this.label = d.label; this.docNumber = d.doc_number; this.customerPhone = d.customer_phone || '';
                 this.invoiceNumber = d.invoice_number; this.invoiceTotal = d.invoice_total; this.paidBefore = d.paid_before || 0; this.paymentMethods = d.payment_methods; this.creditReasons = d.credit_reasons || {};
                 // Standard wording for "Use default"; the job's own saved notes (if any) open in edit mode.
-                this.defaultNotes = d.standard_notes; this.notesText = d.defaults.notes.join('\n'); this.noteList = [...d.defaults.notes]; this.editNotes = d.notes_custom;
+                this.standardNotes = d.standard_notes; this.notesText = d.defaults.notes.join('\n'); this.noteList = [...d.defaults.notes]; this.editNotes = d.notes_custom;
                 const f = d.defaults; delete f.notes;
                 this.loading = false;
                 this.form = f;
@@ -325,6 +333,14 @@
                 row.uploading = false;
             },
             removeItem(i) { this.form.items.splice(i, 1); },
+            get defaultNotes() { return this.standardNotes[this.form.lang || 'en'] || []; },
+            // Standard notes follow the language; notes staff wrote themselves are left alone.
+            setLang(lang) {
+                const before = JSON.stringify(this.noteList.map((n) => n.trim()).filter(Boolean));
+                const wasStandard = !this.editNotes || before === JSON.stringify(this.defaultNotes);
+                this.form.lang = lang;
+                if (wasStandard) { this.noteList = [...this.defaultNotes]; this.notesText = this.defaultNotes.join('\n'); }
+            },
             toggleNotes() { this.editNotes = !this.editNotes; if (!this.editNotes) { this.notesText = this.defaultNotes.join('\n'); this.noteList = [...this.defaultNotes]; } },
             addNote(at) { this.noteList.splice(at, 0, ''); this.$nextTick(() => this.$root.querySelectorAll('textarea[placeholder="Note"]')[at]?.focus()); },
             payload() {

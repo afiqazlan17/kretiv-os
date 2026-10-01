@@ -18,6 +18,7 @@ use App\Models\PayrollRun;
 use App\Models\Payslip;
 use App\Models\ProfileChangeRequest;
 use App\Models\RecurringExpense;
+use App\Models\RizqNote;
 use App\Models\User;
 use App\Support\DocumentData;
 use Illuminate\Support\Carbon;
@@ -96,6 +97,10 @@ class NotificationCenter
     {
         $visible = Job::query()->where('archived', false)
             ->when(! $user->isBod(), fn ($q) => $q->whereIn('department', $user->visibleDepartments()));
+
+        if ($user->isBod() && $stale = RizqNote::where('status', RizqNote::STATUS_OPEN)->where('created_at', '<', now()->subDays(RizqNote::STALE_DAYS))->count()) {
+            $actions->push($this->item('sparkles', 'amber', "{$stale} Rizq ".str('note')->plural($stale).' not taken for '.RizqNote::STALE_DAYS.'+ days', route('rizq.index')));
+        }
 
         if ($new = (clone $visible)->where('status', Job::STATUS_NEW)->count()) {
             $actions->push($this->item('inbox', 'amber', "{$new} new ".str('job')->plural($new).' waiting to be taken in', route('jobs.index', ['view' => 'queue'])));

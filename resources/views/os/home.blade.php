@@ -24,16 +24,30 @@
                     <div class="mt-4">
                         <div class="flex items-center justify-between gap-3">
                             <div class="font-mono text-3xl font-semibold text-[#FCB03C] tracking-wide" x-text="time"></div>
-                            {{-- KretivAI: shown now so staff know it's coming; not wired up yet. --}}
-                            <div class="relative shrink-0" x-data="{ soon: false }" @click.outside="soon = false">
-                                <button type="button" @click="soon = !soon" class="px-3 py-1 rounded-full border border-white/15 bg-white/5 hover:bg-white/10 transition-colors">
-                                    <span class="text-sm font-extrabold tracking-tight bg-gradient-to-r from-[#FF5C8A] via-[#F46A3A] to-[#FCB03C] bg-clip-text text-transparent">KretivAI</span>
-                                </button>
-                                <div x-show="soon" x-cloak x-transition class="absolute right-0 mt-2 w-56 rounded-xl bg-white text-gray-800 text-xs p-3 shadow-xl z-20">
-                                    <p class="font-bold text-gray-900 mb-0.5">KretivAI is coming soon</p>
-                                    <p class="text-gray-500 leading-snug">Paste a customer's message and get a job and quotation ready in seconds.</p>
+                            {{-- Rizq (BOD only): glowing circle beside the clock. Tap to jot down a lead; the dot counts notes nobody has taken. --}}
+                            @if ($rizqOpen !== null)
+                                <div class="relative shrink-0" x-data="{ open: false, count: {{ $rizqOpen }} }" @click.outside="open = false" @rizq-saved="count = $event.detail.open ?? count">
+                                    <button type="button" @click="open = !open" aria-label="Rizq: write down a lead"
+                                            class="rizq-orb relative w-14 h-14 rounded-full flex items-center justify-center border border-white/20 bg-white/5 hover:bg-white/10 transition-colors">
+                                        <span class="rizq-word text-base font-extrabold tracking-tight">Rizq</span>
+                                        <span x-show="count > 0" x-text="count" class="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-[#FCB03C] text-[11px] font-bold text-gray-900 flex items-center justify-center"></span>
+                                    </button>
+                                    <div x-show="open" x-cloak x-transition class="absolute right-0 mt-2 w-[min(20rem,calc(100vw-2.5rem))] rounded-2xl bg-white text-gray-800 p-3 shadow-xl z-30">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <p class="text-sm font-bold text-gray-900">New lead for Rizq</p>
+                                            <a href="{{ route('rizq.index') }}" class="text-xs font-semibold text-[#C2185B] hover:underline">Open Rizq</a>
+                                        </div>
+                                        @include('rizq.partials.compose', ['action' => route('os.rizq.store'), 'dark' => true])
+                                    </div>
                                 </div>
-                            </div>
+                                <style>
+                                    .rizq-orb { box-shadow: 0 0 18px -4px rgba(255, 92, 138, .55), inset 0 0 12px rgba(252, 176, 60, .12); animation: rizq-pulse 3.2s ease-in-out infinite; }
+                                    .rizq-word { background: linear-gradient(90deg, #FF7AA2, #FF8A5B, #FFC65C); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 3px rgba(255, 122, 162, .95)) drop-shadow(0 0 10px rgba(244, 106, 58, .75)); animation: rizq-text 3.2s ease-in-out infinite; }
+                                    @keyframes rizq-text { 0%, 100% { filter: drop-shadow(0 0 2px rgba(255, 122, 162, .8)) drop-shadow(0 0 6px rgba(244, 106, 58, .5)); } 50% { filter: drop-shadow(0 0 4px rgba(255, 122, 162, 1)) drop-shadow(0 0 14px rgba(252, 176, 60, .85)); } }
+                                    @keyframes rizq-pulse { 0%, 100% { box-shadow: 0 0 14px -4px rgba(255, 92, 138, .45), inset 0 0 10px rgba(252, 176, 60, .1); } 50% { box-shadow: 0 0 26px -2px rgba(255, 92, 138, .8), inset 0 0 14px rgba(252, 176, 60, .2); } }
+                                    @media (prefers-reduced-motion: reduce) { .rizq-orb, .rizq-word { animation: none; } }
+                                </style>
+                            @endif
                         </div>
                         <div class="text-xs text-white/50 mt-1" x-text="date"></div>
                     </div>

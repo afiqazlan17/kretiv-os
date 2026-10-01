@@ -7,6 +7,7 @@ use App\Models\ActivityLog;
 use App\Models\Customer;
 use App\Models\Job;
 use App\Models\LedgerEntry;
+use App\Models\RizqNote;
 use App\Models\User;
 use App\Models\Vendor;
 use App\Rules\SafeUpload;
@@ -163,6 +164,9 @@ class JobController extends Controller
             'customers' => Customer::orderBy('name')->get(),
             'slowPayers' => PaymentHistory::summaries()->where('slow', true)->map(fn ($s) => $s['text']),
             'departments' => $this->availableDepartments($request),
+            // "Create job" on a Rizq note opens this form with the note filled in.
+            'rizq' => $request->user()->isBod() && $request->integer('rizq')
+                ? RizqNote::whereKey($request->integer('rizq'))->where('status', '!=', RizqNote::STATUS_DONE)->first() : null,
         ]);
     }
 
@@ -307,6 +311,8 @@ class JobController extends Controller
 
             return $job;
         });
+
+        RizqController::linkJob($request, $request->integer('rizq_note_id') ?: null, $createdJobs->first()->id);
 
         if (! $isMulti) {
             return redirect()->route('jobs.show', $createdJobs->first())->with('success', "{$createdJobs->first()->job_id} created.");

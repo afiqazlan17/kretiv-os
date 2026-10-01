@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Hr\AnnouncementController;
 use App\Models\Job;
 use App\Models\LeaveRequest;
+use App\Models\RizqNote;
 use App\Models\User;
 use App\Services\AttendanceService;
 use Illuminate\Http\RedirectResponse;
@@ -38,6 +39,7 @@ class OsController extends Controller
         $due = $myJobs->filter(fn (Job $j) => $j->deadline && $j->deadline->startOfDay()->lte($today));
 
         return view('os.home', [
+            'rizqOpen' => $user->isBod() ? RizqNote::where('status', RizqNote::STATUS_OPEN)->count() : null,
             'myJobs' => $myJobs,
             'queueCount' => $queueCount,
             'dueJobs' => $due,

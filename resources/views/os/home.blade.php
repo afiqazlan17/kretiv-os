@@ -36,7 +36,7 @@
                                 </template>
                                 <span class="radar-word">Radar</span>
                             </button>
-                            <span x-show="count > 0" x-text="count" class="absolute -top-0.5 -right-0.5 min-w-[20px] h-5 px-1 rounded-full {{ $radarUrgent ? 'bg-red-500 text-white' : 'bg-[#FCB03C] text-gray-900' }} text-[11px] font-bold flex items-center justify-center pointer-events-none"></span>
+                            <span x-show="count > 0" x-text="count" class="absolute -top-1.5 -right-1.5 z-10 min-w-[22px] h-[22px] px-1.5 rounded-full ring-[3px] ring-[#1c0f12] shadow-md {{ $radarUrgent ? 'bg-red-500 text-white' : 'bg-[#FCB03C] text-gray-900' }} text-[11px] font-bold flex items-center justify-center pointer-events-none"></span>
                             <div x-show="open" x-cloak x-transition class="absolute right-0 top-full mt-2 w-[min(21rem,calc(100vw-2.5rem))] rounded-2xl bg-white text-gray-800 p-3 shadow-xl">
                                 @if ($radar->isNotEmpty())
                                     <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-1.5">Needs attention</p>

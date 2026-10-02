@@ -7,8 +7,9 @@
     <div class="space-y-4">
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 items-stretch">
             {{-- Greeting + attendance. Staff only see their own times; lateness is
-                 for HR, Dept Heads and BOD (HR > Team attendance). --}}
-            <div class="os-card rounded-2xl p-5 flex flex-col">
+                 for HR, Dept Heads and BOD (HR > Team attendance). z-30 lets the Radar
+                 popup open over the cards below. --}}
+            <div class="os-card rounded-2xl p-5 flex flex-col z-30">
                 <div class="relative" x-data="{ time: '', date: '' }"
                      x-init="
                         const tick = () => {

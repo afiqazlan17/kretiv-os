@@ -11,7 +11,6 @@ use App\Services\LedgerService;
 use App\Support\DocLang;
 use App\Support\DocumentData;
 use App\Support\ItemImages;
-use App\Support\Phone;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -19,7 +18,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
@@ -242,8 +240,6 @@ class DocumentController extends Controller
         return response($bytes, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-            // For the WhatsApp button: a link the customer can open without logging in.
-            'X-Share-Url' => URL::temporarySignedRoute('documents.shared', now()->addDays(30), ['document' => $archived->id]),
         ]);
     }
 
@@ -296,7 +292,6 @@ class DocumentController extends Controller
         return response($bytes, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-            'X-Share-Url' => URL::temporarySignedRoute('documents.shared', now()->addDays(30), ['document' => $archived->id]),
         ]);
     }
 
@@ -349,7 +344,7 @@ class DocumentController extends Controller
         return $jobs->isEmpty() ? null : $jobs;
     }
 
-    /** A customer opening a document link sent on WhatsApp (signed, expires after 30 days). */
+    /** A customer opening a document link sent on WhatsApp (signed, 30 days). WhatsApp now sends the PDF itself; this stays for links already sent. */
     public function shared(JobDocument $document): Response
     {
         abort_unless(Storage::disk('public')->exists($document->storage_path), 404);
@@ -516,15 +511,16 @@ class DocumentController extends Controller
         $job->refresh();
         [$basisAfter, , $paidAfter] = DocumentData::projectBasis(collect([$job]));
         $fullyPaid = $basisAfter - $paidAfter <= 0.005;
-        $link = URL::temporarySignedRoute('documents.shared', now()->addDays(30), ['document' => $archived->id]);
         $text = 'Hi '.($job->customer?->name ?? '').", we've received your payment of RM ".number_format($amount, 2)
-            .". Here is your receipt {$docNumber}. Thank you.\n\n{$link}";
+            .". Here is your receipt {$docNumber}. Thank you.";
 
         return back()->with('payment_recorded', [
             'amount' => $amount,
             'number' => $docNumber,
             'url' => route('jobs.documents.show', [$job, $archived]),
-            'whatsapp' => 'https://wa.me/'.Phone::whatsapp($job->customer?->phone).'?text='.rawurlencode($text),
+            // Sent as the PDF with this message (sendPdfOnWhatsApp), not a link.
+            'whatsapp_text' => $text,
+            'phone' => $job->customer?->phone,
             'fully_paid' => $fullyPaid,
             'suggest_close' => $fullyPaid && $job->status === Job::STATUS_DELIVERED,
         ]);

@@ -5,11 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use App\Models\Job;
 use App\Models\LedgerEntry;
-use App\Support\Phone;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\URL;
 
 // Statement of Account: every invoice, payment and credit for one
 // customer with a running balance and how old the unpaid amount is, as a
@@ -29,14 +27,11 @@ class StatementController extends Controller
         return $this->pdf($customer, null, false);
     }
 
-    /** WhatsApp message with a 30-day link to the statement. */
-    public static function whatsappUrl(Customer $customer, float $balance): string
+    /** WhatsApp message sent with the statement PDF (see sendPdfOnWhatsApp). */
+    public static function whatsappText(Customer $customer, float $balance): string
     {
-        $link = URL::temporarySignedRoute('statement.shared', now()->addDays(30), ['customer' => $customer->id]);
-        $text = "Hi {$customer->name}, here is your statement of account from ".config('kretivco.brand.name')
-            .'. Outstanding balance: RM '.number_format($balance, 2).".\n\n{$link}";
-
-        return 'https://wa.me/'.Phone::whatsapp($customer->phone).'?text='.rawurlencode($text);
+        return "Hi {$customer->name}, here is your statement of account from ".config('kretivco.brand.name')
+            .'. Outstanding balance: RM '.number_format($balance, 2).'.';
     }
 
     /** @return array{rows: array, balance: float, aging: array<string, float>} */

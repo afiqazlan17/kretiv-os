@@ -92,6 +92,54 @@ Alpine.data('itemCombo', (url, dept, mode) => ({
 // inputs (see resources/views/customers/index.blade.php). Never overwrites what's
 // already typed there — a postcode can span more than one town, and staff who
 // already picked the right one shouldn't have it silently replaced.
+// Sends a PDF and a message on WhatsApp. WhatsApp keeps the file but often drops
+// text shared alongside it (iPhone), so the message is copied first and staff
+// paste it as the caption. Phones get the share sheet with the file; computers
+// download the PDF and open WhatsApp Web with the message, to drag the file in.
+// getFile() returns a File (it may issue the document). Resolves to 'shared',
+// 'downloaded' or 'cancelled'.
+window.sendPdfOnWhatsApp = async function ({ text, phone, getFile }) {
+    // Both of these must start inside the tap: Safari refuses clipboard writes,
+    // and browsers block new windows, once the tap has passed.
+    navigator.clipboard?.writeText(text).catch(() => {});
+    const canShareFiles = !!navigator.canShare && navigator.canShare({ files: [new File(['%PDF'], 'check.pdf', { type: 'application/pdf' })] });
+    const tab = canShareFiles ? null : window.open('', '_blank');
+
+    let file;
+    try {
+        file = await getFile();
+    } catch (e) {
+        tab?.close();
+        throw e;
+    }
+
+    if (canShareFiles) {
+        try {
+            await navigator.share({ files: [file], text });
+            return 'shared';
+        } catch (e) {
+            if (e.name === 'AbortError') return 'cancelled';
+        }
+    }
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(file); a.download = file.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    let digits = String(phone || '').replace(/\D/g, '');
+    if (digits.startsWith('0')) digits = '6' + digits;
+    const url = `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+    if (tab) tab.location = url; else window.open(url, '_blank');
+    return 'downloaded';
+};
+
+// Fetches a PDF the user can already open (receipt, statement) as a named File.
+window.fetchPdfFile = async function (url, fallbackName) {
+    const res = await fetch(url, { headers: { Accept: 'application/pdf' } });
+    if (!res.ok) throw new Error('Could not get the PDF. Try again.');
+    const name = (res.headers.get('Content-Disposition') || '').match(/filename="?([^";]+)"?/)?.[1] || fallbackName;
+    return new File([await res.blob()], name, { type: 'application/pdf' });
+};
+
 window.lookupPostcode = async function (input) {
     const value = input.value.trim();
     if (!/^\d{5}$/.test(value)) return;

@@ -154,7 +154,7 @@
                 <x-icon name="circle-check" class="w-4 h-4 shrink-0" />
                 <span class="flex-1 min-w-[14rem]">Payment of RM {{ number_format($recorded['amount'], 2) }} recorded. Receipt {{ $recorded['number'] }} is ready.@if ($recorded['suggest_close']) The job is delivered and fully paid, so you can close it now.@elseif ($recorded['fully_paid']) The job is fully paid.@endif</span>
                 <a href="{{ $recorded['url'] }}" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-green-300 bg-white hover:bg-green-50"><x-icon name="file-text" class="w-3.5 h-3.5" /> Open receipt</a>
-                <a href="{{ $recorded['whatsapp'] }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg text-white bg-[#25D366] hover:brightness-105"><x-icon name="message-circle" class="w-3.5 h-3.5" /> Send on WhatsApp</a>
+                <x-whatsapp-pdf-button :pdf="$recorded['url']" :text="$recorded['whatsapp_text']" :phone="$recorded['phone']" :name="$recorded['number'].'.pdf'" />
                 @if ($recorded['suggest_close'])
                     <button type="button" @click="$store.jobActions.panel = 'complete'" class="text-xs font-semibold px-3 py-1.5 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110">Close Job</button>
                 @endif

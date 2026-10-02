@@ -216,6 +216,7 @@
         <div class="flex flex-wrap items-center justify-end gap-2 px-5 py-3 border-t border-[#F5ECE8]">
             <p x-show="error" x-text="error" class="mr-auto text-xs text-red-600"></p>
             <p x-show="notice && !error" x-text="notice" class="mr-auto text-xs text-green-600"></p>
+            <p x-show="!notice && !error" class="sm:hidden mr-auto text-[11px] text-gray-400">WhatsApp copies the message for you. Paste it as the caption.</p>
             <button type="button" @click="close()" class="text-sm font-semibold px-4 py-2 rounded-xl border border-[#EFE3DE] text-gray-700 hover:bg-[#FFF7F3]">Cancel</button>
             <button type="button" x-show="scope !== 'project'" @click="save()" :disabled="busy || loading" class="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl border border-green-500 text-green-700 hover:bg-green-50 disabled:opacity-40"><x-icon name="save" class="w-4 h-4" /> Save</button>
             <button type="button" @click="print()" :disabled="busy || !previewUrl" class="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl border border-blue-500 text-blue-600 hover:bg-blue-50 disabled:opacity-40"><x-icon name="printer" class="w-4 h-4" /> Print</button>
@@ -425,32 +426,27 @@
                 document.body.appendChild(f); setTimeout(() => f.remove(), 60000);
             },
             /**
-             * Issues the document (same as Download), then shares the actual
-             * PDF: on a phone the share sheet sends the file and message
-             * straight into WhatsApp; elsewhere WhatsApp opens with the
-             * message and a link to the PDF (valid 30 days).
+             * Issues the document (same as Download), then sends the PDF on
+             * WhatsApp with the message copied for the caption (see
+             * sendPdfOnWhatsApp in app.js). The modal stays open to say so.
              */
             async whatsapp() {
-                let phone = (this.customerPhone || '').replace(/\D/g, '');
-                if (phone.startsWith('0')) phone = '6' + phone;
                 const total = this.type === 'receipt' ? (parseFloat(this.form.amount_paid) || 0) : this.total;
                 const text = `Hi ${this.form.customer_name || ''}, here is your ${this.label.toLowerCase()} ${this.docNumber} for ${this.form.title} (RM ${total.toFixed(2)}). Thank you!`;
-
                 this.busy = true; this.error = ''; this.notice = '';
-                const res = await this.call('generate', 'POST', this.payload());
-                if (!res.ok) { this.busy = false; this.error = await this.failure(res); return; }
-                const name = (res.headers.get('Content-Disposition') || '').match(/filename="?([^";]+)"?/)?.[1] || 'document.pdf';
-                const link = res.headers.get('X-Share-Url');
-                const file = new File([await res.blob()], name, { type: 'application/pdf' });
-                this.busy = false; this.pageDirty = true; this.dirty = false;
-
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    try { await navigator.share({ files: [file], text }); this.close(); return; }
-                    catch (e) { if (e.name === 'AbortError') return; }
-                }
-                const message = link ? `${text}\n\n${link}` : text;
-                window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
-                this.close();
+                try {
+                    const how = await window.sendPdfOnWhatsApp({ text, phone: this.customerPhone, getFile: async () => {
+                        const res = await this.call('generate', 'POST', this.payload());
+                        if (!res.ok) throw new Error(await this.failure(res));
+                        this.pageDirty = true; this.dirty = false;
+                        const name = (res.headers.get('Content-Disposition') || '').match(/filename="?([^";]+)"?/)?.[1] || 'document.pdf';
+                        return new File([await res.blob()], name, { type: 'application/pdf' });
+                    } });
+                    this.busy = false;
+                    this.notice = how === 'downloaded'
+                        ? 'PDF downloaded and WhatsApp opened with the message. Drag the PDF into the chat.'
+                        : 'Document issued. The message is copied: in WhatsApp, long-press the caption and Paste.';
+                } catch (e) { this.busy = false; this.error = e.message || 'Something went wrong.'; }
             },
         };
     }

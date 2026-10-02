@@ -196,7 +196,7 @@
                                                     </div>
                                                     <a href="{{ route('customers.statement', $customer) }}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#EFE3DE] text-gray-700 hover:bg-[#FFF7F3]"><x-icon name="file-text" class="w-3.5 h-3.5" /> View PDF</a>
                                                     @if ($customer->phone)
-                                                        <a href="{{ \App\Http\Controllers\StatementController::whatsappUrl($customer, $soa['balance']) }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#25D366] text-white hover:brightness-105"><x-icon name="message-circle" class="w-3.5 h-3.5" /> Send on WhatsApp</a>
+                                                        <x-whatsapp-pdf-button :pdf="route('customers.statement', $customer)" :text="\App\Http\Controllers\StatementController::whatsappText($customer, $soa['balance'])" :phone="$customer->phone" :name="'SOA_'.$customer->customer_id.'.pdf'" />
                                                     @endif
                                                 </div>
                                             @endif

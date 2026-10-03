@@ -1,5 +1,5 @@
 {{-- Finished product photos (e.g. the customer's photo of the installed banner). Optional; they feed the Portfolio page. --}}
-<div class="k-card p-5 md:p-6" x-data="jobPhotos('{{ route('jobs.photos.store', $job) }}')">
+<div class="k-card p-5 md:p-6 max-lg:order-last" x-data="jobPhotos('{{ route('jobs.photos.store', $job) }}')">
     <div class="flex items-center justify-between gap-3 mb-1">
         <h3 class="text-base font-bold text-gray-900">Finished Product Photos</h3>
         <a href="{{ route('portfolio.index') }}" class="text-xs font-semibold text-[#C2185B] hover:underline">Portfolio</a>

@@ -119,6 +119,7 @@ window.sendPdfOnWhatsApp = async function ({ text, phone, getFile }) {
             return 'shared';
         } catch (e) {
             if (e.name === 'AbortError') return 'cancelled';
+            // NotAllowedError: the tap expired before the file was ready. Fall back to download + WhatsApp Web.
         }
     }
 

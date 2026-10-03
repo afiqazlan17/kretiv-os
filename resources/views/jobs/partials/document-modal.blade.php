@@ -230,7 +230,7 @@
 <script>
     function documentModal(cfg) {
         const blank = () => ({ customer_name: '', company: '', phone: '', address_line_1: '', address_line_2: '', title: '', by_staff: '', due_date: '',
-            items: [], delivery: 0, discount: 0, payment_method: 'Bank Transfer', amount_paid: null, credit_reason: 'discount', credit_reason_text: '', credit_amount: null });
+            items: [], delivery: 0, discount: 0, payment_method: 'Online Banking', amount_paid: null, credit_reason: 'discount', credit_reason_text: '', credit_amount: null });
         return {
             jobCode: cfg.jobCode, urls: cfg.urls, mobileTab: 'form', scope: 'project', project: null, projectTotal: 0,
             open: false, type: 'quotation', label: 'Quotation', loading: false, busy: false, previewing: false,

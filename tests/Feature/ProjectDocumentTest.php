@@ -126,7 +126,7 @@ class ProjectDocumentTest extends TestCase
         $this->actingAs($bod)->get(route('jobs.show', $print))->assertOk()->assertSee('Record Payment')->assertSee('Whole project (KP-2026-001, KB-2026-001)', false);
 
         $this->actingAs($bod)->post(route('jobs.payments.store', $print), [
-            'amount' => 300, 'payment_method' => 'Bank Transfer', 'paid_on' => now()->subDays(2)->toDateString(),
+            'amount' => 300, 'payment_method' => 'Online Banking', 'paid_on' => now()->subDays(2)->toDateString(),
             'bank' => 'affin', 'scope' => 'project', 'proof' => UploadedFile::fake()->image('slip.jpg'),
         ])->assertRedirect()->assertSessionHas('payment_recorded');
 

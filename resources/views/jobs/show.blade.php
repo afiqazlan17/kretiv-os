@@ -293,7 +293,70 @@
         <form id="takein-form" method="POST" action="{{ route('jobs.take-in', $job) }}" class="hidden">@csrf</form>
         <form id="advance-form" method="POST" action="{{ route('jobs.advance', $job) }}" class="hidden">@csrf</form>
         <form id="duplicate-form" method="POST" action="{{ route('jobs.duplicate', $job) }}" class="hidden" onsubmit="return confirm('Create a new job for the same customer with the same items and prices?')">@csrf</form>
-        <div x-show="$store.jobActions.panel" x-cloak class="bg-white shadow-sm sm:rounded-lg p-6 border-2 border-pink-100">
+            @if ($canPay)
+            {{-- Record Payment opens as a popup, like the document modals. --}}
+            <div x-show="$store.jobActions.panel === 'payment'" x-cloak x-transition.opacity
+                 class="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/50 p-2 sm:p-6"
+                 @click.self="$store.jobActions.panel = null"
+                 @keydown.escape.window="$store.jobActions.panel === 'payment' && ($store.jobActions.panel = null)"
+                 @if ($errors->hasAny(['amount', 'paid_on', 'payment_method', 'bank', 'proof']) || request()->has('pay')) x-effect="$store.jobActions.panel ??= 'payment'" @endif
+                 x-data="{ scope: '{{ $payProject ? 'project' : 'job' }}', owed: {{ Js::from(['project' => $payProject['owed'] ?? 0, 'job' => $money['owed']]) }}, amount: '' }"
+                 x-init="amount = {{ Js::from(old('amount', request('pay'))) }} ?? owed[scope].toFixed(2)">
+              <div class="w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl bg-white p-5 sm:p-6 shadow-xl">
+                <div class="flex items-start justify-between gap-3">
+                    <h3 class="text-base font-bold text-gray-900">Record Payment</h3>
+                    <button type="button" @click="$store.jobActions.panel = null" class="text-gray-400 hover:text-gray-700" aria-label="Close"><x-icon name="x" class="w-5 h-5" /></button>
+                </div>
+                <p class="text-xs text-gray-500 mb-3">What the customer paid. The receipt is issued straight after, ready to send.</p>
+                <form method="POST" action="{{ route('jobs.payments.store', $job) }}" enctype="multipart/form-data" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    @csrf
+                    @if ($payProject)
+                        <div class="sm:col-span-2 lg:col-span-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
+                            <label class="inline-flex items-center gap-2"><input type="radio" name="scope" value="project" x-model="scope" @change="amount = owed.project.toFixed(2)" class="text-[#C2185B]"> Whole project ({{ implode(', ', $payProject['jobs']) }}), RM {{ number_format($payProject['owed'], 2) }} owed</label>
+                            <label class="inline-flex items-center gap-2"><input type="radio" name="scope" value="job" x-model="scope" @change="amount = owed.job.toFixed(2)" class="text-[#C2185B]"> This job only, RM {{ number_format($money['owed'], 2) }} owed</label>
+                        </div>
+                    @endif
+                    <div>
+                        <label class="text-xs text-gray-500">Amount Paid (RM) *</label>
+                        <input type="number" step="0.01" min="0.01" name="amount" x-model="amount" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                        <p class="mt-1 text-[11px] text-gray-400">Filled in with the balance owed. Change it for a deposit or part payment.</p>
+                        <x-input-error :messages="$errors->get('amount')" class="mt-1" />
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">Payment Date *</label>
+                        <input type="date" name="paid_on" value="{{ old('paid_on', request('paid_on', now()->toDateString())) }}" max="{{ now()->toDateString() }}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                        <p class="mt-1 text-[11px] text-gray-400">The day the money came in.</p>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">Payment Method *</label>
+                        <select name="payment_method" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                            @foreach (\App\Support\DocumentData::PAYMENT_METHODS as $method)
+                                <option value="{{ $method }}" @selected(old('payment_method') === $method)>{{ $method }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500">Paid Into *</label>
+                        <select name="bank" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                            @foreach (config('kretivco.bank_details') as $key => $bank)
+                                <option value="{{ $key }}" @selected(old('bank', request('bank', $job->bank ?: 'mbb')) === $key)>{{ $bank['label'] }} ({{ $bank['acct'] }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="text-xs text-gray-500">Proof of Payment (bank slip or screenshot)</label>
+                        <input type="file" name="proof" accept="image/*,application/pdf" class="mt-1 block w-full text-xs text-gray-500 file:mr-2 file:rounded-lg file:border-0 file:bg-[#FFF1EC] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-[#C2185B]">
+                        <x-input-error :messages="$errors->get('proof')" class="mt-1" />
+                    </div>
+                    <div class="sm:col-span-2 lg:col-span-3 flex items-center gap-2">
+                        <x-primary-button type="submit">Save Payment and Issue Receipt</x-primary-button>
+                        <button type="button" @click="$store.jobActions.panel = null" class="text-xs text-gray-500 hover:underline">Cancel</button>
+                    </div>
+                </form>
+              </div>
+            </div>
+            @endif
+        <div x-show="$store.jobActions.panel && $store.jobActions.panel !== 'payment'" x-cloak class="bg-white shadow-sm sm:rounded-lg p-6 border-2 border-pink-100">
             <div x-show="$store.jobActions.panel === 'reassign'">
                 <h3 class="text-sm font-semibold text-gray-700 mb-3">Change Current Responsible</h3>
                 <form method="POST" action="{{ route('jobs.reassign', $job) }}" class="flex flex-wrap items-end gap-2">
@@ -392,60 +455,6 @@
                     <button type="button" @click="$store.jobActions.panel = null" class="text-xs text-gray-500 hover:underline">Cancel</button>
                 </form>
             </div>
-            @if ($canPay)
-            <div x-show="$store.jobActions.panel === 'payment'" x-cloak
-                 @if ($errors->hasAny(['amount', 'paid_on', 'payment_method', 'bank', 'proof']) || request()->has('pay')) x-effect="$store.jobActions.panel ??= 'payment'" @endif
-                 x-data="{ scope: '{{ $payProject ? 'project' : 'job' }}', owed: {{ Js::from(['project' => $payProject['owed'] ?? 0, 'job' => $money['owed']]) }}, amount: '' }"
-                 x-init="amount = {{ Js::from(old('amount', request('pay'))) }} ?? owed[scope].toFixed(2)">
-                <h3 class="text-sm font-semibold text-gray-700">Record Payment</h3>
-                <p class="text-xs text-gray-500 mb-3">What the customer paid. The receipt is issued straight after, ready to send.</p>
-                <form method="POST" action="{{ route('jobs.payments.store', $job) }}" enctype="multipart/form-data" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    @csrf
-                    @if ($payProject)
-                        <div class="sm:col-span-2 lg:col-span-3 flex flex-wrap gap-x-5 gap-y-1.5 text-sm">
-                            <label class="inline-flex items-center gap-2"><input type="radio" name="scope" value="project" x-model="scope" @change="amount = owed.project.toFixed(2)" class="text-[#C2185B]"> Whole project ({{ implode(', ', $payProject['jobs']) }}), RM {{ number_format($payProject['owed'], 2) }} owed</label>
-                            <label class="inline-flex items-center gap-2"><input type="radio" name="scope" value="job" x-model="scope" @change="amount = owed.job.toFixed(2)" class="text-[#C2185B]"> This job only, RM {{ number_format($money['owed'], 2) }} owed</label>
-                        </div>
-                    @endif
-                    <div>
-                        <label class="text-xs text-gray-500">Amount Paid (RM) *</label>
-                        <input type="number" step="0.01" min="0.01" name="amount" x-model="amount" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
-                        <p class="mt-1 text-[11px] text-gray-400">Filled in with the balance owed. Change it for a deposit or part payment.</p>
-                        <x-input-error :messages="$errors->get('amount')" class="mt-1" />
-                    </div>
-                    <div>
-                        <label class="text-xs text-gray-500">Payment Date *</label>
-                        <input type="date" name="paid_on" value="{{ old('paid_on', request('paid_on', now()->toDateString())) }}" max="{{ now()->toDateString() }}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
-                        <p class="mt-1 text-[11px] text-gray-400">The day the money came in.</p>
-                    </div>
-                    <div>
-                        <label class="text-xs text-gray-500">Payment Method *</label>
-                        <select name="payment_method" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
-                            @foreach (\App\Support\DocumentData::PAYMENT_METHODS as $method)
-                                <option value="{{ $method }}" @selected(old('payment_method') === $method)>{{ $method }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-xs text-gray-500">Paid Into *</label>
-                        <select name="bank" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
-                            @foreach (config('kretivco.bank_details') as $key => $bank)
-                                <option value="{{ $key }}" @selected(old('bank', request('bank', $job->bank ?: 'mbb')) === $key)>{{ $bank['label'] }} ({{ $bank['acct'] }})</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="sm:col-span-2">
-                        <label class="text-xs text-gray-500">Proof of Payment (bank slip or screenshot)</label>
-                        <input type="file" name="proof" accept="image/*,application/pdf" class="mt-1 block w-full text-xs text-gray-500 file:mr-2 file:rounded-lg file:border-0 file:bg-[#FFF1EC] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-[#C2185B]">
-                        <x-input-error :messages="$errors->get('proof')" class="mt-1" />
-                    </div>
-                    <div class="sm:col-span-2 lg:col-span-3 flex items-center gap-2">
-                        <x-primary-button type="submit">Save Payment and Issue Receipt</x-primary-button>
-                        <button type="button" @click="$store.jobActions.panel = null" class="text-xs text-gray-500 hover:underline">Cancel</button>
-                    </div>
-                </form>
-            </div>
-            @endif
 
             <div x-show="$store.jobActions.panel === 'rollback'">
                 <h3 class="text-sm font-semibold text-gray-700 mb-3">Move Back a Step</h3>
@@ -459,9 +468,9 @@
         </div>
         @endcan
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-            {{-- Left column --}}
-            <div class="space-y-4">
+        <div class="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start">
+            {{-- Left column. On phones the columns dissolve (contents) so the cards can be reordered: Documents first, then notes and the log, then the rest. --}}
+            <div class="contents lg:block lg:space-y-4">
                 @can('update', $job)
                 <div class="k-card p-5 md:p-6">
                     <h3 class="text-base font-bold text-gray-900 mb-3">New Note</h3>
@@ -536,8 +545,8 @@
             </div>
 
             {{-- Right column --}}
-            <div class="space-y-4">
-                <div class="k-card p-5 md:p-6" x-data="{ showCombine: false }">
+            <div class="contents lg:block lg:space-y-4">
+                <div class="k-card p-5 md:p-6 max-lg:order-first" x-data="{ showCombine: false }">
                     <h3 class="text-base font-bold text-gray-900 mb-4">Documents</h3>
                     @if ($payment)
                         <div class="grid grid-cols-3 gap-2 mb-4">
@@ -736,7 +745,7 @@
                 @php $deptForms = \App\Models\JobForm::forDepartment($job->department); @endphp
                 @if ($deptForms)
                     @php $savedForms = \App\Models\JobForm::where('job_id', $job->id)->get()->keyBy('form_key'); @endphp
-                    <div class="k-card p-5 md:p-6">
+                    <div class="k-card p-5 md:p-6 max-lg:order-last">
                         <h3 class="text-base font-bold text-gray-900 mb-3">Forms</h3>
                         <div class="space-y-2">
                             @foreach ($deptForms as $fk => $fd)
@@ -755,7 +764,7 @@
                     </div>
                 @endif
 
-                <div class="k-card p-5 md:p-6" x-data="{ showVendorForm: false, payingId: null, editingId: null }">
+                <div class="k-card p-5 md:p-6 max-lg:order-last" x-data="{ showVendorForm: false, payingId: null, editingId: null }">
                     @php
                         $vendorCosts = collect($job->vendor_costs ?? []);
                         $totalEstimated = $vendorCosts->sum(fn ($v) => (float) ($v['estimated_cost'] ?? 0));
@@ -994,7 +1003,7 @@
                         ->unique(fn ($ap) => $ap->line_item_id.'-'.$ap->design)->keyBy(fn ($ap) => $ap->line_item_id.'-'.$ap->design);
                     $waCustomer = \App\Support\Phone::whatsapp($job->customer?->phone);
                 @endphp
-                <div class="k-card p-5 md:p-6">
+                <div class="k-card p-5 md:p-6 max-lg:order-last">
                     <h3 class="text-base font-bold text-gray-900 mb-4">Artwork</h3>
                     <div class="space-y-5">
                     @foreach ($artGroups as $g)
@@ -1095,7 +1104,7 @@
 
                 @include('jobs.partials.photos')
 
-                <div class="k-card p-5 md:p-6">
+                <div class="k-card p-5 md:p-6 max-lg:order-last">
                     <h3 class="text-base font-bold text-gray-900 mb-4">Other Files</h3>
                     <div class="space-y-2 text-sm mb-4">
                         @forelse ($otherAtt as $att)

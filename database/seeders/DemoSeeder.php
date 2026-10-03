@@ -236,7 +236,7 @@ class DemoSeeder extends Seeder
         $h = $this->job('KB-2026-003', 'brand', 'maju', 'Company profile', Job::STATUS_COMPLETED, 'kavitha', 110, [$lim('Company profile, 16 pages', 1, 2400)]);
         $this->issue($h, 'quotation', $this->at(110));
         $this->issue($h, 'invoice', $this->at(95));
-        $this->issue($h, 'receipt', $this->at(52), ['amount_paid' => 2400, 'payment_method' => 'Bank Transfer']);
+        $this->issue($h, 'receipt', $this->at(52), ['amount_paid' => 2400, 'payment_method' => 'Online Banking']);
         $j = $this->job('KT-2026-002', 'tech', 'maju', 'Online booking system', Job::STATUS_COMPLETED, 'irfan', 100, [$lim('Booking system with admin panel', 1, 6500)]);
         $this->issue($j, 'quotation', $this->at(100));
         $this->issue($j, 'invoice', $this->at(80));
@@ -247,7 +247,7 @@ class DemoSeeder extends Seeder
             $lim('Cake box 8" printed', 500, 3.2), $lim('Label sticker', 500, 0.6),
         ]);
         $this->issue($c, 'quotation', $this->at(12));
-        $this->issue($c, 'receipt', $this->at(9), ['amount_paid' => 950, 'payment_method' => 'Bank Transfer']);
+        $this->issue($c, 'receipt', $this->at(9), ['amount_paid' => 950, 'payment_method' => 'Online Banking']);
         $this->vendorCost($c, 'jaya', 900, null);
 
         // Tadika Ceria: done and paid on time.
@@ -255,7 +255,7 @@ class DemoSeeder extends Seeder
         $this->issue($d, 'quotation', $this->at(70));
         $this->issue($d, 'delivery', $this->at(56));
         $this->issue($d, 'invoice', $this->at(55));
-        $this->issue($d, 'receipt', $this->at(50), ['amount_paid' => 2500, 'payment_method' => 'Bank Transfer']);
+        $this->issue($d, 'receipt', $this->at(50), ['amount_paid' => 2500, 'payment_method' => 'Online Banking']);
 
         // Bengkel Ah Seng: new today, nobody has taken it in yet.
         $this->job('KP-2026-005', 'print', 'ahseng', 'Car stickers', Job::STATUS_NEW, null, 0, [$lim('Sticker cutting', 20, 35)]);
@@ -275,7 +275,7 @@ class DemoSeeder extends Seeder
             $lim('Company website (5 pages)', 1, 3800), $lim('Hosting and domain, 1 year', 1, 350),
         ]);
         $this->issue($i, 'quotation', $this->at(25));
-        $this->issue($i, 'receipt', $this->at(21), ['amount_paid' => 2075, 'payment_method' => 'Bank Transfer']);
+        $this->issue($i, 'receipt', $this->at(21), ['amount_paid' => 2075, 'payment_method' => 'Online Banking']);
 
         // Puan Aida: dinner done, deposit paid, invoice for the balance due in 2 days.
         $k = $this->job('KE-2026-001', 'event', 'aida', 'Annual dinner', Job::STATUS_DELIVERED, 'hakim', 30, [

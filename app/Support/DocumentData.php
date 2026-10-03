@@ -21,7 +21,8 @@ class DocumentData
     /** Why a credit note is issued (shown on the document). */
     public const CREDIT_REASONS = ['discount' => 'Discount', 'pricing_correction' => 'Pricing correction', 'cancellation' => 'Cancellation', 'other' => 'Other'];
 
-    public const PAYMENT_METHODS = ['Bank Transfer', 'Cash', 'Online Banking'];
+    // Online Banking covers bank transfers (staff saw no difference); old 'Bank Transfer' receipts keep their wording.
+    public const PAYMENT_METHODS = ['Online Banking', 'Cash'];
 
     public const QUOTATION_VALID_DAYS = 14;
 

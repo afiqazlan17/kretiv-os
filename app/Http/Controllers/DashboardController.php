@@ -44,18 +44,37 @@ class DashboardController extends Controller
             'actual_revenue' => (float) $completed->sum('final_value'),
         ];
 
-        // Net received this month: money in (receipts, less voids and refunded
-        // deposits) minus the actual vendor costs (suppliers, delivery) known this month.
+        // Net received this month, per bank: money in (receipts, less voids and
+        // refunded deposits) minus actual vendor costs (suppliers, delivery).
+        // A paid cost counts against the bank it was paid from, in the month
+        // paid; an unpaid one against the job's bank, in the month its actual
+        // was entered. (The bank balance itself lives in Finance.)
         $month = [now()->startOfMonth(), now()->endOfMonth()];
         $ledger = LedgerEntry::whereBetween('date', $month)->where('reversed', false)->whereNull('reverses_id')
             ->when(! $user->isBod(), fn ($q) => $q->whereIn('department', $user->visibleDepartments()));
-        $received = (float) (clone $ledger)->where('type', 'receipt')->sum('amount')
-            - (float) (clone $ledger)->where('type', 'deposit_refund')->sum('amount');
-        $vendorCost = (float) $jobs->sum(fn (Job $j) => collect($j->vendor_costs ?? [])
-            ->filter(fn ($c) => (float) ($c['actual_cost'] ?? 0) > 0
-                && now()->isSameMonth(Carbon::parse($c['actual_at'] ?? $c['paid_date'] ?? $j->created_at)))
-            ->sum(fn ($c) => (float) $c['actual_cost']));
-        $stats += ['received_month' => round($received, 2), 'vendor_cost_month' => round($vendorCost, 2), 'net_received_month' => round($received - $vendorCost, 2)];
+        $in = (clone $ledger)->where('type', 'receipt')->get()->groupBy('bank')->map->sum('amount');
+        $refunds = (clone $ledger)->where('type', 'deposit_refund')->get()->groupBy('bank')->map->sum('amount');
+        $costs = [];
+        foreach ($jobs as $j) {
+            foreach ($j->vendor_costs ?? [] as $c) {
+                if ((float) ($c['actual_cost'] ?? 0) <= 0) {
+                    continue;
+                }
+                $paid = ($c['status'] ?? null) === 'paid';
+                $when = $paid ? ($c['paid_date'] ?? null) : ($c['actual_at'] ?? null);
+                if (now()->isSameMonth(Carbon::parse($when ?? $j->created_at))) {
+                    $bank = $paid ? ($c['paid_bank'] ?? 'mbb') : ($j->bank ?: 'mbb');
+                    $costs[$bank] = ($costs[$bank] ?? 0) + (float) $c['actual_cost'];
+                }
+            }
+        }
+        $stats['net_by_bank'] = collect(config('kretivco.bank_details'))->map(function ($b, $key) use ($in, $refunds, $costs) {
+            $received = round((float) ($in[$key] ?? 0) - (float) ($refunds[$key] ?? 0), 2);
+            $cost = round($costs[$key] ?? 0, 2);
+
+            return ['label' => $b['label'], 'received' => $received, 'cost' => $cost, 'net' => round($received - $cost, 2)];
+        })->all();
+        $stats['net_received_month'] = round(collect($stats['net_by_bank'])->sum('net'), 2);
 
         // Every stage of the flow, for the pipeline panel.
         $stats['new_count'] = $notCancelled->where('status', Job::STATUS_NEW)->count();

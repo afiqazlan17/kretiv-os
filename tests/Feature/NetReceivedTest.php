@@ -31,7 +31,7 @@ class NetReceivedTest extends TestCase
         // Actual cost known: comes off.
         $cost = $job->fresh()->vendor_costs[0];
         $this->actingAs($bod)->put(route('jobs.vendor-costs.update', [$job, $cost['id']]), ['vendor_id' => $vendor->id, 'estimated_cost' => 40, 'actual_cost' => 30]);
-        $this->actingAs($bod)->get(route('dashboard'))->assertViewHas('stats', fn ($s) => $s['received_month'] == 100.0 && $s['vendor_cost_month'] == 30.0 && $s['net_received_month'] == 70.0);
+        $this->actingAs($bod)->get(route('dashboard'))->assertViewHas('stats', fn ($s) => $s['net_by_bank']['mbb']['received'] == 100.0 && $s['net_by_bank']['mbb']['cost'] == 30.0 && $s['net_received_month'] == 70.0 && $s['net_by_bank']['affin']['net'] == 0.0);
     }
 
     public function test_close_job_waits_for_vendor_cost_or_none_and_pic_is_reminded(): void

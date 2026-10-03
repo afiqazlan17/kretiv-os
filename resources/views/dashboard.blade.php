@@ -109,18 +109,33 @@
         @php
             $money = [
                 ['icon' => 'trending-up', 'label' => 'Pipeline value', 'v' => $stats['pipeline_value'], 'sub' => 'Every open job', 'c' => '#E91E63', 'bg' => '#FFF0F5'],
-                ['icon' => 'sprout', 'label' => 'Quoted, not confirmed', 'v' => $stats['potential_value'], 'sub' => 'New and quotation stage', 'c' => '#6366F1', 'bg' => '#F1F1FF'],
-                ['icon' => 'wallet', 'label' => 'Net received (this month)', 'v' => $stats['net_received_month'], 'sub' => 'RM '.number_format($stats['received_month'], 2).' received − RM '.number_format($stats['vendor_cost_month'], 2).' vendor cost', 'c' => '#10B981', 'bg' => '#ECFDF5'],
+                ['icon' => 'sprout', 'label' => 'Quoted (Pending Customer)', 'v' => $stats['potential_value'], 'sub' => 'New and quotation stage', 'c' => '#6366F1', 'bg' => '#F1F1FF'],
+                ['icon' => 'wallet', 'label' => 'Net received (this month)', 'v' => $stats['net_received_month'], 'banks' => $stats['net_by_bank'], 'c' => '#10B981', 'bg' => '#ECFDF5'],
             ];
         @endphp
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             @foreach ($money as $m)
                 <div class="k-card k-card--hover p-5 flex items-start gap-4">
                     <div class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style="background:{{ $m['bg'] }};color:{{ $m['c'] }}"><x-icon :name="$m['icon']" class="w-6 h-6" /></div>
-                    <div class="min-w-0">
+                    <div class="min-w-0 flex-1">
                         <div class="text-xs font-semibold uppercase tracking-wide" style="color:{{ $m['c'] }}">{{ $m['label'] }}</div>
-                        <div class="text-2xl font-extrabold text-gray-900 mt-1 truncate">RM {{ number_format($m['v'], 2) }}</div>
-                        <div class="text-xs text-gray-400 mt-0.5">{{ $m['sub'] }}</div>
+                        @if (isset($m['banks']))
+                            {{-- One line per bank: jobs only (received less vendor cost). The bank balance is in Finance. --}}
+                            <div class="mt-1 space-y-1.5">
+                                @foreach ($m['banks'] as $b)
+                                    <div>
+                                        <div class="flex items-baseline justify-between gap-3">
+                                            <span class="text-xs font-semibold text-gray-500">{{ $b['label'] }}</span>
+                                            <span class="text-lg font-extrabold text-gray-900">RM {{ number_format($b['net'], 2) }}</span>
+                                        </div>
+                                        <div class="text-[11px] text-gray-400 text-right">RM {{ number_format($b['received'], 2) }} received − RM {{ number_format($b['cost'], 2) }} vendor cost</div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="text-2xl font-extrabold text-gray-900 mt-1 truncate">RM {{ number_format($m['v'], 2) }}</div>
+                            <div class="text-xs text-gray-400 mt-0.5">{{ $m['sub'] }}</div>
+                        @endif
                     </div>
                 </div>
             @endforeach

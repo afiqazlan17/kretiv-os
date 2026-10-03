@@ -63,7 +63,7 @@ class JobVendorCostController extends Controller
             $changed = (float) $item['actual_cost'] !== (float) $updated['actual_cost'] || (int) $item['vendor_id'] !== (int) $updated['vendor_id'] || ($item['notes'] ?? null) !== ($updated['notes'] ?? null);
             if ($changed) {
                 $this->reverseExpense($job, $item, $ledger, $request->user()->name);
-                $updated['ledger_entry_id'] = $this->postExpense($job, $updated, $item['paid_bank'] ?? 'mbb', $item['paid_date'] ?? now()->toDateString(), $ledger, $request->user()->name)?->id;
+                $updated['ledger_entry_id'] = self::postExpense($job, $updated, $item['paid_bank'] ?? 'mbb', $item['paid_date'] ?? now()->toDateString(), $ledger, $request->user()->name)?->id;
             }
         }
 
@@ -110,7 +110,7 @@ class JobVendorCostController extends Controller
             'date' => ['nullable', 'date'],
         ]);
         $date = $validated['date'] ?? now()->toDateString();
-        $entry = $this->postExpense($job, $item, $validated['bank'], $date, $ledger, $request->user()->name);
+        $entry = self::postExpense($job, $item, $validated['bank'], $date, $ledger, $request->user()->name);
 
         $items = $items->map(fn (array $i) => $i['id'] === $costId ? [
             ...$i,
@@ -131,7 +131,8 @@ class JobVendorCostController extends Controller
         return back()->with('success', 'Vendor cost marked as paid.');
     }
 
-    private function postExpense(Job $job, array $item, string $bank, string $date, LedgerService $ledger, string $userName): ?LedgerEntry
+    /** Books a paid vendor cost in the ledger (also used when a delivery trip is paid). */
+    public static function postExpense(Job $job, array $item, string $bank, string $date, LedgerService $ledger, string $userName): ?LedgerEntry
     {
         $vendorName = Vendor::find($item['vendor_id'])?->name ?? 'Unknown vendor';
 
@@ -194,9 +195,6 @@ class JobVendorCostController extends Controller
         return $validated;
     }
 
-    /**
-     * @param  array<string, mixed>  $entry
-     */
     /** "No vendor cost" for this job (or undo it), so it isn't taken for a forgotten one. */
     public function none(Request $request, Job $job): RedirectResponse
     {
@@ -213,6 +211,9 @@ class JobVendorCostController extends Controller
         return back()->with('success', $undo ? 'Undone.' : 'Noted: no vendor cost for this job.');
     }
 
+    /**
+     * @param  array<string, mixed>  $entry
+     */
     private function log(Request $request, Job $job, string $verb, array $entry): void
     {
         $vendorName = Vendor::find($entry['vendor_id'])?->name ?? 'Unknown vendor';

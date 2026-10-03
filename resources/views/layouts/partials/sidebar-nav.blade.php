@@ -9,6 +9,7 @@
         ['key' => 'dashboard', 'label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'layout-dashboard'],
         ['key' => 'jobs', 'label' => 'Job', 'route' => 'jobs.index', 'pattern' => 'jobs.*', 'icon' => 'clipboard-list'],
         ['key' => 'customers', 'label' => 'Customers', 'route' => 'customers.index', 'icon' => 'users'],
+        ['key' => 'deliveries', 'label' => 'Delivery', 'route' => 'deliveries.index', 'pattern' => 'deliveries.*', 'icon' => 'truck'],
         ['key' => 'vendors', 'label' => 'Vendors', 'route' => 'vendors.index', 'icon' => 'factory'],
         ['key' => 'items', 'label' => 'Items', 'route' => 'items.index', 'pattern' => 'items.*', 'icon' => 'package'],
         ['key' => 'portfolio', 'label' => 'Portfolio', 'route' => 'portfolio.index', 'pattern' => 'portfolio.*', 'icon' => 'image'],

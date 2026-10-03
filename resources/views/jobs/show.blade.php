@@ -780,7 +780,7 @@
                     </div>
                 @endif
 
-                <div id="vendor-cost" class="k-card p-5 md:p-6 max-lg:order-last scroll-mt-4" x-data="{ showVendorForm: false, payingId: null, editingId: null }" @open-vendor-form.window="showVendorForm = true">
+                <div id="vendor-cost" class="k-card p-5 md:p-6 max-lg:order-last scroll-mt-4" x-data="{ showVendorForm: false, showDeliveryForm: false, payingId: null, editingId: null }" @open-vendor-form.window="showVendorForm = true">
                     @php
                         $vendorCosts = collect($job->vendor_costs ?? []);
                         $totalEstimated = $vendorCosts->sum(fn ($v) => (float) ($v['estimated_cost'] ?? 0));
@@ -798,11 +798,47 @@
                             </span>
                         @endif
                         @can('update', $job)
-                        <button type="button" @click="showVendorForm = !showVendorForm" class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#F8D7E3] text-[#C2185B] hover:bg-[#FFF0F5]"><x-icon name="plus" class="w-3.5 h-3.5" /> Add Vendor Cost</button>
+                        <span class="inline-flex flex-wrap gap-2">
+                            <button type="button" @click="showDeliveryForm = !showDeliveryForm; showVendorForm = false" class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#F8D7E3] text-[#C2185B] hover:bg-[#FFF0F5]"><x-icon name="truck" class="w-3.5 h-3.5" /> Add delivery</button>
+                            <button type="button" @click="showVendorForm = !showVendorForm; showDeliveryForm = false" class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#F8D7E3] text-[#C2185B] hover:bg-[#FFF0F5]"><x-icon name="plus" class="w-3.5 h-3.5" /> Add Vendor Cost</button>
+                        </span>
                         @endcan
                     </div>
 
                     @can('update', $job)
+                    {{-- Lalamove pickup from a supplier (mostly SY) to Kretivco; listed on the Delivery page to combine trips. --}}
+                    @php
+                        $sy = $vendors->first(fn ($v) => str_starts_with(strtoupper($v->name), 'SY'));
+                        $deliveryItems = collect($job->line_items ?? [])->map(fn ($li) => trim(($li['item'] ?? '') ?: ($li['desc'] ?? '')).(($li['qty'] ?? 0) > 0 ? ' x'.rtrim(rtrim(number_format((float) $li['qty'], 2, '.', ''), '0'), '.') : ''))->filter(fn ($l) => trim($l) !== '')->values();
+                    @endphp
+                    <form method="POST" action="{{ route('jobs.deliveries.store', $job) }}" x-show="showDeliveryForm" x-cloak class="mb-4 p-3 rounded-xl bg-[#FFF9F6] border border-[#F5ECE8] space-y-3">
+                        @csrf
+                        <div class="flex flex-wrap items-end gap-2">
+                            <div><label class="text-xs text-gray-500">Pickup from *</label>
+                                <select name="pickup_vendor_id" required class="block rounded-md border-gray-300 shadow-sm text-sm">
+                                    @foreach ($vendors->where('category', '!=', 'delivery') as $v)<option value="{{ $v->id }}" @selected($sy?->id === $v->id)>{{ $v->name }}</option>@endforeach
+                                </select></div>
+                            <div><label class="text-xs text-gray-500">Ready at supplier *</label>
+                                <input type="date" name="ready_date" required value="{{ $job->deadline?->copy()->subDays(1)->max(now())->toDateString() ?? now()->toDateString() }}" class="block rounded-md border-gray-300 shadow-sm text-sm"></div>
+                            <div><label class="text-xs text-gray-500">Lalamove (RM) *</label>
+                                <input type="number" step="0.01" min="0" name="estimated_cost" value="{{ \App\Http\Controllers\DeliveryController::DEFAULT_COST }}" required class="block w-24 rounded-md border-gray-300 shadow-sm text-sm"></div>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-500">Items in this delivery * <span class="text-gray-400">(tick only what comes from this supplier)</span></label>
+                            <div class="mt-1 space-y-1">
+                                @forelse ($deliveryItems as $line)
+                                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="items[]" value="{{ $line }}" checked class="rounded border-gray-300 text-[#C2185B]"> {{ $line }}</label>
+                                @empty
+                                    <input type="text" name="items[]" required placeholder="Bunting 2x5ft x2" class="block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                                @endforelse
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button class="text-xs font-semibold px-4 py-2 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110">Add delivery</button>
+                            <a href="{{ route('deliveries.index') }}" class="text-xs text-gray-500 hover:underline">Open Delivery page</a>
+                        </div>
+                    </form>
+
                     <form method="POST" action="{{ route('jobs.vendor-costs.store', $job) }}" x-show="showVendorForm" x-cloak x-data="{ pick: '' }" class="mb-4 p-3 rounded-xl bg-[#FFF9F6] border border-[#F5ECE8] flex flex-wrap items-end gap-2">
                         @csrf
                         <div>
@@ -856,6 +892,10 @@
                                         <div>
                                             <span class="font-semibold">{{ $vendor?->name ?? 'Unknown vendor' }}</span>
                                             @if ($vendor)<span class="ml-1.5 text-xs text-gray-400 font-mono">{{ $vendor->vendor_id }}</span>@endif
+                                            @if (($item['kind'] ?? null) === 'delivery')
+                                                <span class="block text-xs text-gray-500 mt-0.5">{{ $item['notes'] }}, ready {{ \Illuminate\Support\Carbon::parse($item['ready_date'])->format('j M') }} · {{ implode(', ', $item['items'] ?? []) }}
+                                                    · <a href="{{ route('deliveries.index') }}" class="text-[#C2185B] hover:underline">{{ empty($item['trip_id']) ? 'Waiting for pickup' : 'On trip #'.$item['trip_id'] }}</a></span>
+                                            @endif
                                         </div>
                                         <span class="text-xs font-semibold rounded-full px-2 py-0.5 {{ ($item['status'] ?? 'unpaid') === 'paid' ? 'text-green-600 bg-green-50' : 'text-amber-600 bg-amber-50' }}">
                                             {{ ($item['status'] ?? 'unpaid') === 'paid' ? 'Paid' : 'Unpaid' }}

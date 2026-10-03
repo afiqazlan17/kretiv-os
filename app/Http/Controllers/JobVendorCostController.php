@@ -32,6 +32,8 @@ class JobVendorCostController extends Controller
             'actual_cost' => $validated['actual_cost'] ?? null,
             'notes' => $validated['notes'] ?? null,
             'status' => 'unpaid',
+            // When the actual cost was known: Net received on the dashboard takes it off in that month.
+            'actual_at' => ! empty($validated['actual_cost']) ? now()->toDateString() : null,
         ];
 
         $job->update(['vendor_costs' => [...($job->vendor_costs ?? []), $entry]]);
@@ -51,6 +53,9 @@ class JobVendorCostController extends Controller
 
         $validated = $this->validated($request);
         $updated = [...$item, ...$validated];
+        if (! empty($updated['actual_cost']) && (float) ($item['actual_cost'] ?? 0) !== (float) $updated['actual_cost']) {
+            $updated['actual_at'] = now()->toDateString();
+        }
 
         // Paid already: re-post the expense if the amount or vendor changed.
         if (($item['status'] ?? null) === 'paid') {

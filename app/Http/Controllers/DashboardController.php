@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Job;
+use App\Models\LedgerEntry;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 // Ports the old Next.js app's Dashboard (app/page.js) onto the current
@@ -41,6 +43,19 @@ class DashboardController extends Controller
             'pipeline_value' => (float) $potential->sum('estimation_value') + (float) $inProgress->sum('estimation_value'),
             'actual_revenue' => (float) $completed->sum('final_value'),
         ];
+
+        // Net received this month: money in (receipts, less voids and refunded
+        // deposits) minus the actual vendor costs (suppliers, delivery) known this month.
+        $month = [now()->startOfMonth(), now()->endOfMonth()];
+        $ledger = LedgerEntry::whereBetween('date', $month)->where('reversed', false)->whereNull('reverses_id')
+            ->when(! $user->isBod(), fn ($q) => $q->whereIn('department', $user->visibleDepartments()));
+        $received = (float) (clone $ledger)->where('type', 'receipt')->sum('amount')
+            - (float) (clone $ledger)->where('type', 'deposit_refund')->sum('amount');
+        $vendorCost = (float) $jobs->sum(fn (Job $j) => collect($j->vendor_costs ?? [])
+            ->filter(fn ($c) => (float) ($c['actual_cost'] ?? 0) > 0
+                && now()->isSameMonth(Carbon::parse($c['actual_at'] ?? $c['paid_date'] ?? $j->created_at)))
+            ->sum(fn ($c) => (float) $c['actual_cost']));
+        $stats += ['received_month' => round($received, 2), 'vendor_cost_month' => round($vendorCost, 2), 'net_received_month' => round($received - $vendorCost, 2)];
 
         // Every stage of the flow, for the pipeline panel.
         $stats['new_count'] = $notCancelled->where('status', Job::STATUS_NEW)->count();

@@ -110,7 +110,7 @@
             $money = [
                 ['icon' => 'trending-up', 'label' => 'Pipeline value', 'v' => $stats['pipeline_value'], 'sub' => 'Every open job', 'c' => '#E91E63', 'bg' => '#FFF0F5'],
                 ['icon' => 'sprout', 'label' => 'Quoted, not confirmed', 'v' => $stats['potential_value'], 'sub' => 'New and quotation stage', 'c' => '#6366F1', 'bg' => '#F1F1FF'],
-                ['icon' => 'wallet', 'label' => 'Actual revenue', 'v' => $stats['actual_revenue'], 'sub' => $stats['completed_count'].' '.\Illuminate\Support\Str::plural('job', $stats['completed_count']).' completed', 'c' => '#10B981', 'bg' => '#ECFDF5'],
+                ['icon' => 'wallet', 'label' => 'Net received (this month)', 'v' => $stats['net_received_month'], 'sub' => 'RM '.number_format($stats['received_month'], 2).' received − RM '.number_format($stats['vendor_cost_month'], 2).' vendor cost', 'c' => '#10B981', 'bg' => '#ECFDF5'],
             ];
         @endphp
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">

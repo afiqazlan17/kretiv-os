@@ -65,8 +65,6 @@ $osRoutes = function () {
         // Radar: BOD's action board. Lives in KretivOS only (reached from the radar orb on the home screen).
         Route::get('/radar', [RadarController::class, 'index'])->name('radar.index');
         Route::post('/radar', [RadarController::class, 'store'])->middleware('throttle:30,1')->name('radar.store');
-        Route::patch('/radar/{note}', [RadarController::class, 'update'])->name('radar.update');
-        Route::post('/radar/{note}/take', [RadarController::class, 'take'])->name('radar.take');
         Route::post('/radar/{note}/reply', [RadarController::class, 'reply'])->name('radar.reply');
         Route::post('/radar/{note}/done', [RadarController::class, 'done'])->name('radar.done');
         Route::post('/radar/{note}/reopen', [RadarController::class, 'reopen'])->name('radar.reopen');

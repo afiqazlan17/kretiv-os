@@ -21,7 +21,7 @@ class RadarItem extends Model
 
     public const STATUS_DONE = 'done';
 
-    public const TYPES = ['lead' => 'Lead', 'renewal' => 'Renewal', 'admin' => 'Admin', 'other' => 'Other'];
+    public const TYPES = ['todo' => 'To do', 'appointment' => 'Appointment', 'meeting' => 'Meeting', 'enquiry' => 'Job Enquiry', 'other' => 'Others'];
 
     /** Days an untaken item can sit before it is flagged. */
     public const STALE_DAYS = 2;
@@ -38,30 +38,29 @@ class RadarItem extends Model
 
     /**
      * What lights up the radar orb for this user (Radar has no bell
-     * notifications; the orb is the only signal): items nobody has taken,
-     * overdue items, and items that reached a reminder (30, 14, 7, 3 days
-     * before, or the day itself) the user hasn't seen on the Radar page yet.
+     * notifications; the orb is the only signal): new items from someone
+     * else the user hasn't seen, overdue items, and items that reached a
+     * reminder (30, 14, 7, 3 days before, or the day itself) not yet seen.
+     * Opening the Radar page counts as seeing them.
      *
      * @return Collection<int, self>
      */
     public static function attentionFor(User $user): Collection
     {
-        $items = self::where('status', '!=', self::STATUS_DONE)
-            ->where(fn ($q) => $q->where('status', self::STATUS_OPEN)
-                ->orWhere(fn ($q) => $q->whereNotNull('due_date')->where('due_date', '<=', today()->addDays(self::REMIND_DAYS[0]))))
-            ->get();
-        $seen = NotificationRead::where('user_id', $user->id)->whereIn('key', $items->map->stageKey()->filter()->values())->pluck('key')->all();
+        $items = self::where('status', '!=', self::STATUS_DONE)->get();
+        $keys = $items->flatMap(fn (self $i) => [$i->stageKey(), "radar:{$i->id}:new"])->filter()->values();
+        $seen = NotificationRead::where('user_id', $user->id)->whereIn('key', $keys)->pluck('key')->all();
 
-        return $items->filter(fn (self $i) => $i->status === self::STATUS_OPEN
-            || ($i->daysLeft() !== null && $i->daysLeft() < 0)
-            || ($i->stageKey() !== null && ! in_array($i->stageKey(), $seen, true)))->values();
+        return $items->filter(fn (self $i) => ($i->daysLeft() !== null && $i->daysLeft() < 0)
+            || ($i->stageKey() !== null && ! in_array($i->stageKey(), $seen, true))
+            || ($i->created_by !== $user->id && ! in_array("radar:{$i->id}:new", $seen, true)))->values();
     }
 
     /** Opening the Radar page counts as seeing each item's current reminder. */
     public static function markSeen(User $user): void
     {
-        $keys = self::where('status', '!=', self::STATUS_DONE)->whereNotNull('due_date')
-            ->where('due_date', '<=', today()->addDays(self::REMIND_DAYS[0]))->get()->map->stageKey()->filter();
+        $keys = self::where('status', '!=', self::STATUS_DONE)->get()
+            ->flatMap(fn (self $i) => [$i->stageKey(), "radar:{$i->id}:new"])->filter();
         foreach ($keys as $key) {
             NotificationRead::firstOrCreate(['user_id' => $user->id, 'key' => $key], ['read_at' => now()]);
         }

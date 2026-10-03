@@ -46,7 +46,7 @@
                                             <a href="{{ route('radar.index', ['tab' => $item->status]) }}" class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-[#FFF5F1]">
                                                 <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ ($item->daysLeft() ?? 99) <= 3 ? 'bg-red-500' : 'bg-[#FCB03C]' }}"></span>
                                                 <span class="truncate flex-1 text-gray-800">{{ $item->headline(48) }}</span>
-                                                <span class="shrink-0 text-gray-400">{{ $item->dueLabel() ?? 'Not taken' }}</span>
+                                                <span class="shrink-0 text-gray-400">{{ $item->dueLabel() ?? 'New' }}</span>
                                             </a>
                                         @endforeach
                                     </div>

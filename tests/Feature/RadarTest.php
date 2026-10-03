@@ -22,22 +22,22 @@ class RadarTest extends TestCase
         $ila = User::factory()->create(['role' => User::ROLE_BOD, 'name' => 'Ila']);
 
         $this->actingAs($mirul)->postJson(route('radar.store'), [
-            'body' => "Seafic merchandise 5 items\n50 pcs each", 'department' => 'print',
+            'body' => "Seafic merchandise 5 items\n50 pcs each", 'type' => 'enquiry',
             'photo' => UploadedFile::fake()->image('sample.jpg', 1200, 900),
-        ])->assertOk()->assertJsonPath('count', 1);
+        ])->assertOk()->assertJsonPath('count', 0); // your own note doesn't light your orb
+
+        // A new note from someone else lights Ila's orb until she opens Radar.
+        $this->assertSame(1, RadarItem::attentionFor($ila)->count());
 
         $note = RadarItem::first();
         $this->assertSame('Seafic merchandise 5 items', $note->headline());
         Storage::disk('public')->assertExists($note->image_path);
 
-        $this->actingAs($ila)->get(route('radar.index'))->assertOk()->assertSee('Seafic merchandise');
+        $this->actingAs($ila)->get(route('radar.index'))->assertOk()->assertSee('Seafic merchandise')->assertSee('Convert to Job')->assertDontSee('Take it');
+        $this->assertSame(0, RadarItem::attentionFor($ila)->count());
         $this->actingAs($ila)->get(route('os.home'))->assertOk()->assertSee('radar-orb', false);
         // Radar lives only in KretivOS: no sidebar entry or dashboard card in Jobs.
         $this->actingAs($ila)->get(route('dashboard'))->assertOk()->assertDontSee(route('radar.index'));
-
-        $this->actingAs($ila)->post(route('radar.take', $note));
-        $this->assertSame('taken', $note->fresh()->status);
-        $this->assertSame($ila->id, $note->fresh()->taken_by);
 
         $this->actingAs($ila)->post(route('radar.reply', $note), ['body' => 'Quote sent']);
         $this->assertSame('Quote sent', $note->replies()->first()->body);
@@ -47,7 +47,11 @@ class RadarTest extends TestCase
         $this->assertSame('dropped', $note->fresh()->outcome);
 
         $this->actingAs($ila)->post(route('radar.reopen', $note));
-        $this->assertSame('taken', $note->fresh()->status);
+        $this->assertSame('open', $note->fresh()->status);
+
+        // PDFs attach as they are.
+        $this->actingAs($mirul)->postJson(route('radar.store'), ['body' => 'Meeting brief', 'type' => 'meeting', 'photo' => UploadedFile::fake()->create('brief.pdf', 20, 'application/pdf')])->assertOk();
+        $this->assertStringEndsWith('.pdf', RadarItem::where('body', 'Meeting brief')->first()->image_path);
     }
 
     public function test_staff_cannot_see_radar(): void
@@ -80,43 +84,40 @@ class RadarTest extends TestCase
     public function test_radar_signals_only_on_the_orb_and_reminders_clear_once_seen(): void
     {
         $bod = User::factory()->create(['role' => User::ROLE_BOD]);
-        $this->actingAs($bod)->postJson(route('radar.store'), ['body' => 'SSM renewal', 'type' => 'renewal', 'due_date' => today()->addDays(20)->toDateString()])->assertOk();
-        $this->actingAs($bod)->postJson(route('radar.store'), ['body' => 'Lead with no date'])->assertOk();
-        $ssm = RadarItem::where('body', 'SSM renewal')->first();
-        $ssm->update(['status' => 'taken', 'taken_by' => $bod->id]);
+        $this->actingAs($bod)->postJson(route('radar.store'), ['body' => 'Renew SSM', 'type' => 'todo', 'due_date' => today()->addDays(20)->toDateString()])->assertOk();
+        $this->actingAs($bod)->postJson(route('radar.store'), ['body' => 'Note with no date'])->assertOk();
+        $ssm = RadarItem::where('body', 'Renew SSM')->first();
 
         // Nothing in the bell.
         NotificationCenter::flush();
         $all = collect(NotificationCenter::for($bod))->only(['actions', 'updates'])->flatten(1);
         $this->assertFalse($all->contains(fn ($n) => str_contains($n['text'] ?? '', 'SSM')));
 
-        // The orb: the untaken lead, plus the 30-day reminder until Radar is opened.
+        // The orb: the 30-day reminder until Radar is opened (own notes don't count as new).
         $this->assertSame(30, $ssm->reminderStage());
-        $this->assertSame(2, RadarItem::attentionFor($bod)->count());
-        $this->actingAs($bod)->get(route('radar.index', ['tab' => 'taken']))->assertOk()->assertSee('Due in 20 days');
         $this->assertSame(1, RadarItem::attentionFor($bod)->count());
-        $this->assertSame('SSM renewal', RadarItem::byUrgency()->first()->body);
+        $this->actingAs($bod)->get(route('radar.index'))->assertOk()->assertSee('Due in 20 days');
+        $this->assertSame(0, RadarItem::attentionFor($bod)->count());
+        $this->assertSame('Renew SSM', RadarItem::byUrgency()->first()->body);
 
         // 14 days before: lights up again.
         $this->travelTo(today()->addDays(6));
         $this->assertSame(14, $ssm->fresh()->reminderStage());
-        $this->assertSame(2, RadarItem::attentionFor($bod)->count());
+        $this->assertSame(1, RadarItem::attentionFor($bod)->count());
 
         // Overdue: stays lit even after opening Radar.
         $this->travelTo(today()->addDays(16));
         $this->actingAs($bod)->get(route('radar.index'));
         $this->assertTrue(RadarItem::attentionFor($bod)->contains('id', $ssm->id));
         $this->actingAs($bod)->get(route('os.home'))->assertSee('radar-orb--urgent', false);
-
-        $this->actingAs($bod)->patch(route('radar.update', $ssm), ['type' => 'renewal', 'due_date' => null]);
-        $this->assertNull($ssm->fresh()->due_date);
     }
 
-    public function test_renewals_do_not_offer_create_job(): void
+    public function test_only_job_enquiries_offer_convert_to_job(): void
     {
         $bod = User::factory()->create(['role' => User::ROLE_BOD]);
-        RadarItem::create(['body' => 'Renew domain glambooth.my', 'type' => 'renewal', 'status' => 'open', 'created_by' => $bod->id]);
+        RadarItem::create(['body' => 'Company profile Kretivco', 'type' => 'todo', 'status' => 'open', 'created_by' => $bod->id]);
 
-        $this->actingAs($bod)->get(route('radar.index'))->assertSee('Renew domain')->assertDontSee('Create job');
+        $this->actingAs($bod)->get(route('radar.index'))->assertSee('Company profile')->assertDontSee('Convert to Job')
+            ->assertSee("Under Board Of Director's Radar", false);
     }
 }

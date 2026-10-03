@@ -17,7 +17,7 @@ use Symfony\Component\HttpFoundation\Response;
 // notes carry prices and partner deals.
 class RadarController extends Controller
 {
-    public const TABS = ['open' => 'Not taken', 'taken' => 'In hand', 'done' => 'Done'];
+    public const TABS = ['open' => 'Open', 'done' => 'Done'];
 
     public function index(Request $request): View
     {
@@ -45,13 +45,15 @@ class RadarController extends Controller
             'department' => ['nullable', 'in:'.implode(',', array_keys(config('kretivco.departments')))],
             'type' => ['nullable', 'in:'.implode(',', array_keys(RadarItem::TYPES))],
             'due_date' => ['nullable', 'date'],
-            'photo' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:15360'],
+            'photo' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:15360'],
         ]);
 
+        // Attachment: photos are shrunk to JPEG; PDFs are kept as they are.
         $path = null;
-        if ($request->hasFile('photo')) {
-            $path = 'radar/'.Str::random(32).'.jpg';
-            Storage::disk('public')->put($path, ItemImages::jpeg($request->file('photo')->getRealPath(), 2000));
+        if ($file = $request->file('photo')) {
+            $pdf = strtolower($file->getClientOriginalExtension()) === 'pdf';
+            $path = 'radar/'.Str::random(32).($pdf ? '.pdf' : '.jpg');
+            Storage::disk('public')->put($path, $pdf ? $file->get() : ItemImages::jpeg($file->getRealPath(), 2000));
         }
 
         $note = RadarItem::create([
@@ -65,28 +67,6 @@ class RadarController extends Controller
         }
 
         return back()->with('success', 'Saved to Radar.');
-    }
-
-    /** Change the type or due date after the fact. */
-    public function update(Request $request, RadarItem $note): RedirectResponse
-    {
-        $this->guard($request);
-        $data = $request->validate([
-            'type' => ['nullable', 'in:'.implode(',', array_keys(RadarItem::TYPES))],
-            'due_date' => ['nullable', 'date'],
-        ]);
-        $note->update(['type' => $data['type'] ?? null, 'due_date' => $data['due_date'] ?? null]);
-
-        return back()->with('success', 'Item updated.');
-    }
-
-    public function take(Request $request, RadarItem $note): RedirectResponse
-    {
-        $this->guard($request);
-        abort_if($note->status === RadarItem::STATUS_DONE, 422, 'This note is already done.');
-        $note->update(['status' => RadarItem::STATUS_TAKEN, 'taken_by' => $request->user()->id, 'taken_at' => now()]);
-
-        return back()->with('success', 'You have this one.');
     }
 
     public function reply(Request $request, RadarItem $note): RedirectResponse
@@ -115,7 +95,7 @@ class RadarController extends Controller
     {
         $this->guard($request);
         abort_if($note->outcome === 'job', 422, 'This note already became a job.');
-        $note->update(['status' => $note->taken_by ? RadarItem::STATUS_TAKEN : RadarItem::STATUS_OPEN, 'outcome' => null, 'done_by' => null, 'done_at' => null]);
+        $note->update(['status' => RadarItem::STATUS_OPEN, 'outcome' => null, 'done_by' => null, 'done_at' => null]);
 
         return back()->with('success', 'Note reopened.');
     }
@@ -125,7 +105,7 @@ class RadarController extends Controller
         $this->guard($request);
         abort_unless($note->image_path && Storage::disk('public')->exists($note->image_path), 404);
 
-        return Storage::disk('public')->response($note->image_path, "radar-{$note->id}.jpg", ['Cache-Control' => 'private, max-age=604800']);
+        return Storage::disk('public')->response($note->image_path, "radar-{$note->id}.".pathinfo($note->image_path, PATHINFO_EXTENSION), ['Cache-Control' => 'private, max-age=604800']);
     }
 
     /** Marks the note done once a job has been created from it (New Job form). */

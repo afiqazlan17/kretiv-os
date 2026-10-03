@@ -1,9 +1,9 @@
 {{-- Quick add box for Radar, used on the Radar page and in the KretivOS orb.
-     Only the text is needed; type, date, department and photo are one tap each.
+     Only the text is needed; type, date and attachment are one tap each.
      A date written in the text ("SSM expires 15 Nov", "renew 3/12") fills the due date.
      $action: where it posts; $reload: reload the page after saving; $dark: no card wrapper (inside the orb popover). --}}
 <div x-data="radarCompose('{{ $action }}', {{ ($reload ?? false) ? 'true' : 'false' }})" class="{{ ($dark ?? false) ? '' : 'k-card p-4' }}">
-    <textarea x-model="body" @input="detect()" rows="3" maxlength="5000" placeholder="SSM renewal, expires 15 Nov. Or: Kastam wants 500 boxes, via Glambooth 50/50"
+    <textarea x-model="body" @input="detect()" rows="3" maxlength="5000" placeholder="Meeting with Kastam 15 Nov, 10am. Or: renew SSM by 3/12"
               class="block w-full rounded-lg border-gray-300 text-sm text-gray-800"></textarea>
     <div class="mt-2 flex flex-wrap items-center gap-1.5">
         @foreach (\App\Models\RadarItem::TYPES as $key => $label)
@@ -19,18 +19,12 @@
             <input type="date" x-model="due" @change="dueManual = true" class="absolute inset-0 opacity-0 cursor-pointer" aria-label="Due date">
         </label>
         <button type="button" x-show="due" x-cloak @click="due = ''; dueManual = true" class="text-[11px] text-gray-400 hover:text-red-500" aria-label="Remove date">Remove date</button>
-    </div>
-    <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
-        @foreach (config('kretivco.departments') as $key => $d)
-            <button type="button" @click="dept = dept === '{{ $key }}' ? '' : '{{ $key }}'"
-                    :class="dept === '{{ $key }}' ? 'text-white border-transparent' : 'bg-white text-gray-500 border-[#EFE3DE]'"
-                    :style="dept === '{{ $key }}' ? 'background: {{ $d['color'] }}' : ''"
-                    class="text-[11px] font-semibold px-2.5 py-1 rounded-full border">{{ str_replace('Kretiv', '', $d['label']) }}</button>
-        @endforeach
-        <label class="cursor-pointer inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-[#EFE3DE] bg-white text-gray-500">
-            <x-icon name="image" class="w-3 h-3" /> <span x-text="photo ? 'Photo added' : 'Photo'"></span>
-            <input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="pick($event)">
+        <label class="cursor-pointer inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-[#EFE3DE] bg-white text-gray-600">
+            <x-icon name="paperclip" class="w-3 h-3" /> <span x-text="photo ? 'Attached' : 'Attachment'"></span>
+            <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" class="hidden" @change="pick($event)">
         </label>
+    </div>
+    <div class="mt-2 flex items-center">
         <button type="button" @click="save()" :disabled="busy" class="ml-auto text-xs font-semibold px-4 py-1.5 rounded-lg text-white bg-gradient-to-r from-[#E91E63] to-[#F46A3A] hover:brightness-110 disabled:opacity-50" x-text="busy ? 'Saving...' : 'Save'"></button>
     </div>
     <p x-show="due && !dueManual" x-cloak class="mt-1 text-[11px] text-gray-400">Date read from your text. Tap the date to change it.</p>
@@ -68,7 +62,6 @@
             body: '', type: '', typeManual: false, due: '', dueManual: false, dept: '', photo: null, busy: false, error: '', saved: false,
             detect() {
                 if (!this.dueManual) this.due = window.radarFindDate(this.body);
-                if (!this.typeManual) this.type = /\b(renew|renewal|expire|expires|expiry|tamat|luput|perbaharu)/i.test(this.body) ? 'renewal' : '';
             },
             dueText() {
                 return new Date(this.due + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -76,6 +69,7 @@
             async pick(event) {
                 const file = event.target.files[0]; event.target.value = '';
                 if (!file) return;
+                if (file.type === 'application/pdf') { this.photo = file; return; }
                 // Shrunk in the browser first: hosting caps uploads at about 2 MB.
                 try {
                     const img = await createImageBitmap(file);
@@ -95,7 +89,6 @@
                 data.append('body', this.body);
                 if (this.type) data.append('type', this.type);
                 if (this.due) data.append('due_date', this.due);
-                if (this.dept) data.append('department', this.dept);
                 if (this.photo) data.append('photo', this.photo);
                 try {
                     const res = await fetch(url, { method: 'POST', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }, body: data });

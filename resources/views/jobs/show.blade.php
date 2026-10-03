@@ -296,13 +296,13 @@
             @if ($canPay)
             {{-- Record Payment opens as a popup, like the document modals. --}}
             <div x-show="$store.jobActions.panel === 'payment'" x-cloak x-transition.opacity
-                 class="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/50 p-2 sm:p-6"
+                 class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-3 sm:p-6"
                  @click.self="$store.jobActions.panel = null"
                  @keydown.escape.window="$store.jobActions.panel === 'payment' && ($store.jobActions.panel = null)"
                  @if ($errors->hasAny(['amount', 'paid_on', 'payment_method', 'bank', 'proof']) || request()->has('pay')) x-effect="$store.jobActions.panel ??= 'payment'" @endif
                  x-data="{ scope: '{{ $payProject ? 'project' : 'job' }}', owed: {{ Js::from(['project' => $payProject['owed'] ?? 0, 'job' => $money['owed']]) }}, amount: '' }"
                  x-init="amount = {{ Js::from(old('amount', request('pay'))) }} ?? owed[scope].toFixed(2)">
-              <div class="w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl bg-white p-5 sm:p-6 shadow-xl">
+              <div class="w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl bg-white p-5 sm:p-6 shadow-xl">
                 <div class="flex items-start justify-between gap-3">
                     <h3 class="text-base font-bold text-gray-900">Record Payment</h3>
                     <button type="button" @click="$store.jobActions.panel = null" class="text-gray-400 hover:text-gray-700" aria-label="Close"><x-icon name="x" class="w-5 h-5" /></button>

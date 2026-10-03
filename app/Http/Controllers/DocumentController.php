@@ -519,6 +519,7 @@ class DocumentController extends Controller
             'number' => $docNumber,
             'url' => route('jobs.documents.show', [$job, $archived]),
             // Sent as the PDF with this message (sendPdfOnWhatsApp), not a link.
+            'bank' => $data['bank'],
             'whatsapp_text' => $text,
             'phone' => $job->customer?->phone,
             'fully_paid' => $fullyPaid,

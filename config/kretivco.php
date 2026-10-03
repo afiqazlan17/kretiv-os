@@ -209,7 +209,7 @@ return [
 
     'banks' => [
         'mbb' => ['label' => 'Maybank', 'code' => 'MBB', 'color' => '#FFC107'],
-        'affin' => ['label' => 'AFFIN', 'code' => 'AFFIN', 'color' => '#E53935'],
+        'affin' => ['label' => 'AFFIN', 'code' => 'AFFIN', 'color' => '#0565B0'],
     ],
 
     // One flow for every department: New (enquiry, nobody on it) ->

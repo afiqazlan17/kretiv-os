@@ -150,6 +150,7 @@
             <div class="rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3">{{ session('success') }}</div>
         @endif
         @if ($recorded = session('payment_recorded'))
+            <x-payment-celebration :recorded="$recorded" />
             <div class="rounded-xl bg-green-50 border border-green-200 text-green-800 text-sm px-4 py-3 flex flex-wrap items-center gap-2">
                 <x-icon name="circle-check" class="w-4 h-4 shrink-0" />
                 <span class="flex-1 min-w-[14rem]">Payment of RM {{ number_format($recorded['amount'], 2) }} recorded. Receipt {{ $recorded['number'] }} is ready.@if ($recorded['suggest_close']) The job is delivered and fully paid, so you can close it now.@elseif ($recorded['fully_paid']) The job is fully paid.@endif</span>

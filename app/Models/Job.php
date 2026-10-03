@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'archived', 'cancel_reason', 'cancel_reason_text', 'source', 'special_arrangement', 'installments',
     'cost_breakdown', 'baki_kretivco', 'line_items', 'attachments', 'bank', 'hold_status', 'hold_reason',
     'project_id', 'created_by', 'vendor_costs', 'document_notes', 'po_number', 'po_amount', 'po_path', 'po_name',
+    'no_vendor_cost_by', 'no_vendor_cost_at',
 ])]
 class Job extends Model
 {
@@ -94,8 +95,15 @@ class Job extends Model
             'line_items' => 'array',
             'attachments' => 'array',
             'vendor_costs' => 'array',
+            'no_vendor_cost_at' => 'datetime',
             'document_notes' => 'array',
         ];
+    }
+
+    /** Vendor cost is either recorded or confirmed as none; until then Close Job is blocked and the PIC is reminded. */
+    public function vendorCostAnswered(): bool
+    {
+        return ! empty($this->vendor_costs) || $this->no_vendor_cost_at !== null;
     }
 
     /** Finished product photos, for the Portfolio page. */

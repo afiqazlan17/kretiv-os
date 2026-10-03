@@ -675,6 +675,9 @@ class JobController extends Controller
         $this->authorize('update', $job);
 
         $validated = $request->validate(['final_value' => ['required', 'numeric', 'min:0']]);
+        if (! $job->vendorCostAnswered()) {
+            return back()->withErrors(['final_value' => 'Add the vendor cost for this job (supplier, Lalamove, courier), or confirm it has none, before closing it.']);
+        }
 
         $job->update(['status' => Job::STATUS_COMPLETED, 'final_value' => $validated['final_value']]);
 

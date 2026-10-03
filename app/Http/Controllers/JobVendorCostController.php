@@ -36,7 +36,7 @@ class JobVendorCostController extends Controller
             'actual_at' => ! empty($validated['actual_cost']) ? now()->toDateString() : null,
         ];
 
-        $job->update(['vendor_costs' => [...($job->vendor_costs ?? []), $entry]]);
+        $job->update(['vendor_costs' => [...($job->vendor_costs ?? []), $entry], 'no_vendor_cost_by' => null, 'no_vendor_cost_at' => null]);
 
         $this->log($request, $job, 'added', $entry);
 
@@ -197,6 +197,22 @@ class JobVendorCostController extends Controller
     /**
      * @param  array<string, mixed>  $entry
      */
+    /** "No vendor cost" for this job (or undo it), so it isn't taken for a forgotten one. */
+    public function none(Request $request, Job $job): RedirectResponse
+    {
+        $this->authorize('update', $job);
+        $undo = $request->isMethod('delete');
+        abort_if(! $undo && ! empty($job->vendor_costs), 422, 'This job already has vendor costs.');
+
+        $job->update($undo ? ['no_vendor_cost_by' => null, 'no_vendor_cost_at' => null] : ['no_vendor_cost_by' => $request->user()->shortName(), 'no_vendor_cost_at' => now()]);
+        ActivityLog::create([
+            'job_id' => $job->id, 'job_code' => $job->job_id, 'user_id' => $request->user()->id, 'user_name' => $request->user()->name,
+            'action' => 'edited', 'field_changed' => 'vendor_costs', 'detail' => $undo ? 'Undid "no vendor cost".' : 'Confirmed this job has no vendor cost.',
+        ]);
+
+        return back()->with('success', $undo ? 'Undone.' : 'Noted: no vendor cost for this job.');
+    }
+
     private function log(Request $request, Job $job, string $verb, array $entry): void
     {
         $vendorName = Vendor::find($entry['vendor_id'])?->name ?? 'Unknown vendor';

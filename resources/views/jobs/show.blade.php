@@ -275,6 +275,19 @@
                         @endcan
                     </div>
                 @endif
+                @can('update', $job)
+                    @if (in_array($job->status, ['in_progress', 'delivered'], true) && ! $job->vendorCostAnswered())
+                        {{-- Asked once per job: record the vendor cost or confirm there is none (Close Job waits for this). --}}
+                        <div class="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+                            <x-icon name="truck" class="w-4 h-4 text-amber-600 shrink-0" />
+                            <p class="flex-1 min-w-[14rem] text-sm text-amber-900"><span class="font-semibold">Any vendor cost for this job?</span> Supplier, Lalamove, courier.</p>
+                            <a href="#vendor-cost" @click="$dispatch('open-vendor-form')" class="shrink-0 text-xs font-semibold px-3.5 py-2 rounded-lg border border-amber-400 text-amber-800 hover:bg-amber-100">Add vendor cost</a>
+                            <form method="POST" action="{{ route('jobs.vendor-costs.none', $job) }}">@csrf
+                                <button class="shrink-0 text-xs font-semibold px-3.5 py-2 rounded-lg bg-white border border-amber-200 text-gray-700 hover:bg-amber-100">No vendor cost</button>
+                            </form>
+                        </div>
+                    @endif
+                @endcan
             @endif
         </div>
 
@@ -424,6 +437,9 @@
             </div>
             <div x-show="$store.jobActions.panel === 'complete'">
                 <h3 class="text-sm font-semibold text-gray-700 mb-3">Close Job</h3>
+                @unless ($job->vendorCostAnswered())
+                    <p class="mb-3 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-900">Before closing: add the vendor cost for this job, or confirm it has none (the question above Job Progress actions).</p>
+                @endunless
                 <form method="POST" action="{{ route('jobs.complete', $job) }}" class="flex flex-wrap items-end gap-2">
                     @csrf
                     <div>
@@ -764,7 +780,7 @@
                     </div>
                 @endif
 
-                <div class="k-card p-5 md:p-6 max-lg:order-last" x-data="{ showVendorForm: false, payingId: null, editingId: null }">
+                <div id="vendor-cost" class="k-card p-5 md:p-6 max-lg:order-last scroll-mt-4" x-data="{ showVendorForm: false, payingId: null, editingId: null }" @open-vendor-form.window="showVendorForm = true">
                     @php
                         $vendorCosts = collect($job->vendor_costs ?? []);
                         $totalEstimated = $vendorCosts->sum(fn ($v) => (float) ($v['estimated_cost'] ?? 0));
@@ -774,6 +790,13 @@
                     @endphp
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-base font-bold text-gray-900">Vendor Cost</h3>
+                        @if ($job->no_vendor_cost_at && empty($job->vendor_costs))
+                            <span class="mr-auto ml-3 inline-flex items-center gap-2 text-xs text-gray-500">No vendor cost (confirmed by {{ $job->no_vendor_cost_by }}, {{ $job->no_vendor_cost_at->format('j M') }})
+                                @can('update', $job)
+                                    <form method="POST" action="{{ route('jobs.vendor-costs.none', $job) }}">@csrf @method('DELETE')<button class="text-[#C2185B] hover:underline">Undo</button></form>
+                                @endcan
+                            </span>
+                        @endif
                         @can('update', $job)
                         <button type="button" @click="showVendorForm = !showVendorForm" class="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#F8D7E3] text-[#C2185B] hover:bg-[#FFF0F5]"><x-icon name="plus" class="w-3.5 h-3.5" /> Add Vendor Cost</button>
                         @endcan

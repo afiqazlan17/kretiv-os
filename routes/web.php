@@ -176,6 +176,7 @@ $onHost('jobs', function () {
         Route::post('/jobs/{job}/payments', [DocumentController::class, 'recordPayment'])->name('jobs.payments.store');
         Route::post('/jobs/{job}/payments/{entry}/void', [DocumentController::class, 'voidPayment'])->name('jobs.payments.void');
         Route::post('/jobs/{job}/vendor-costs', [JobVendorCostController::class, 'store'])->name('jobs.vendor-costs.store');
+        Route::match(['post', 'delete'], '/jobs/{job}/vendor-costs/none', [JobVendorCostController::class, 'none'])->name('jobs.vendor-costs.none');
         Route::put('/jobs/{job}/vendor-costs/{costId}', [JobVendorCostController::class, 'update'])->name('jobs.vendor-costs.update');
         Route::delete('/jobs/{job}/vendor-costs/{costId}', [JobVendorCostController::class, 'destroy'])->name('jobs.vendor-costs.destroy');
         Route::post('/jobs/{job}/vendor-costs/{costId}/mark-paid', [JobVendorCostController::class, 'markPaid'])->name('jobs.vendor-costs.mark-paid');

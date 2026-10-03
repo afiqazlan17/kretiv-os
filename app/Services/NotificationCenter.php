@@ -107,6 +107,17 @@ class NotificationCenter
             $actions->push($this->item('triangle-alert', 'red', "{$j->job_id} {$j->job_type}: ".($late ? 'overdue since '.$j->deadline->format('j M') : 'deadline today'), route('jobs.show', $j)));
         }
 
+        // Vendor cost: delivered jobs with no answer yet, and costs still at the estimate (Net received only counts actual costs).
+        foreach ($mine as $j) {
+            if ($j->status === Job::STATUS_DELIVERED && ! $j->vendorCostAnswered()) {
+                $actions->push($this->item('truck', 'amber', "{$j->job_id}: any vendor cost? Add it or confirm there is none", route('jobs.show', $j).'#vendor-cost'));
+            }
+            $estimated = collect($j->vendor_costs ?? [])->filter(fn ($c) => (float) ($c['actual_cost'] ?? 0) <= 0)->count();
+            if ($estimated) {
+                $actions->push($this->item('truck', 'amber', "{$j->job_id}: {$estimated} vendor ".str('cost')->plural($estimated).' still estimated. Enter the actual amount', route('jobs.show', $j).'#vendor-cost'));
+            }
+        }
+
         // Quotations: follow up a week after the last touch; once the quotation is
         // 60 days old with no answer, suggest closing it so the pipeline stays honest.
         $quotedAt = JobDocument::whereIn('job_id', $mine->where('status', Job::STATUS_POTENTIAL)->pluck('id'))

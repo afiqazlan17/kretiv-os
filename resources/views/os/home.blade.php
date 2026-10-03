@@ -20,13 +20,13 @@
                         tick();
                         setInterval(tick, 1000);
                      ">
-                    {{-- Radar (BOD only, and only here): a sonar sweep with a blip for each item that needs
-                         attention (not taken, overdue, or a reminder not yet seen). Tap to check or add. --}}
+                    {{-- Radar (BOD only, and only here): a sonar sweep with a blip per open item, amber when
+                         fresh and red after 3 days with no action (or past its date). Tap to check or add. --}}
                     @if ($radar !== null)
                         @php
                             $orbSweep = 4; // seconds per turn
                             // One blip per item; red for items due within 3 days or overdue (listed first).
-                            $blipUrgent = $radar->map(fn ($i) => $i->daysLeft() !== null && $i->daysLeft() <= 3)->sortDesc()->values();
+                            $blipUrgent = $radar->map->isRed()->sortDesc()->values();
                             $radarUrgent = $blipUrgent->contains(true);
                         @endphp
                         <div class="absolute right-0 top-1/2 -translate-y-1/2 z-20" x-data="radarOrb({{ $radar->count() }}, @js($blipUrgent), {{ $orbSweep }})" @click.outside="open = false" @radar-saved="count = $event.detail.count ?? count">
@@ -42,11 +42,11 @@
                                 @if ($radar->isNotEmpty())
                                     <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-1.5">Needs attention</p>
                                     <div class="space-y-1 mb-3">
-                                        @foreach ($radar->sortBy(fn ($i) => $i->daysLeft() ?? 9999)->take(4) as $item)
+                                        @foreach ($radar->sortByDesc(fn ($i) => $i->isRed())->take(4) as $item)
                                             <a href="{{ route('radar.index', ['tab' => $item->status]) }}" class="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-[#FFF5F1]">
-                                                <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ ($item->daysLeft() ?? 99) <= 3 ? 'bg-red-500' : 'bg-[#FCB03C]' }}"></span>
+                                                <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ $item->isRed() ? 'bg-red-500' : 'bg-[#FCB03C]' }}"></span>
                                                 <span class="truncate flex-1 text-gray-800">{{ $item->headline(48) }}</span>
-                                                <span class="shrink-0 text-gray-400">{{ $item->dueLabel() ?? 'New' }}</span>
+                                                <span class="shrink-0 text-gray-400">{{ $item->dueLabel() ?? ($item->isRed() ? 'No action '.\App\Models\RadarItem::STALE_DAYS.'+ days' : 'New') }}</span>
                                             </a>
                                         @endforeach
                                     </div>

@@ -23,7 +23,6 @@ class RadarController extends Controller
     {
         $this->guard($request);
         $tab = array_key_exists((string) $request->query('tab'), self::TABS) ? $request->query('tab') : 'open';
-        RadarItem::markSeen($request->user());
 
         $notes = RadarItem::with(['creator', 'taker', 'closer', 'job', 'replies.user'])
             ->where('status', $tab)

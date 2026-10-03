@@ -23,8 +23,8 @@ class RadarItem extends Model
 
     public const TYPES = ['todo' => 'To do', 'appointment' => 'Appointment', 'meeting' => 'Meeting', 'enquiry' => 'Job Enquiry', 'other' => 'Others'];
 
-    /** Days an untaken item can sit before it is flagged. */
-    public const STALE_DAYS = 2;
+    /** Days without any action (update) before an item's blip turns red. */
+    public const STALE_DAYS = 3;
 
     /** Reminders go out this many days before the due date (and on the day). */
     public const REMIND_DAYS = [30, 14, 7, 3, 0];
@@ -37,41 +37,20 @@ class RadarItem extends Model
     }
 
     /**
-     * What lights up the radar orb for this user (Radar has no bell
-     * notifications; the orb is the only signal): new items from someone
-     * else the user hasn't seen, overdue items, and items that reached a
-     * reminder (30, 14, 7, 3 days before, or the day itself) not yet seen.
-     * Opening the Radar page counts as seeing them.
+     * The radar orb shows one blip per open item (Radar has no bell
+     * notifications; the orb is the only signal).
      *
      * @return Collection<int, self>
      */
     public static function attentionFor(User $user): Collection
     {
-        $items = self::where('status', '!=', self::STATUS_DONE)->get();
-        $keys = $items->flatMap(fn (self $i) => [$i->stageKey(), "radar:{$i->id}:new"])->filter()->values();
-        $seen = NotificationRead::where('user_id', $user->id)->whereIn('key', $keys)->pluck('key')->all();
-
-        return $items->filter(fn (self $i) => ($i->daysLeft() !== null && $i->daysLeft() < 0)
-            || ($i->stageKey() !== null && ! in_array($i->stageKey(), $seen, true))
-            || ($i->created_by !== $user->id && ! in_array("radar:{$i->id}:new", $seen, true)))->values();
+        return self::where('status', '!=', self::STATUS_DONE)->byUrgency()->get();
     }
 
-    /** Opening the Radar page counts as seeing each item's current reminder. */
-    public static function markSeen(User $user): void
+    /** Red blip: nothing done on it for STALE_DAYS (no update since it was written), or past its date. */
+    public function isRed(): bool
     {
-        $keys = self::where('status', '!=', self::STATUS_DONE)->get()
-            ->flatMap(fn (self $i) => [$i->stageKey(), "radar:{$i->id}:new"])->filter();
-        foreach ($keys as $key) {
-            NotificationRead::firstOrCreate(['user_id' => $user->id, 'key' => $key], ['read_at' => now()]);
-        }
-    }
-
-    /** One key per reminder, so each of 30/14/7/3/0 days lights the orb once. */
-    public function stageKey(): ?string
-    {
-        $stage = $this->reminderStage();
-
-        return $stage === null ? null : "radar:{$this->id}:{$stage}";
+        return $this->updated_at->lt(now()->subDays(self::STALE_DAYS)) || ($this->daysLeft() ?? 0) < 0;
     }
 
     /** Dated items first (nearest due date on top), then the rest, newest first. */

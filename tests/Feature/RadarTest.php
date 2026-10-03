@@ -24,17 +24,13 @@ class RadarTest extends TestCase
         $this->actingAs($mirul)->postJson(route('radar.store'), [
             'body' => "Seafic merchandise 5 items\n50 pcs each", 'type' => 'enquiry',
             'photo' => UploadedFile::fake()->image('sample.jpg', 1200, 900),
-        ])->assertOk()->assertJsonPath('count', 0); // your own note doesn't light your orb
-
-        // A new note from someone else lights Ila's orb until she opens Radar.
-        $this->assertSame(1, RadarItem::attentionFor($ila)->count());
+        ])->assertOk()->assertJsonPath('count', 1); // one blip per open item
 
         $note = RadarItem::first();
         $this->assertSame('Seafic merchandise 5 items', $note->headline());
         Storage::disk('public')->assertExists($note->image_path);
 
         $this->actingAs($ila)->get(route('radar.index'))->assertOk()->assertSee('Seafic merchandise')->assertSee('Convert to Job')->assertDontSee('Take it');
-        $this->assertSame(0, RadarItem::attentionFor($ila)->count());
         $this->actingAs($ila)->get(route('os.home'))->assertOk()->assertSee('radar-orb', false);
         // Radar lives only in KretivOS: no sidebar entry or dashboard card in Jobs.
         $this->actingAs($ila)->get(route('dashboard'))->assertOk()->assertDontSee(route('radar.index'));
@@ -81,35 +77,31 @@ class RadarTest extends TestCase
         $this->assertNotNull($note->job_id);
     }
 
-    public function test_radar_signals_only_on_the_orb_and_reminders_clear_once_seen(): void
+    public function test_orb_has_a_blip_per_open_item_turning_red_after_3_days_without_action(): void
     {
         $bod = User::factory()->create(['role' => User::ROLE_BOD]);
-        $this->actingAs($bod)->postJson(route('radar.store'), ['body' => 'Renew SSM', 'type' => 'todo', 'due_date' => today()->addDays(20)->toDateString()])->assertOk();
-        $this->actingAs($bod)->postJson(route('radar.store'), ['body' => 'Note with no date'])->assertOk();
+        $this->actingAs($bod)->postJson(route('radar.store'), ['body' => 'Renew SSM', 'type' => 'todo'])->assertOk();
+        $this->actingAs($bod)->postJson(route('radar.store'), ['body' => 'Call Kastam'])->assertOk();
         $ssm = RadarItem::where('body', 'Renew SSM')->first();
 
-        // Nothing in the bell.
+        // Nothing in the bell; two amber blips.
         NotificationCenter::flush();
         $all = collect(NotificationCenter::for($bod))->only(['actions', 'updates'])->flatten(1);
         $this->assertFalse($all->contains(fn ($n) => str_contains($n['text'] ?? '', 'SSM')));
+        $this->assertSame(2, RadarItem::attentionFor($bod)->count());
+        $this->assertFalse(RadarItem::attentionFor($bod)->contains->isRed());
+        $this->actingAs($bod)->get(route('os.home'))->assertDontSee('radar-orb radar-orb--urgent', false);
 
-        // The orb: the 30-day reminder until Radar is opened (own notes don't count as new).
-        $this->assertSame(30, $ssm->reminderStage());
+        // Three days with no action: red. An update resets it.
+        $this->travelTo(now()->addDays(4));
+        $this->assertTrue($ssm->fresh()->isRed());
+        $this->actingAs($bod)->get(route('os.home'))->assertSee('radar-orb radar-orb--urgent', false);
+        $this->actingAs($bod)->post(route('radar.reply', $ssm), ['body' => 'Paid the fee']);
+        $this->assertFalse($ssm->fresh()->isRed());
+
+        // Closed items leave the radar.
+        $this->actingAs($bod)->post(route('radar.done', $ssm));
         $this->assertSame(1, RadarItem::attentionFor($bod)->count());
-        $this->actingAs($bod)->get(route('radar.index'))->assertOk()->assertSee('Due in 20 days');
-        $this->assertSame(0, RadarItem::attentionFor($bod)->count());
-        $this->assertSame('Renew SSM', RadarItem::byUrgency()->first()->body);
-
-        // 14 days before: lights up again.
-        $this->travelTo(today()->addDays(6));
-        $this->assertSame(14, $ssm->fresh()->reminderStage());
-        $this->assertSame(1, RadarItem::attentionFor($bod)->count());
-
-        // Overdue: stays lit even after opening Radar.
-        $this->travelTo(today()->addDays(16));
-        $this->actingAs($bod)->get(route('radar.index'));
-        $this->assertTrue(RadarItem::attentionFor($bod)->contains('id', $ssm->id));
-        $this->actingAs($bod)->get(route('os.home'))->assertSee('radar-orb--urgent', false);
     }
 
     public function test_only_job_enquiries_offer_convert_to_job(): void

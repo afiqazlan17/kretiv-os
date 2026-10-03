@@ -12,16 +12,17 @@
                     class="text-[11px] font-semibold px-2.5 py-1 rounded-full border">{{ $label }}</button>
         @endforeach
         <span class="w-px h-4 bg-[#EFE3DE] mx-0.5"></span>
-        <label class="relative inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full border cursor-pointer"
+        <label title="Date" class="relative inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full border cursor-pointer"
                :class="due ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-white text-gray-600 border-[#EFE3DE]'">
-            <x-icon name="calendar-clock" class="w-3 h-3" />
-            <span x-text="due ? 'Due ' + dueText() : 'Date'"></span>
+            <x-icon name="calendar-clock" class="w-3.5 h-3.5" />
+            <span x-show="due" x-cloak x-text="dueText()"></span>
             <input type="date" x-model="due" @change="dueManual = true" class="absolute inset-0 opacity-0 cursor-pointer" aria-label="Due date">
         </label>
         <button type="button" x-show="due" x-cloak @click="due = ''; dueManual = true" class="text-[11px] text-gray-400 hover:text-red-500" aria-label="Remove date">Remove date</button>
-        <label class="cursor-pointer inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-[#EFE3DE] bg-white text-gray-600">
-            <x-icon name="paperclip" class="w-3 h-3" /> <span x-text="photo ? 'Attached' : 'Attachment'"></span>
-            <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" class="hidden" @change="pick($event)">
+        <label title="Attachment" class="cursor-pointer inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full border"
+               :class="photo ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-white text-gray-600 border-[#EFE3DE]'">
+            <x-icon name="paperclip" class="w-3.5 h-3.5" /> <span x-show="photo" x-cloak>1</span>
+            <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" class="hidden" aria-label="Attachment" @change="pick($event)">
         </label>
     </div>
     <div class="mt-2 flex items-center">

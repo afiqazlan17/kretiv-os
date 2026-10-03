@@ -153,7 +153,8 @@ return [
     // list get baked into the job's line_items at creation (see
     // JobController::resolvePackageTier()).
     'package_catalog' => [
-        'print' => [
+        // Undangan.my is a KretivTech product (digital wedding card).
+        'tech' => [
             [
                 'key' => 'undangan_my',
                 'label' => 'Undangan.my',

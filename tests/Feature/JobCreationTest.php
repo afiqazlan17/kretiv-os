@@ -121,9 +121,9 @@ class JobCreationTest extends TestCase
 
         $response = $this->actingAs($bod)->post(route('jobs.store'), [
             'customer_id' => $customer->id,
-            'departments' => ['print'],
+            'departments' => ['tech'],
             'per_dept' => [
-                'print' => [
+                'tech' => [
                     'job_type_category' => 'product_sale',
                     'product_line' => 'undangan_my',
                     'segment' => 'end_user',
@@ -135,6 +135,8 @@ class JobCreationTest extends TestCase
 
         $job = Job::first();
         $response->assertRedirect(route('jobs.show', $job));
+        $this->assertSame('tech', $job->department);
+        $this->assertStringStartsWith('KT-', $job->job_id);
         $this->assertSame('Undangan.my: VIP Wedding Card Package (200pcs)', $job->job_type);
         $this->assertSame(410.0, (float) $job->estimation_value);
         $this->assertCount(1, $job->line_items);
